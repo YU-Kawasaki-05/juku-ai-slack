@@ -1,36 +1,107 @@
 /** @file
- * 機能: process_slack_message ジョブの実処理（Sprint 1: セッション確保 + 暫定返信）
+ * 機能: process_slack_message ジョブの実処理（セッション確保 → 履歴/プロフィール取得 →
+ *       モード選択 → AI 回答生成 → Slack 返信 → メッセージ保存 → 利用量記録）
  * 入力: Supabase クライアント, ProcessSlackMessagePayload
  * 出力: なし
- * 例外: Slack 送信失敗等は上位（processJob のリトライ）に伝播
- * 依存: thread-sessions, Slack client
- * 副作用: セッション行の作成/更新, Slack への返信投稿
- * セキュリティ: person_id は payload（channel_id 解決済み）のみ使用
- * @implements FR-03, FR-05, AC-03-01, AC-03-02
+ * 例外: LLM/Slack 失敗は上位（processJob のリトライ）に伝播
+ * 依存: thread-sessions, ai-answer, student-profiles, student-knowledge, slack-messages, usage-logs, Slack client
+ * 副作用: セッション/メッセージ/利用量ログの DB 書き込み, Slack への返信投稿, LLM 呼び出し
+ * セキュリティ: person_id は payload（channel_id 解決済み）のみ使用（BR-05-11）。LLM 応答のみ Slack に出す
+ * @implements FR-05, FR-03, FR-12, AC-05-01, AC-05-09
  */
 import type { ServerDb } from '@shared/types/db'
+import { env } from '@shared/lib/env'
+import { AiResponseFailedError } from '@shared/lib/errors/AppError'
 import { getOrCreateSession } from '@features/thread-sessions'
 import { postMessage } from '@shared/lib/slack/client'
-import { SPRINT1_ACK_REPLY } from '@shared/lib/constants'
+import { stripBotMention } from '@features/slack-events'
+import { getStudentProfile } from '@features/student-profiles'
+import { getMastery } from '@features/student-knowledge'
+import { loadThreadHistory, saveMessage } from '@features/slack-messages'
+import { logUsage } from '@features/usage-logs'
+import { selectMode, generateAnswer, calculateCost, getLlmClient } from '@features/ai-answer'
 import type { ProcessSlackMessagePayload } from '../types'
 
 export async function executeProcessSlackMessage(
   db: ServerDb,
   payload: ProcessSlackMessagePayload,
 ): Promise<void> {
+  const nowIso = new Date().toISOString()
+
   await getOrCreateSession(db, {
     teamId: payload.teamId,
     channelId: payload.channelId,
     threadTs: payload.threadTs,
     personId: payload.personId,
     reportId: payload.reportId,
-    nowIso: new Date().toISOString(),
+    nowIso,
   })
 
-  // Sprint 1: 暫定の受付返信。Sprint 2 で AI 回答に置換する
-  await postMessage({
+  const model = env.LLM_MODEL_DEFAULT
+  if (!model) {
+    throw new AiResponseFailedError('LLM_MODEL_DEFAULT が未設定です')
+  }
+
+  const question = stripBotMention(payload.text ?? '', env.SLACK_BOT_USER_ID)
+
+  // 生徒データ（他生徒を混入させない。person_id で厳密にフィルタ）
+  const [profile, history] = await Promise.all([
+    getStudentProfile(db, payload.personId),
+    loadThreadHistory(db, payload.channelId, payload.threadTs),
+  ])
+  // Sprint 2 はトピック検出未実装のため topic=null（デフォルト P → direct）
+  const pMastery = await getMastery(db, payload.personId, null)
+
+  const mode = selectMode({ pMastery, examMode: profile.examMode })
+
+  const startedAt = Date.now()
+  const result = await generateAnswer(getLlmClient(), {
+    mode,
+    question,
+    profileText: profile.profileText,
+    history,
+    model,
+  })
+  const latencyMs = Date.now() - startedAt
+
+  const posted = await postMessage({
     channel: payload.channelId,
-    text: SPRINT1_ACK_REPLY,
+    text: result.text,
     threadTs: payload.threadTs,
+  })
+
+  // 会話履歴の保存（次ターンの文脈に使う）: 生徒質問 → AI 回答
+  await saveMessage(db, {
+    teamId: payload.teamId,
+    channelId: payload.channelId,
+    threadTs: payload.threadTs,
+    messageTs: payload.messageTs,
+    slackUserId: payload.userId,
+    personId: payload.personId,
+    role: 'user',
+    text: question,
+  })
+  await saveMessage(db, {
+    teamId: payload.teamId,
+    channelId: payload.channelId,
+    threadTs: payload.threadTs,
+    // AI 返信の message_ts は Slack 応答から取得できるが、Sprint 2 では messageTs に紐付けて記録
+    messageTs: `${payload.messageTs}-ai`,
+    personId: payload.personId,
+    role: 'assistant',
+    text: result.text,
+    ...(posted.ts ? { messageTs: posted.ts } : {}),
+  })
+
+  await logUsage(db, {
+    personId: payload.personId,
+    channelId: payload.channelId,
+    threadTs: payload.threadTs,
+    messageTs: payload.messageTs,
+    model: result.model,
+    usage: result.usage,
+    estimatedCost: calculateCost(result.model, result.usage),
+    hasImage: false,
+    latencyMs,
   })
 }
