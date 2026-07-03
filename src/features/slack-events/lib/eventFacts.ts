@@ -21,10 +21,13 @@ export interface EventFacts {
   messageTs: string
 }
 
-/** テキストに Bot への明示的メンション `<@BOT_USER_ID>` が含まれるか。BR-02-03 */
+/**
+ * テキストに Bot への明示的メンションが含まれるか。BR-02-03
+ * Slack のメンションは `<@U123>` 形式のほか、まれにラベル付き `<@U123|name>` 形式もある。
+ */
 export function containsMention(text: string | undefined, botUserId: string): boolean {
   if (!text) return false
-  return text.includes(`<@${botUserId}>`)
+  return text.includes(`<@${botUserId}>`) || text.includes(`<@${botUserId}|`)
 }
 
 export function deriveEventFacts(event: SlackMessageEvent, botUserId: string): EventFacts {

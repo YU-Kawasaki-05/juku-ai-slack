@@ -20,6 +20,9 @@ describe('lookupBinding', () => {
     const result = await lookupBinding(db, 'C1')
     expect(result.status).toBe('active')
     expect(result.binding?.person_id).toBe('p1')
+    // BR-07-01: channel_id を信頼の基点にする（channel_name では引かない）
+    expect(db.__calls.eq).toContainEqual(['slack_channel_id', 'C1'])
+    expect(db.__calls.eq.some(([col]) => col === 'slack_channel_name')).toBe(false)
   })
 
   it('inactive は status=inactive（AC-07-03）', async () => {

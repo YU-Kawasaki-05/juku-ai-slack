@@ -8,7 +8,7 @@
  * セキュリティ: payload は Zod 検証。person_id は channel_id 解決済みの値のみ
  * @implements FR-04, FR-01, AC-04-02, AC-04-03, AC-04-04, AC-01-06
  */
-import type { ServerDb } from '@shared/types/db'
+import type { ServerDb, TablesUpdate } from '@shared/types/db'
 import { addReaction, removeReaction } from '@shared/lib/slack/client'
 import { JOB_RETRY_BASE_DELAY_MS, THINKING_REACTION } from '@shared/lib/constants'
 import { AppError } from '@shared/lib/errors/AppError'
@@ -43,6 +43,18 @@ async function safeReaction(fn: () => Promise<unknown>): Promise<void> {
   }
 }
 
+/** jobs のステータス更新。書き込み失敗は主処理を止めない（console.warn のみ） */
+async function updateJobStatus(
+  db: ServerDb,
+  jobId: string,
+  values: TablesUpdate<'jobs'>,
+): Promise<void> {
+  const { error } = await db.from('jobs').update(values).eq('id', jobId)
+  if (error) {
+    console.warn('[processJob] failed to update job status', jobId, (error as { message?: string }).message)
+  }
+}
+
 /**
  * ジョブを processing に claim し（AC-04-04: 条件付き更新で二重処理防止）、
  * 実処理を max_attempts までリトライする（AC-04-03）。
@@ -72,10 +84,11 @@ export async function processJob(
 
   const parsed = processSlackMessagePayloadSchema.safeParse(claimed.payload)
   if (!parsed.success) {
-    await db
-      .from('jobs')
-      .update({ status: 'failed', finished_at: clock(), error_code: 'UNKNOWN_ERROR' })
-      .eq('id', jobId)
+    await updateJobStatus(db, jobId, {
+      status: 'failed',
+      finished_at: clock(),
+      error_code: 'UNKNOWN_ERROR',
+    })
     await logError(db, {
       code: 'UNKNOWN_ERROR',
       severity: 'error',
@@ -94,28 +107,39 @@ export async function processJob(
   try {
     let lastError: unknown
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      let executed = false
       try {
         await execute(db, payload)
-        await db
-          .from('jobs')
-          .update({ status: 'completed', finished_at: clock(), attempt_count: attempt })
-          .eq('id', jobId)
-        return { status: 'completed', attempts: attempt }
+        executed = true
       } catch (err) {
         lastError = err
-        await db.from('jobs').update({ attempt_count: attempt }).eq('id', jobId)
+        await updateJobStatus(db, jobId, { attempt_count: attempt })
         if (attempt < maxAttempts) {
           await sleep(JOB_RETRY_BASE_DELAY_MS * 2 ** (attempt - 1))
+          continue
         }
+      }
+
+      // execute 成功時のステータス更新は execute の try/catch 外で行う。
+      // ここで失敗しても execute を再実行しない（二重返信の防止）。
+      if (executed) {
+        await updateJobStatus(db, jobId, {
+          status: 'completed',
+          finished_at: clock(),
+          attempt_count: attempt,
+        })
+        return { status: 'completed', attempts: attempt }
       }
     }
 
     // max_attempts 到達（AC-04-03）
     const code = lastError instanceof AppError ? lastError.code : 'UNKNOWN_ERROR'
-    await db
-      .from('jobs')
-      .update({ status: 'failed', finished_at: clock(), error_code: code, attempt_count: maxAttempts })
-      .eq('id', jobId)
+    await updateJobStatus(db, jobId, {
+      status: 'failed',
+      finished_at: clock(),
+      error_code: code,
+      attempt_count: maxAttempts,
+    })
     await logError(db, {
       code,
       severity: 'error',

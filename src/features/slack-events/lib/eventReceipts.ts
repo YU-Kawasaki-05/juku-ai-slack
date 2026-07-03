@@ -40,3 +40,15 @@ export async function recordEventReceipt(
   if (error.code === PG_UNIQUE_VIOLATION) return 'duplicate'
   throw error
 }
+
+/**
+ * receipt を削除する（H-1 対策）。
+ * receipt 記録後の後続処理が失敗した場合に呼び、Slack 再送で再処理できるようにする。
+ * ベストエフォート（失敗しても主エラーを覆い隠さない）。
+ */
+export async function deleteReceipt(db: ServerDb, eventId: string): Promise<void> {
+  const { error } = await db.from('slack_event_receipts').delete().eq('event_id', eventId)
+  if (error) {
+    console.warn('[deleteReceipt] failed to delete receipt for', eventId, error.message)
+  }
+}

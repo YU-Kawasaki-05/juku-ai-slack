@@ -7,6 +7,7 @@ import { createHmac } from 'node:crypto'
 
 const mocks = vi.hoisted(() => ({
   recordEventReceipt: vi.fn(),
+  deleteReceipt: vi.fn(),
   lookupBinding: vi.fn(),
   findSession: vi.fn(),
   enqueueJob: vi.fn(),
@@ -24,7 +25,7 @@ vi.mock('@features/error-logs', () => ({ logError: mocks.logError }))
 vi.mock('@shared/lib/slack/client', () => ({ postMessage: mocks.postMessage }))
 vi.mock('@features/slack-events', async (importOriginal) => {
   const actual = (await importOriginal()) as object
-  return { ...actual, recordEventReceipt: mocks.recordEventReceipt }
+  return { ...actual, recordEventReceipt: mocks.recordEventReceipt, deleteReceipt: mocks.deleteReceipt }
 })
 vi.mock('next/server', async (importOriginal) => {
   const actual = (await importOriginal()) as object
@@ -86,15 +87,13 @@ describe('POST /api/slack/events', () => {
     expect(mocks.enqueueJob).not.toHaveBeenCalled()
   })
 
-  it('署名不正は 401、ジョブ登録なし（AC-01-03）', async () => {
+  it('署名不正は 401、ジョブ登録なし、DB 書き込みもしない（AC-01-03）', async () => {
     const res = await POST(signedRequest(messageEvent(), { badSig: true }))
     expect(res.status).toBe(401)
     expect(mocks.enqueueJob).not.toHaveBeenCalled()
-    await flushAfter()
-    expect(mocks.logError).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ code: 'SLACK_SIGNATURE_INVALID' }),
-    )
+    // 未認証リクエストで DB 書き込みを誘発しない（セキュリティ: 増幅防止）
+    expect(mocks.recordEventReceipt).not.toHaveBeenCalled()
+    expect(mocks.logError).not.toHaveBeenCalled()
   })
 
   it('タイムスタンプ超過は 401（AC-01-05）', async () => {
@@ -114,16 +113,52 @@ describe('POST /api/slack/events', () => {
     expect(payload.personId).toBe('p1')
     expect(payload.channelId).toBe('C1')
     expect(payload.threadTs).toBe('100.1')
+    // AC-04-01 / BR-01-04: ACK 前に AI 処理（processJob）を実行しない
+    expect(mocks.processJob).not.toHaveBeenCalled()
     // ACK 後に processJob が予約される
     await flushAfter()
     expect(mocks.processJob).toHaveBeenCalledOnce()
   })
 
-  it('重複イベントはジョブ登録しない（AC-01-04）', async () => {
+  it('重複イベントはジョブ登録せず SLACK_EVENT_DUPLICATE(info) を記録（AC-01-04）', async () => {
     mocks.recordEventReceipt.mockResolvedValue('duplicate')
     const res = await POST(signedRequest(messageEvent()))
     expect(res.status).toBe(200)
     expect(mocks.enqueueJob).not.toHaveBeenCalled()
+    await flushAfter()
+    expect(mocks.logError).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ code: 'SLACK_EVENT_DUPLICATE', severity: 'info' }),
+    )
+  })
+
+  it('不正な JSON は 400', async () => {
+    const res = await POST(signedRequest('not-json-at-all'))
+    expect(res.status).toBe(400)
+    expect(mocks.enqueueJob).not.toHaveBeenCalled()
+  })
+
+  it('message 以外のイベントは 200 で無視', async () => {
+    const res = await POST(
+      signedRequest({
+        type: 'event_callback',
+        event_id: 'Ev2',
+        team_id: 'T1',
+        event: { type: 'reaction_added' },
+      }),
+    )
+    expect(res.status).toBe(200)
+    expect(mocks.enqueueJob).not.toHaveBeenCalled()
+  })
+
+  it('receipt 後の一過性エラーは receipt 削除 + 500（H-1）', async () => {
+    mocks.lookupBinding.mockRejectedValue(new Error('transient DB error'))
+    const res = await POST(signedRequest(messageEvent()))
+    expect(res.status).toBe(500)
+    expect(mocks.enqueueJob).not.toHaveBeenCalled()
+    // receipt を削除して Slack 再送での再処理を可能にする
+    expect(mocks.deleteReceipt).toHaveBeenCalledWith(expect.anything(), 'Ev1')
+    expect(mocks.processJob).not.toHaveBeenCalled()
   })
 
   it('メンションなしのチャンネル直下は無視（AC-02-02）', async () => {

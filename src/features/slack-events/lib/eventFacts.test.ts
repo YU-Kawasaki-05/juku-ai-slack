@@ -18,6 +18,12 @@ describe('containsMention', () => {
   it('テキストなしは false', () => {
     expect(containsMention(undefined, BOT)).toBe(false)
   })
+  it('ラベル付きメンション <@U_BOT|name> も検出する', () => {
+    expect(containsMention('<@U_BOT|bot> やあ', BOT)).toBe(true)
+  })
+  it('前方一致の別ID <@U_BOTX> は誤検出しない', () => {
+    expect(containsMention('<@U_BOTX> やあ', BOT)).toBe(false)
+  })
 })
 
 describe('deriveEventFacts', () => {
