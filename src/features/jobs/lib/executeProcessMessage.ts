@@ -17,10 +17,12 @@ import { getOrCreateSession } from '@features/thread-sessions'
 import { postMessage } from '@shared/lib/slack/client'
 import { stripBotMention } from '@features/slack-events'
 import { getStudentProfile } from '@features/student-profiles'
-import { getMastery } from '@features/student-knowledge'
+import { getMastery, evaluate, applyEvaluation } from '@features/student-knowledge'
 import { loadThreadHistory, saveMessage } from '@features/slack-messages'
 import { logUsage } from '@features/usage-logs'
+import { logError } from '@features/error-logs'
 import { selectMode, generateAnswer, calculateCost, getLlmClient } from '@features/ai-answer'
+import type { LlmMessage } from '@features/ai-answer'
 import type { ProcessSlackMessagePayload } from '../types'
 
 export async function executeProcessSlackMessage(
@@ -117,4 +119,67 @@ export async function executeProcessSlackMessage(
     hasImage: false,
     latencyMs,
   })
+
+  // Evaluator（2エージェント構成）: 返信送信後に非同期で BKT を更新する。
+  // BR-23-06: 失敗は AI 回答を妨げない（サイレントフェイル + ai_error_logs 記録）
+  await runEvaluator(db, payload, question, history, model)
+}
+
+/** 直前の Bot 確認質問に対する生徒返信を評価し BKT を更新する（FR-23。失敗は握りつぶす） */
+async function runEvaluator(
+  db: ServerDb,
+  payload: ProcessSlackMessagePayload,
+  studentReply: string,
+  history: LlmMessage[],
+  model: string,
+): Promise<void> {
+  // 生徒返信が答える対象＝直前の assistant（Bot の確認質問）。無ければ評価しない
+  const botQuestion = [...history].reverse().find((m) => m.role === 'assistant')?.content
+  if (!botQuestion) return
+
+  try {
+    const { evaluation, result: evalResult } = await evaluate(
+      getLlmClient(),
+      { botQuestion, studentReply },
+      model,
+    )
+    const applied = await applyEvaluation(db, payload.personId, evaluation)
+
+    // AC-23-07: 低確信度は BKT 更新せず LOW_CONFIDENCE_SKIP を記録
+    if (!applied.updated && applied.reason === 'low_confidence') {
+      await logError(db, {
+        code: 'LOW_CONFIDENCE_SKIP',
+        severity: 'info',
+        personId: payload.personId,
+        channelId: payload.channelId,
+        threadTs: payload.threadTs,
+        messageTs: payload.messageTs,
+        internalMessage: `evaluator confidence ${evaluation.confidence} < threshold`,
+      })
+    }
+
+    // Evaluator の利用量も記録（FR-12）
+    await logUsage(db, {
+      personId: payload.personId,
+      channelId: payload.channelId,
+      threadTs: payload.threadTs,
+      messageTs: `${payload.messageTs}-eval`,
+      model,
+      usage: evalResult.usage,
+      estimatedCost: calculateCost(model, evalResult.usage),
+      hasImage: false,
+    })
+  } catch (err) {
+    // BR-23-06: 評価失敗は回答を妨げない
+    await logError(db, {
+      code: 'AI_RESPONSE_FAILED',
+      severity: 'warning',
+      personId: payload.personId,
+      channelId: payload.channelId,
+      threadTs: payload.threadTs,
+      messageTs: payload.messageTs,
+      internalMessage: `evaluator failed: ${err instanceof Error ? err.message : String(err)}`,
+      rawError: err,
+    })
+  }
 }

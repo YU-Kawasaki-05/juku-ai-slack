@@ -8,21 +8,29 @@ const mocks = vi.hoisted(() => ({
   getOrCreateSession: vi.fn(),
   getStudentProfile: vi.fn(),
   getMastery: vi.fn(),
+  evaluate: vi.fn(),
+  applyEvaluation: vi.fn(),
   loadThreadHistory: vi.fn(),
   saveMessage: vi.fn(),
   logUsage: vi.fn(),
+  logError: vi.fn(),
   postMessage: vi.fn(),
   generate: vi.fn(),
 }))
 
 vi.mock('@features/thread-sessions', () => ({ getOrCreateSession: mocks.getOrCreateSession }))
 vi.mock('@features/student-profiles', () => ({ getStudentProfile: mocks.getStudentProfile }))
-vi.mock('@features/student-knowledge', () => ({ getMastery: mocks.getMastery }))
+vi.mock('@features/student-knowledge', () => ({
+  getMastery: mocks.getMastery,
+  evaluate: mocks.evaluate,
+  applyEvaluation: mocks.applyEvaluation,
+}))
 vi.mock('@features/slack-messages', () => ({
   loadThreadHistory: mocks.loadThreadHistory,
   saveMessage: mocks.saveMessage,
 }))
 vi.mock('@features/usage-logs', () => ({ logUsage: mocks.logUsage }))
+vi.mock('@features/error-logs', () => ({ logError: mocks.logError }))
 vi.mock('@shared/lib/slack/client', () => ({ postMessage: mocks.postMessage }))
 
 import { executeProcessSlackMessage } from './executeProcessMessage'
@@ -51,6 +59,12 @@ beforeEach(() => {
   mocks.loadThreadHistory.mockResolvedValue([])
   mocks.saveMessage.mockResolvedValue(undefined)
   mocks.logUsage.mockResolvedValue(undefined)
+  mocks.logError.mockResolvedValue(undefined)
+  mocks.evaluate.mockResolvedValue({
+    evaluation: { signal: 'correct', topic_id: '二次方程式', subject: '数学', confidence: 0.9, reasoning: 'r', identified_misconception: null },
+    result: { text: '{}', usage: { inputTokens: 10, outputTokens: 5 }, model: 'test-default-model' },
+  })
+  mocks.applyEvaluation.mockResolvedValue({ updated: true, newPMastery: 0.5 })
   mocks.postMessage.mockResolvedValue({ ts: '200.2' })
   mocks.generate.mockResolvedValue({
     text: '一緒に整理しよう',
@@ -125,5 +139,44 @@ describe('executeProcessSlackMessage', () => {
     mocks.saveMessage.mockRejectedValue(new Error('db blip'))
     await expect(executeProcessSlackMessage(db, payload)).resolves.toBeUndefined()
     expect(mocks.postMessage).toHaveBeenCalledOnce()
+  })
+
+  it('履歴に直前の確認質問があれば Evaluator を実行し BKT を更新（FR-23）', async () => {
+    mocks.loadThreadHistory.mockResolvedValue([
+      { role: 'user', content: '前の質問' },
+      { role: 'assistant', content: '判別式ってどういう意味？' },
+    ])
+    await executeProcessSlackMessage(db, payload)
+    expect(mocks.evaluate).toHaveBeenCalledOnce()
+    // 直前の assistant（確認質問）と生徒返信を渡す
+    expect(mocks.evaluate.mock.calls[0][1]).toEqual({
+      botQuestion: '判別式ってどういう意味？',
+      studentReply: '二次方程式がわからない',
+    })
+    expect(mocks.applyEvaluation).toHaveBeenCalledOnce()
+  })
+
+  it('直前の確認質問が無ければ Evaluator を呼ばない（初回ターン）', async () => {
+    mocks.loadThreadHistory.mockResolvedValue([])
+    await executeProcessSlackMessage(db, payload)
+    expect(mocks.evaluate).not.toHaveBeenCalled()
+  })
+
+  it('Evaluator 失敗は回答を妨げない（サイレント、logError 記録）（BR-23-06）', async () => {
+    mocks.loadThreadHistory.mockResolvedValue([{ role: 'assistant', content: 'Q?' }])
+    mocks.evaluate.mockRejectedValue(new Error('eval boom'))
+    await expect(executeProcessSlackMessage(db, payload)).resolves.toBeUndefined()
+    expect(mocks.postMessage).toHaveBeenCalledOnce() // 回答は送信済み
+    expect(mocks.logError).toHaveBeenCalled()
+  })
+
+  it('低確信度は LOW_CONFIDENCE_SKIP を記録（AC-23-07）', async () => {
+    mocks.loadThreadHistory.mockResolvedValue([{ role: 'assistant', content: 'Q?' }])
+    mocks.applyEvaluation.mockResolvedValue({ updated: false, reason: 'low_confidence' })
+    await executeProcessSlackMessage(db, payload)
+    expect(mocks.logError).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ code: 'LOW_CONFIDENCE_SKIP', severity: 'info' }),
+    )
   })
 })
