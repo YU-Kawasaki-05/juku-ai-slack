@@ -88,6 +88,7 @@ Then 二重取得されない（行ロックまたは楽観的ロックで防ぐ
 
 ## 実装ステータス（Phase 4 が更新）
 
-- 実装ファイル: -
-- テストファイル: -
-- 最終確認Sprint: -
+- 実装ファイル: `src/features/jobs/lib/enqueueJob.ts`, `src/features/jobs/lib/processJob.ts`, `src/features/jobs/lib/executeProcessMessage.ts`
+- テストファイル: `enqueueJob.test.ts`, `processJob.test.ts`
+- 最終確認Sprint: Sprint 1
+- 既知の制約: リトライは `waitUntil`(after) 内のインメモリ実装（BR-04-06）。関数が途中 kill された場合の processing 孤児化を回収する JOB_TIMEOUT スイーパは未実装（FR-04 エラーケース表の「長時間 processing」）。将来 Sprint で対応

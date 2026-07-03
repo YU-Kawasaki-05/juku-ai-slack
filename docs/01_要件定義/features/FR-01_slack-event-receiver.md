@@ -111,6 +111,7 @@ And リアクション追加が失敗してもAI処理は継続される
 
 ## 実装ステータス（Phase 4 が更新）
 
-- 実装ファイル: -
-- テストファイル: -
-- 最終確認Sprint: -
+- 実装ファイル: `src/app/api/slack/events/route.ts`, `src/features/slack-events/lib/verifySignature.ts`, `src/features/slack-events/lib/eventReceipts.ts`
+- テストファイル: `verifySignature.test.ts`, `eventReceipts.test.ts`, `route.test.ts`
+- 最終確認Sprint: Sprint 1
+- 備考: 署名検証失敗は DB でなく console.warn に記録（未認証リクエストによる書き込み増幅防止）。🤔 リアクションは processJob 内で付与/削除（AC-01-06）

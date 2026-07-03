@@ -77,6 +77,7 @@ Then 1つのセッションのみが作成される（重複なし）
 
 ## 実装ステータス（Phase 4 が更新）
 
-- 実装ファイル: -
-- テストファイル: -
-- 最終確認Sprint: -
+- 実装ファイル: `src/features/thread-sessions/lib/getOrCreateSession.ts`, `src/features/thread-sessions/lib/findSession.ts`
+- テストファイル: `getOrCreateSession.test.ts`
+- 最終確認Sprint: Sprint 1
+- 備考: 既存セッションは last_message_at のみ更新（status/report_id を保持）。BR-03-04（要約圧縮）・BR-03-05（closed 復活）は MVP 後回し

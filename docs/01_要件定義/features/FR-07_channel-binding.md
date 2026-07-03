@@ -77,6 +77,7 @@ Then CHANNEL_NOT_BOUNDエラーが返される
 
 ## 実装ステータス（Phase 4 が更新）
 
-- 実装ファイル: -
-- テストファイル: -
-- 最終確認Sprint: -
+- 実装ファイル: `src/features/channel-bindings/lib/lookupBinding.ts`（検索）。管理画面 CRUD は Sprint 5（FR-15）
+- テストファイル: `lookupBinding.test.ts`
+- 最終確認Sprint: Sprint 1（検索のみ）
+- 備考: `slack_channel_id` を唯一のキーに検索（BR-07-01）。event.user（投稿者）と person_id の突き合わせは未実施＝チャンネルメンバーシップが唯一のアクセス制御。Sprint 2 のデータ露出前に多層防御を検討

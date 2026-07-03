@@ -104,6 +104,7 @@ And CHANNEL_NOT_BOUNDをai_error_logsに記録
 
 ## 実装ステータス（Phase 4 が更新）
 
-- 実装ファイル: -
-- テストファイル: -
-- 最終確認Sprint: -
+- 実装ファイル: `src/features/slack-events/lib/shouldReact.ts`, `src/features/slack-events/lib/eventFacts.ts`, `src/app/api/slack/events/route.ts`
+- テストファイル: `shouldReact.test.ts`, `eventFacts.test.ts`, `route.test.ts`
+- 最終確認Sprint: Sprint 1
+- 備考: CHANNEL_NOT_BOUND 文言は `07_エラー文言設計.md`（確定版）に準拠（本FRの旧文言ではない）
