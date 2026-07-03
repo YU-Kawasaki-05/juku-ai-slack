@@ -1,3 +1,5 @@
+// クライアントバンドルへの誤取り込みをビルド時に検知する（シークレット集約ファイル）
+import 'server-only'
 import { z } from 'zod'
 
 const envSchema = z.object({

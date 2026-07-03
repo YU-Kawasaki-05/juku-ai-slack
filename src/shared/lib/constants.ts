@@ -69,8 +69,8 @@ export const EMBEDDING_DIM = 1536
 export const RAG_TOP_K = 5
 /** 類似度の下限（BR-10-06） */
 export const RAG_SIMILARITY_THRESHOLD = 0.7
-/** 1チャンクの最大文字数（BR-10-02: 200〜800 tokens 目安） */
-export const RAG_CHUNK_MAX_CHARS = 1500
+/** 1チャンクの最大文字数（BR-10-02: 200〜800 tokens 目安。日本語 ~1tok/字 を考慮） */
+export const RAG_CHUNK_MAX_CHARS = 1000
 
 /**
  * モデル別の料金（USD / 100万トークン）。プロバイダ非依存。

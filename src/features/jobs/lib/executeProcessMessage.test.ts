@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   getOrCreateSession: vi.fn(),
   getStudentProfile: vi.fn(),
   getMastery: vi.fn(),
+  getKnowledgeSummary: vi.fn(),
   evaluate: vi.fn(),
   applyEvaluation: vi.fn(),
   loadThreadHistory: vi.fn(),
@@ -24,6 +25,7 @@ vi.mock('@features/thread-sessions', () => ({ getOrCreateSession: mocks.getOrCre
 vi.mock('@features/student-profiles', () => ({ getStudentProfile: mocks.getStudentProfile }))
 vi.mock('@features/student-knowledge', () => ({
   getMastery: mocks.getMastery,
+  getKnowledgeSummary: mocks.getKnowledgeSummary,
   evaluate: mocks.evaluate,
   applyEvaluation: mocks.applyEvaluation,
 }))
@@ -62,6 +64,7 @@ beforeEach(() => {
   mocks.getOrCreateSession.mockResolvedValue({ id: 's1' })
   mocks.getStudentProfile.mockResolvedValue({ profileText: null, examMode: false })
   mocks.getMastery.mockResolvedValue(0.2)
+  mocks.getKnowledgeSummary.mockResolvedValue(null)
   mocks.loadThreadHistory.mockResolvedValue([])
   mocks.saveMessage.mockResolvedValue(undefined)
   mocks.logUsage.mockResolvedValue(undefined)
@@ -186,6 +189,12 @@ describe('executeProcessSlackMessage', () => {
       expect.anything(),
       expect.objectContaining({ code: 'LOW_CONFIDENCE_SKIP', severity: 'info' }),
     )
+  })
+
+  it('知識状態サマリーをプロンプトに注入する（AC-23-05）', async () => {
+    mocks.getKnowledgeSummary.mockResolvedValue('数学: 二次方程式(苦手:P=0.18,2回)')
+    await executeProcessSlackMessage(db, payload)
+    expect(mocks.generate.mock.calls[0][0].system).toContain('二次方程式(苦手')
   })
 
   it('RAG チャンクをプロンプトに渡す（FR-10）', async () => {

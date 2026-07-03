@@ -17,7 +17,7 @@ import { getOrCreateSession } from '@features/thread-sessions'
 import { postMessage } from '@shared/lib/slack/client'
 import { stripBotMention } from '@features/slack-events'
 import { getStudentProfile } from '@features/student-profiles'
-import { getMastery, evaluate, applyEvaluation } from '@features/student-knowledge'
+import { getMastery, getKnowledgeSummary, evaluate, applyEvaluation } from '@features/student-knowledge'
 import { loadThreadHistory, saveMessage } from '@features/slack-messages'
 import { logUsage } from '@features/usage-logs'
 import { logError } from '@features/error-logs'
@@ -54,11 +54,13 @@ export async function executeProcessSlackMessage(
   }
 
   // 生徒データ（他生徒を混入させない。person_id で厳密にフィルタ）
-  const [profile, history] = await Promise.all([
+  const [profile, history, knowledgeSummary] = await Promise.all([
     getStudentProfile(db, payload.personId),
     loadThreadHistory(db, payload.channelId, payload.threadTs, payload.personId),
+    getKnowledgeSummary(db, payload.personId),
   ])
-  // Sprint 2 はトピック検出未実装のため topic=null（デフォルト P → direct）
+  // Sprint 3 時点ではトピック検出（質問時）未実装のため topic=null（デフォルト P → direct）。
+  // 知識状態は knowledgeSummary としてプロンプトに注入し、LLM がトピック別に適応できるようにする（AC-23-05）
   const pMastery = await getMastery(db, payload.personId, null)
 
   const mode = selectMode({ pMastery, examMode: profile.examMode })
@@ -73,6 +75,7 @@ export async function executeProcessSlackMessage(
     profileText: profile.profileText,
     history,
     ragChunks,
+    knowledgeSummary,
     model,
   })
   const latencyMs = Date.now() - startedAt

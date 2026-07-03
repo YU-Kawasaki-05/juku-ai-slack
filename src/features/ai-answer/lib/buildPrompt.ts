@@ -20,6 +20,8 @@ export interface BuildPromptInput {
   history: LlmMessage[]
   /** RAG で取得したレポート由来チャンク（FR-10）。無ければ空/未指定 */
   ragChunks?: string[]
+  /** 生徒の知識状態サマリー（FR-23, AC-23-05）。無ければ null/未指定 */
+  knowledgeSummary?: string | null
 }
 
 /** 全モード共通の土台（伴走者フレーミング, DEC-25 / 安全, BR-05-11〜14） */
@@ -58,6 +60,10 @@ export function buildPrompt(input: BuildPromptInput): { system: string; messages
   let system = `${BASE_SYSTEM}\n\n${MODE_SYSTEM[input.mode]}`
   if (input.profileText) {
     system += `\n\n【この生徒のメモ（他の生徒には使わない）】\n${input.profileText}`
+  }
+  if (input.knowledgeSummary) {
+    // AC-23-05: 知識状態サマリーをプロンプトに含める（苦手トピックは丁寧に説明）
+    system += `\n\n【この生徒の知識状態（AI参照用。苦手トピックは特に丁寧に）】\n${input.knowledgeSummary}`
   }
   if (input.ragChunks && input.ragChunks.length > 0) {
     // BR-05-10: レポート由来と一般知識を区別できる表現を促す

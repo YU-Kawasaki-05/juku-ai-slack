@@ -26,15 +26,17 @@ export async function rebuildReportEmbeddings(
   if (readError) throw readError
   if (!report) throw new ReportNotFoundError()
 
-  // 古いチャンクを削除して作り直す（BR-10-07）
-  const { error: delError } = await db.from('report_chunks').delete().eq('report_id', reportId)
-  if (delError) throw delError
-
   const chunks = chunkReport(report.body_markdown ?? '')
   const nowIso = new Date().toISOString()
 
+  // embed を先に実行する。失敗しても既存チャンクを消さない（データ損失防止）
+  const vectors = chunks.length > 0 ? await embedInBatches(embeddingClient, chunks) : []
+
+  // embed 成功後に古いチャンクを差し替える（BR-10-07）
+  const { error: delError } = await db.from('report_chunks').delete().eq('report_id', reportId)
+  if (delError) throw delError
+
   if (chunks.length > 0) {
-    const vectors = await embeddingClient.embed(chunks)
     const rows: TablesInsert<'report_chunks'>[] = chunks.map((content, i) => ({
       report_id: reportId,
       person_id: report.person_id,
@@ -54,4 +56,18 @@ export async function rebuildReportEmbeddings(
   if (updError) throw updError
 
   return chunks.length
+}
+
+/** プロバイダのバッチ上限を避けるため分割して embed する */
+const EMBED_BATCH_SIZE = 96
+async function embedInBatches(
+  client: EmbeddingClient,
+  texts: string[],
+): Promise<number[][]> {
+  const out: number[][] = []
+  for (let i = 0; i < texts.length; i += EMBED_BATCH_SIZE) {
+    const batch = await client.embed(texts.slice(i, i + EMBED_BATCH_SIZE))
+    out.push(...batch)
+  }
+  return out
 }

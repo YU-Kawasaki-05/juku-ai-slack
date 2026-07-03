@@ -37,6 +37,17 @@ export function chunkReport(markdown: string, maxChars: number = RAG_CHUNK_MAX_C
     const paragraphs = section.split(/\n\s*\n/)
     let buf = ''
     for (const p of paragraphs) {
+      // 1段落だけで上限超過ならハードスライスする（Transient Information 回避）
+      if (p.length > maxChars) {
+        if (buf.trim()) {
+          chunks.push(buf.trim())
+          buf = ''
+        }
+        for (let i = 0; i < p.length; i += maxChars) {
+          chunks.push(p.slice(i, i + maxChars).trim())
+        }
+        continue
+      }
       if (buf && (buf + '\n\n' + p).length > maxChars) {
         chunks.push(buf.trim())
         buf = p

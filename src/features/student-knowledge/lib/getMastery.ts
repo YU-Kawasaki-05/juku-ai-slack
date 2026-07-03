@@ -13,21 +13,25 @@
  */
 import type { ServerDb } from '@shared/types/db'
 import { P_MASTERY_DEFAULT } from '@shared/lib/constants'
+import { decayedMastery } from './knowledgeSummary'
 
 export async function getMastery(
   db: ServerDb,
   personId: string,
   topic?: string | null,
+  now: Date = new Date(),
 ): Promise<number> {
   if (!topic) return P_MASTERY_DEFAULT
 
   const { data, error } = await db
     .from('student_knowledge_states')
-    .select('p_mastery')
+    .select('p_mastery, last_seen_at')
     .eq('person_id', personId)
     .eq('topic', topic)
     .maybeSingle()
 
   if (error) throw error
-  return data?.p_mastery ?? P_MASTERY_DEFAULT
+  if (!data) return P_MASTERY_DEFAULT
+  // BR-23-05: 読取時に忘却減衰を適用
+  return decayedMastery(data.p_mastery, data.last_seen_at, now)
 }

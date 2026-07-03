@@ -11,6 +11,7 @@ import { z } from 'zod'
 export const evaluationSchema = z.object({
   reasoning: z
     .string()
+    .min(1)
     .describe('生徒の回答を評価するための思考過程。signal を出力する前に必ず記述する'),
   signal: z
     .enum(['correct', 'incorrect', 'partial', 'skip'])

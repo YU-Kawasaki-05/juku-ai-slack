@@ -1,4 +1,5 @@
 export { getMastery } from './lib/getMastery'
+export { getKnowledgeSummary, decayedMastery } from './lib/knowledgeSummary'
 export { updateBKT, applyForgettingDecay } from './lib/bkt'
 export { evaluationSchema } from './lib/evaluationSchema'
 export type { Evaluation, EvaluationSignal } from './lib/evaluationSchema'
