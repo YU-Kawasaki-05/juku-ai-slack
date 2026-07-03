@@ -16,6 +16,8 @@ const mocks = vi.hoisted(() => ({
   logError: vi.fn(),
   postMessage: vi.fn(),
   generate: vi.fn(),
+  searchChunks: vi.fn(),
+  getEmbeddingClient: vi.fn(),
 }))
 
 vi.mock('@features/thread-sessions', () => ({ getOrCreateSession: mocks.getOrCreateSession }))
@@ -31,6 +33,10 @@ vi.mock('@features/slack-messages', () => ({
 }))
 vi.mock('@features/usage-logs', () => ({ logUsage: mocks.logUsage }))
 vi.mock('@features/error-logs', () => ({ logError: mocks.logError }))
+vi.mock('@features/rag', () => ({
+  searchChunks: mocks.searchChunks,
+  getEmbeddingClient: mocks.getEmbeddingClient,
+}))
 vi.mock('@shared/lib/slack/client', () => ({ postMessage: mocks.postMessage }))
 
 import { executeProcessSlackMessage } from './executeProcessMessage'
@@ -65,6 +71,8 @@ beforeEach(() => {
     result: { text: '{}', usage: { inputTokens: 10, outputTokens: 5 }, model: 'test-default-model' },
   })
   mocks.applyEvaluation.mockResolvedValue({ updated: true, newPMastery: 0.5 })
+  mocks.searchChunks.mockResolvedValue([])
+  mocks.getEmbeddingClient.mockReturnValue({ embed: vi.fn() })
   mocks.postMessage.mockResolvedValue({ ts: '200.2' })
   mocks.generate.mockResolvedValue({
     text: '一緒に整理しよう',
@@ -177,6 +185,22 @@ describe('executeProcessSlackMessage', () => {
     expect(mocks.logError).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ code: 'LOW_CONFIDENCE_SKIP', severity: 'info' }),
+    )
+  })
+
+  it('RAG チャンクをプロンプトに渡す（FR-10）', async () => {
+    mocks.searchChunks.mockResolvedValue([{ content: '今月は二次方程式で計算ミスが多い' }])
+    await executeProcessSlackMessage(db, payload)
+    expect(mocks.generate.mock.calls[0][0].system).toContain('計算ミスが多い')
+  })
+
+  it('RAG 検索失敗はチャンクなしで継続し REPORT_CHUNK_SEARCH_FAILED を記録', async () => {
+    mocks.searchChunks.mockRejectedValue(new Error('rag boom'))
+    await expect(executeProcessSlackMessage(db, payload)).resolves.toBeUndefined()
+    expect(mocks.postMessage).toHaveBeenCalledOnce()
+    expect(mocks.logError).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ code: 'REPORT_CHUNK_SEARCH_FAILED' }),
     )
   })
 })

@@ -23,6 +23,7 @@ import { logUsage } from '@features/usage-logs'
 import { logError } from '@features/error-logs'
 import { selectMode, generateAnswer, calculateCost, getLlmClient } from '@features/ai-answer'
 import type { LlmMessage } from '@features/ai-answer'
+import { searchChunks, getEmbeddingClient } from '@features/rag'
 import type { ProcessSlackMessagePayload } from '../types'
 
 export async function executeProcessSlackMessage(
@@ -62,12 +63,16 @@ export async function executeProcessSlackMessage(
 
   const mode = selectMode({ pMastery, examMode: profile.examMode })
 
+  // RAG: レポート由来チャンクを検索（FR-10）。失敗はチャンクなしで継続（BR）
+  const ragChunks = await searchReportChunks(db, payload, question)
+
   const startedAt = Date.now()
   const result = await generateAnswer(getLlmClient(), {
     mode,
     question,
     profileText: profile.profileText,
     history,
+    ragChunks,
     model,
   })
   const latencyMs = Date.now() - startedAt
@@ -123,6 +128,34 @@ export async function executeProcessSlackMessage(
   // Evaluator（2エージェント構成）: 返信送信後に非同期で BKT を更新する。
   // BR-23-06: 失敗は AI 回答を妨げない（サイレントフェイル + ai_error_logs 記録）
   await runEvaluator(db, payload, question, history, model)
+}
+
+/** レポート由来チャンクを検索する。失敗・未設定はチャンクなしで継続（FR-10 エラーケース） */
+async function searchReportChunks(
+  db: ServerDb,
+  payload: ProcessSlackMessagePayload,
+  queryText: string,
+): Promise<string[]> {
+  try {
+    const chunks = await searchChunks(db, getEmbeddingClient(), {
+      personId: payload.personId,
+      queryText,
+    })
+    return chunks.map((c) => c.content)
+  } catch (err) {
+    // REPORT_CHUNK_SEARCH_FAILED（サイレント）: チャンクなしで回答を継続
+    await logError(db, {
+      code: 'REPORT_CHUNK_SEARCH_FAILED',
+      severity: 'warning',
+      personId: payload.personId,
+      channelId: payload.channelId,
+      threadTs: payload.threadTs,
+      messageTs: payload.messageTs,
+      internalMessage: `rag search failed: ${err instanceof Error ? err.message : String(err)}`,
+      rawError: err,
+    })
+    return []
+  }
 }
 
 /** 直前の Bot 確認質問に対する生徒返信を評価し BKT を更新する（FR-23。失敗は握りつぶす） */

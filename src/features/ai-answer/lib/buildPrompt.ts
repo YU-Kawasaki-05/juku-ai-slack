@@ -18,6 +18,8 @@ export interface BuildPromptInput {
   profileText: string | null
   /** スレッド履歴（古い順）。現在の質問は含めない */
   history: LlmMessage[]
+  /** RAG で取得したレポート由来チャンク（FR-10）。無ければ空/未指定 */
+  ragChunks?: string[]
 }
 
 /** 全モード共通の土台（伴走者フレーミング, DEC-25 / 安全, BR-05-11〜14） */
@@ -56,6 +58,10 @@ export function buildPrompt(input: BuildPromptInput): { system: string; messages
   let system = `${BASE_SYSTEM}\n\n${MODE_SYSTEM[input.mode]}`
   if (input.profileText) {
     system += `\n\n【この生徒のメモ（他の生徒には使わない）】\n${input.profileText}`
+  }
+  if (input.ragChunks && input.ragChunks.length > 0) {
+    // BR-05-10: レポート由来と一般知識を区別できる表現を促す
+    system += `\n\n【この生徒の過去レポートからの抜粋（参考。使うときは「レポートを見る限り〜」のように出典が分かる形で）】\n${input.ragChunks.map((c) => `- ${c}`).join('\n')}`
   }
 
   const messages: LlmMessage[] = [

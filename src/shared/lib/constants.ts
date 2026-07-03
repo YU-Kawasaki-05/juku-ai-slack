@@ -61,6 +61,17 @@ export const FORGETTING_DECAY_MIN_DAYS = 14
 /** トピック特定不能を表す ID（この場合 BKT 更新をスキップ） */
 export const UNKNOWN_TOPIC = 'unknown'
 
+// --- RAG（FR-10）---
+
+/** embedding 次元（migration 005/020 の vector(1536) と一致させること） */
+export const EMBEDDING_DIM = 1536
+/** 検索で返すチャンク数の既定（BR: top_k 3〜8） */
+export const RAG_TOP_K = 5
+/** 類似度の下限（BR-10-06） */
+export const RAG_SIMILARITY_THRESHOLD = 0.7
+/** 1チャンクの最大文字数（BR-10-02: 200〜800 tokens 目安） */
+export const RAG_CHUNK_MAX_CHARS = 1500
+
 /**
  * モデル別の料金（USD / 100万トークン）。プロバイダ非依存。
  * ここに無いモデルは cost=0 で記録される（トークン数は常に記録される）。

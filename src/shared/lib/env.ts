@@ -14,6 +14,10 @@ const envSchema = z.object({
   LLM_BASE_URL: z.string().url().optional(),
   LLM_MODEL_DEFAULT: z.string().min(1).optional(),
   LLM_MODEL_COMPLEX: z.string().min(1).optional(),
+  // Embedding（RAG）。プロバイダ非依存。未設定時は RAG をスキップ（チャンクなしで回答）
+  EMBEDDING_API_KEY: z.string().min(1).optional(),
+  EMBEDDING_BASE_URL: z.string().url().optional(),
+  EMBEDDING_MODEL: z.string().min(1).optional(),
   // Anthropic 直アダプタを使う場合のみ
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
 

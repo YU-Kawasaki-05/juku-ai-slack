@@ -25,6 +25,7 @@ export async function generateAnswer(
     question: input.question,
     profileText: input.profileText,
     history: input.history,
+    ragChunks: input.ragChunks,
   })
 
   return llm.generate({
