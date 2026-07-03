@@ -1,0 +1,56 @@
+# Dependencies
+node_modules/
+.pnpm-debug.log*
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+
+# Environment variables (secrets — never commit)
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+
+# Supabase (local runtime + linked project ref)
+.supabase/
+supabase/.temp/
+supabase/.branches/
+
+# Build artifacts
+dist/
+build/
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Testing
+coverage/
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+
+# Claude Code local settings (personal, machine-specific)
+.claude/settings.local.json
+
+# Claude Code project settings (contains local absolute paths)
+.claude/settings.json
+
+# Claude Code local context (anonymization mapping — never publish)
+CLAUDE.local.md

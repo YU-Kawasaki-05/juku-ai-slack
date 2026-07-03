@@ -1,0 +1,112 @@
+phase: 3
+title: 技術設計
+project: juku-ai-slack-bot
+
+tech_stack:
+  framework: next.js@15.x
+  language: typescript@5.x
+  database: supabase
+  hosting: vercel
+  ui: shadcn-ui + tailwind
+  state: tanstack-query@5.x
+  validation: zod
+  forms: react-hook-form
+  testing:
+    unit: vitest
+    e2e: playwright
+    mocking: msw
+  llm:
+    text: anthropic-claude-haiku-4-5
+    vision: anthropic-claude-sonnet-4-6
+    embedding: openai-text-embedding-3-small
+  monitoring: sentry
+
+documents:
+  - id: arch
+    file: 01_アーキテクチャ.md
+    title: アーキテクチャ
+    covers_fr: [FR-01, FR-02, FR-03, FR-04, FR-05, FR-06, FR-07, FR-08, FR-09, FR-10]
+
+  - id: dir
+    file: 02_ディレクトリ構成.md
+    title: ディレクトリ構成
+    covers_fr: all
+
+  - id: services
+    file: 03_外部サービス.md
+    title: 外部サービス
+    covers_fr: [FR-01, FR-05, FR-06, FR-10]
+
+  - id: auth
+    file: 04_認証フロー.md
+    title: 認証フロー
+    covers_fr: [FR-13]
+    covers_ac: [AC-13-01, AC-13-02, AC-13-03]
+
+  - id: dev-guide
+    file: 05_開発ガイドライン.md
+    title: 開発ガイドライン
+    covers_fr: all
+    key_constraint: "@implements タグ必須（Phase 4 drift detection の根拠）"
+
+  - id: ops
+    file: 06_運用設計.md
+    title: 運用設計
+    covers_fr: [FR-04, FR-11, FR-12]
+
+  - id: sprint
+    file: 07_Sprint計画.md
+    title: Sprint計画
+    sprints:
+      - name: Sprint 0
+        goal: 基盤構築
+        fr: []
+      - name: Sprint 1
+        goal: Slack Bot コア
+        fr: [FR-01, FR-02, FR-03, FR-04, FR-07]
+      - name: Sprint 2
+        goal: AI回答生成
+        fr: [FR-05, FR-11, FR-12]
+      - name: Sprint 3
+        goal: レポート・RAG
+        fr: [FR-08, FR-09, FR-10]
+      - name: Sprint 4
+        goal: 画像対応
+        fr: [FR-06]
+      - name: Sprint 5
+        goal: 管理画面基本
+        fr: [FR-13, FR-14, FR-15]
+      - name: Sprint 6
+        goal: 管理画面レポート・エラー管理
+        fr: [FR-16, FR-17]
+
+  - id: launch
+    file: 08_ローンチ計画.md
+    title: ローンチ計画
+
+key_decisions:
+  - id: TDC-01
+    content: "Next.js App Router モノリス（ソロ開発でのコンテキスト集約）"
+    status: confirmed
+  - id: TDC-02
+    content: "Supabase Service Roleで全DB操作（RLSはフォールバック、コードでperson_idフィルタ必須）"
+    status: confirmed
+  - id: TDC-03
+    content: "@implements タグ必須（全機能ファイル）"
+    status: confirmed
+  - id: TDC-04
+    content: "LLMモデル2段: text=haiku, vision/complex=sonnet"
+    status: provisional
+  - id: TDC-05
+    content: "Vercel Hobby Cronの制限対策: MVP初期はcron-job.orgで代替"
+    status: provisional
+
+environment_variables:
+  required: 15
+  server_only: [SUPABASE_SERVICE_ROLE_KEY, SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET, ANTHROPIC_API_KEY, OPENAI_API_KEY, LLM_MODEL_DEFAULT, LLM_MODEL_VISION, EMBEDDING_MODEL, ENABLE_AI, VERCEL_CRON_SECRET]
+  public: [NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, NEXT_PUBLIC_APP_URL, SLACK_BOT_USER_ID]
+
+cost_estimate:
+  dev: "$5/month"
+  mvp_prod: "$30/month"
+  growth: "$91/month"

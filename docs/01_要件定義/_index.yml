@@ -1,0 +1,245 @@
+version: 2
+project_name: juku-ai-slack-bot
+phase: 1
+last_updated: "2026-06-15"
+
+features:
+  - id: FR-01
+    file: features/FR-01_slack-event-receiver.md
+    title: Slackイベント受信・署名検証
+    priority: P0
+    status: defined
+    related_users: []
+    related_screens: []
+
+  - id: FR-02
+    file: features/FR-02_mention-reaction-control.md
+    title: メンション・反応制御
+    priority: P0
+    status: defined
+    related_users: [U-01, U-02]
+    related_screens: []
+
+  - id: FR-03
+    file: features/FR-03_thread-session.md
+    title: スレッドセッション管理
+    priority: P0
+    status: defined
+    related_users: [U-01, U-02]
+    related_screens: []
+
+  - id: FR-04
+    file: features/FR-04_async-job.md
+    title: 非同期ジョブ処理
+    priority: P0
+    status: defined
+    related_users: []
+    related_screens: []
+
+  - id: FR-05
+    file: features/FR-05_ai-answer.md
+    title: AI回答生成
+    priority: P0
+    status: defined
+    related_users: [U-01, U-02]
+    related_screens: []
+
+  - id: FR-06
+    file: features/FR-06_image-attachment.md
+    title: 画像添付処理
+    priority: P0
+    status: defined
+    related_users: [U-01, U-02]
+    related_screens: []
+
+  - id: FR-07
+    file: features/FR-07_channel-binding.md
+    title: チャンネル・生徒紐付け
+    priority: P0
+    status: defined
+    related_users: [U-03]
+    related_screens: [SCR-05, SCR-06]
+
+  - id: FR-08
+    file: features/FR-08_report-management.md
+    title: レポート管理（データ層）
+    priority: P0
+    status: defined
+    related_users: [U-02, U-03]
+    related_screens: [SCR-07, SCR-08, SCR-09]
+
+  - id: FR-09
+    file: features/FR-09_student-profile.md
+    title: 生徒プロフィール要約
+    priority: P0
+    status: defined
+    related_users: [U-02, U-03]
+    related_screens: [SCR-04]
+
+  - id: FR-10
+    file: features/FR-10_rag-chunk-search.md
+    title: RAGチャンク検索
+    priority: P0
+    status: defined
+    related_users: []
+    related_screens: [SCR-09]
+
+  - id: FR-11
+    file: features/FR-11_error-logging.md
+    title: エラー分類・ログ
+    priority: P0
+    status: defined
+    related_users: []
+    related_screens: [SCR-11, SCR-12]
+
+  - id: FR-12
+    file: features/FR-12_usage-log.md
+    title: usage log
+    priority: P0
+    status: defined
+    related_users: []
+    related_screens: [SCR-10]
+
+  - id: FR-13
+    file: features/FR-13_admin-auth.md
+    title: 管理画面認証
+    priority: P0
+    status: defined
+    related_users: [U-02, U-03]
+    related_screens: [SCR-01]
+
+  - id: FR-14
+    file: features/FR-14_admin-persons.md
+    title: 生徒管理（管理画面）
+    priority: P0
+    status: defined
+    related_users: [U-02, U-03]
+    related_screens: [SCR-03, SCR-04]
+
+  - id: FR-15
+    file: features/FR-15_admin-channel-bindings.md
+    title: チャンネル紐付け管理（管理画面）
+    priority: P0
+    status: defined
+    related_users: [U-03]
+    related_screens: [SCR-05, SCR-06]
+
+  - id: FR-16
+    file: features/FR-16_admin-reports.md
+    title: レポート管理（管理画面）
+    priority: P0
+    status: defined
+    related_users: [U-02, U-03]
+    related_screens: [SCR-07, SCR-08, SCR-09]
+
+  - id: FR-17
+    file: features/FR-17_admin-errors.md
+    title: エラー管理（管理画面）
+    priority: P0
+    status: defined
+    related_users: [U-02, U-03]
+    related_screens: [SCR-11, SCR-12]
+
+  - id: FR-18
+    file: features/FR-18_admin-dashboard.md
+    title: 利用状況ダッシュボード
+    priority: P1
+    status: defined
+    related_users: [U-02, U-03]
+    related_screens: [SCR-10]
+
+  - id: FR-19
+    file: features/FR-19_admin-conversation-log.md
+    title: 会話ログ閲覧
+    priority: P1
+    status: defined
+    related_users: [U-02, U-03]
+    related_screens: [SCR-13]
+
+  - id: FR-20
+    file: features/FR-20_thread-summary.md
+    title: スレッド長期要約
+    priority: P1
+    status: defined
+    related_users: [U-01, U-02]
+    related_screens: []
+
+  - id: FR-21
+    file: features/FR-21_pdf-analysis.md
+    title: PDF全文解析
+    priority: P2
+    status: defined
+    related_users: [U-01, U-02]
+    related_screens: []
+
+  - id: FR-22
+    file: features/FR-22_multi-workspace.md
+    title: 複数workspace対応
+    priority: P3
+    status: defined
+    related_users: []
+    related_screens: []
+
+users:
+  - id: U-01
+    title: 生徒
+  - id: U-02
+    title: スタッフ
+  - id: U-03
+    title: 管理者
+  - id: U-AI
+    title: AI Coding Agent
+
+screens:
+  - id: SCR-01
+    title: ログイン
+    url: /login
+    auth_required: false
+  - id: SCR-02
+    title: ダッシュボード
+    url: /dashboard
+    auth_required: true
+  - id: SCR-03
+    title: 生徒一覧
+    url: /persons
+    auth_required: true
+  - id: SCR-04
+    title: 生徒詳細・編集
+    url: /persons/:id
+    auth_required: true
+  - id: SCR-05
+    title: チャンネル紐付け一覧
+    url: /bindings
+    auth_required: true
+  - id: SCR-06
+    title: チャンネル紐付け作成・編集
+    url: /bindings/new, /bindings/:id
+    auth_required: true
+  - id: SCR-07
+    title: レポート一覧
+    url: /reports
+    auth_required: true
+  - id: SCR-08
+    title: レポート作成・編集
+    url: /reports/new, /reports/:id/edit
+    auth_required: true
+  - id: SCR-09
+    title: レポート詳細
+    url: /reports/:id
+    auth_required: true
+  - id: SCR-10
+    title: 利用状況ダッシュボード
+    url: /dashboard/usage
+    auth_required: true
+  - id: SCR-11
+    title: エラー一覧
+    url: /errors
+    auth_required: true
+  - id: SCR-12
+    title: エラー詳細
+    url: /errors/:id
+    auth_required: true
+  - id: SCR-13
+    title: 会話ログ一覧
+    url: /logs
+    auth_required: true

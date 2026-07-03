@@ -1,0 +1,438 @@
+version: 3
+project_name: juku-ai-slack-bot
+phase: 2
+last_updated: "2026-06-20"
+
+tables:
+  - id: TBL-persons
+    related_features: [FR-07, FR-14]
+  - id: TBL-student_profiles
+    related_features: [FR-09]
+  - id: TBL-reports
+    related_features: [FR-08, FR-16]
+  - id: TBL-report_chunks
+    related_features: [FR-10]
+  - id: TBL-slack_channel_bindings
+    related_features: [FR-07, FR-15]
+  - id: TBL-slack_thread_sessions
+    related_features: [FR-03]
+  - id: TBL-slack_messages
+    related_features: [FR-03]
+  - id: TBL-attachments
+    related_features: [FR-06]
+  - id: TBL-ai_usage_logs
+    related_features: [FR-12]
+  - id: TBL-ai_error_logs
+    related_features: [FR-11, FR-17]
+  - id: TBL-slack_event_receipts
+    related_features: [FR-01]
+  - id: TBL-jobs
+    related_features: [FR-04]
+  - id: TBL-student_knowledge_states
+    related_features: [FR-23]
+  - id: TBL-student_episodic_memories
+    related_features: [FR-24]
+  - id: TBL-learning_concepts
+    related_features: [FR-25]
+
+endpoints:
+  - id: EP-01
+    method: POST
+    path: /api/slack/events
+    related_features: [FR-01, FR-02, FR-04]
+    auth_required: false
+  - id: EP-02
+    method: GET
+    path: /api/admin/persons
+    related_features: [FR-14]
+    auth_required: true
+  - id: EP-03
+    method: POST
+    path: /api/admin/persons
+    related_features: [FR-14]
+    auth_required: true
+  - id: EP-04
+    method: GET
+    path: /api/admin/persons/:id
+    related_features: [FR-14, FR-09]
+    auth_required: true
+  - id: EP-05
+    method: PATCH
+    path: /api/admin/persons/:id
+    related_features: [FR-14]
+    auth_required: true
+  - id: EP-06
+    method: PUT
+    path: /api/admin/persons/:id/profile
+    related_features: [FR-09]
+    auth_required: true
+  - id: EP-07
+    method: GET
+    path: /api/admin/channel-bindings
+    related_features: [FR-15]
+    auth_required: true
+  - id: EP-08
+    method: POST
+    path: /api/admin/channel-bindings
+    related_features: [FR-15]
+    auth_required: true
+  - id: EP-09
+    method: PATCH
+    path: /api/admin/channel-bindings/:id
+    related_features: [FR-15]
+    auth_required: true
+  - id: EP-10
+    method: GET
+    path: /api/admin/reports
+    related_features: [FR-16]
+    auth_required: true
+  - id: EP-11
+    method: POST
+    path: /api/admin/reports
+    related_features: [FR-16, FR-08]
+    auth_required: true
+  - id: EP-12
+    method: GET
+    path: /api/admin/reports/:id
+    related_features: [FR-16]
+    auth_required: true
+  - id: EP-13
+    method: PATCH
+    path: /api/admin/reports/:id
+    related_features: [FR-16]
+    auth_required: true
+  - id: EP-14
+    method: POST
+    path: /api/admin/reports/:id/rebuild-embeddings
+    related_features: [FR-10, FR-16]
+    auth_required: true
+    admin_only: true
+  - id: EP-15
+    method: GET
+    path: /api/admin/usage
+    related_features: [FR-18]
+    auth_required: true
+  - id: EP-16
+    method: GET
+    path: /api/admin/errors
+    related_features: [FR-17]
+    auth_required: true
+  - id: EP-17
+    method: PATCH
+    path: /api/admin/errors/:id
+    related_features: [FR-17]
+    auth_required: true
+  - id: EP-18
+    method: GET
+    path: /api/admin/threads
+    related_features: [FR-19]
+    auth_required: true
+
+nfr:
+  - id: NFR-PERF-01
+    title: Slack ACK応答時間
+    target: 3秒以内（必須）
+  - id: NFR-PERF-02
+    title: AI回答完了時間（テキスト）
+    target: 15秒以内
+  - id: NFR-SEC-01
+    title: Slack署名検証
+    target: 必須実装
+  - id: NFR-SEC-02
+    title: 生徒間データ越境防止
+    target: channel_id→person_id解決の徹底
+
+ac_test_mapping:
+  # FR-01: Slackイベント受信・署名検証
+  - ac_id: AC-01-01
+    test_type: unit
+    test_file: src/lib/slack/handleEvent.test.ts
+    status: pending
+  - ac_id: AC-01-02
+    test_type: integration
+    test_file: src/__tests__/integration/slack-events.test.ts
+    status: pending
+  - ac_id: AC-01-03
+    test_type: integration
+    test_file: src/__tests__/integration/slack-events.test.ts
+    status: pending
+  - ac_id: AC-01-04
+    test_type: integration
+    test_file: src/__tests__/integration/slack-events.test.ts
+    status: pending
+  - ac_id: AC-01-05
+    test_type: unit
+    test_file: src/lib/slack/verifySignature.test.ts
+    status: pending
+  - ac_id: AC-01-06
+    test_type: integration
+    test_file: src/__tests__/integration/slack-events.test.ts
+    status: pending
+  # FR-02: メンション・反応制御
+  - ac_id: AC-02-01
+    test_type: unit
+    test_file: src/lib/slack/shouldReact.test.ts
+    status: pending
+  - ac_id: AC-02-02
+    test_type: unit
+    test_file: src/lib/slack/shouldReact.test.ts
+    status: pending
+  - ac_id: AC-02-03
+    test_type: unit
+    test_file: src/lib/slack/shouldReact.test.ts
+    status: pending
+  - ac_id: AC-02-04
+    test_type: unit
+    test_file: src/lib/slack/shouldReact.test.ts
+    status: pending
+  - ac_id: AC-02-05
+    test_type: unit
+    test_file: src/lib/slack/shouldReact.test.ts
+    status: pending
+  - ac_id: AC-02-06
+    test_type: integration
+    test_file: src/__tests__/integration/channel-binding-lookup.test.ts
+    status: pending
+  # FR-03: スレッドセッション管理
+  - ac_id: AC-03-01
+    test_type: integration
+    test_file: src/__tests__/integration/thread-session.test.ts
+    status: pending
+  - ac_id: AC-03-02
+    test_type: integration
+    test_file: src/__tests__/integration/thread-session.test.ts
+    status: pending
+  - ac_id: AC-03-03
+    test_type: integration
+    test_file: src/__tests__/integration/thread-session.test.ts
+    status: pending
+  # FR-04: 非同期ジョブ処理
+  - ac_id: AC-04-01
+    test_type: integration
+    test_file: src/__tests__/integration/jobs.test.ts
+    status: pending
+  - ac_id: AC-04-02
+    test_type: integration
+    test_file: src/__tests__/integration/jobs.test.ts
+    status: pending
+  - ac_id: AC-04-03
+    test_type: unit
+    test_file: src/features/jobs/jobProcessor.test.ts
+    status: pending
+  - ac_id: AC-04-04
+    test_type: unit
+    test_file: src/features/jobs/jobProcessor.test.ts
+    status: pending
+  # FR-05: AI回答生成（適応型応答戦略）
+  - ac_id: AC-05-01
+    test_type: integration
+    test_file: src/__tests__/integration/ai-answer.test.ts
+    status: pending
+  - ac_id: AC-05-02
+    test_type: integration
+    test_file: src/__tests__/integration/ai-answer.test.ts
+    status: pending
+  - ac_id: AC-05-03
+    test_type: integration
+    test_file: src/__tests__/integration/ai-answer.test.ts
+    status: pending
+  - ac_id: AC-05-04
+    test_type: integration
+    test_file: src/__tests__/integration/ai-answer.test.ts
+    status: pending
+  - ac_id: AC-05-05
+    test_type: integration
+    test_file: src/__tests__/integration/ai-answer.test.ts
+    status: pending
+  - ac_id: AC-05-06
+    test_type: integration
+    test_file: src/__tests__/integration/ai-answer.test.ts
+    status: pending
+  - ac_id: AC-05-07
+    test_type: integration
+    test_file: src/__tests__/integration/ai-answer.test.ts
+    status: pending
+  - ac_id: AC-05-08
+    test_type: integration
+    test_file: src/__tests__/integration/ai-answer.test.ts
+    status: pending
+  - ac_id: AC-05-09
+    test_type: integration
+    test_file: src/__tests__/integration/ai-answer.test.ts
+    status: pending
+  # FR-06: 画像添付処理
+  - ac_id: AC-06-01
+    test_type: integration
+    test_file: src/__tests__/integration/image-attachment.test.ts
+    status: pending
+  - ac_id: AC-06-02
+    test_type: unit
+    test_file: src/features/files/imageProcessor.test.ts
+    status: pending
+  - ac_id: AC-06-03
+    test_type: unit
+    test_file: src/features/files/imageProcessor.test.ts
+    status: pending
+  - ac_id: AC-06-04
+    test_type: unit
+    test_file: src/features/files/imageProcessor.test.ts
+    status: pending
+  # FR-07: チャンネル・生徒紐付け
+  - ac_id: AC-07-01
+    test_type: unit
+    test_file: src/features/channels/channelBinding.test.ts
+    status: pending
+  - ac_id: AC-07-02
+    test_type: unit
+    test_file: src/features/channels/channelBinding.test.ts
+    status: pending
+  - ac_id: AC-07-03
+    test_type: unit
+    test_file: src/features/channels/channelBinding.test.ts
+    status: pending
+  # FR-08: レポート管理（データ層）
+  - ac_id: AC-08-01
+    test_type: integration
+    test_file: src/__tests__/integration/reports.test.ts
+    status: pending
+  - ac_id: AC-08-02
+    test_type: integration
+    test_file: src/__tests__/integration/reports.test.ts
+    status: pending
+  - ac_id: AC-08-03
+    test_type: unit
+    test_file: src/features/reports/reportManager.test.ts
+    status: pending
+  - ac_id: AC-08-04
+    test_type: unit
+    test_file: src/features/reports/reportManager.test.ts
+    status: pending
+  # FR-09: 生徒プロフィール要約
+  - ac_id: AC-09-01
+    test_type: integration
+    test_file: src/__tests__/integration/student-profile.test.ts
+    status: pending
+  - ac_id: AC-09-02
+    test_type: integration
+    test_file: src/__tests__/integration/ai-answer.test.ts
+    status: pending
+  - ac_id: AC-09-03
+    test_type: integration
+    test_file: src/__tests__/integration/ai-answer.test.ts
+    status: pending
+  # FR-10: RAGチャンク検索
+  - ac_id: AC-10-01
+    test_type: integration
+    test_file: src/__tests__/integration/rag-search.test.ts
+    status: pending
+  - ac_id: AC-10-02
+    test_type: integration
+    test_file: src/__tests__/integration/rag-search.test.ts
+    status: pending
+  - ac_id: AC-10-03
+    test_type: unit
+    test_file: src/features/rag/ragSearch.test.ts
+    status: pending
+  - ac_id: AC-10-04
+    test_type: unit
+    test_file: src/features/rag/ragSearch.test.ts
+    status: pending
+  # FR-11: エラー分類・ログ
+  - ac_id: AC-11-01
+    test_type: unit
+    test_file: src/lib/errors/errorHandler.test.ts
+    status: pending
+  - ac_id: AC-11-02
+    test_type: unit
+    test_file: src/lib/errors/errorHandler.test.ts
+    status: pending
+  # FR-12: usage log
+  - ac_id: AC-12-01
+    test_type: unit
+    test_file: src/features/usage/usageLog.test.ts
+    status: pending
+  - ac_id: AC-12-02
+    test_type: unit
+    test_file: src/features/usage/usageLog.test.ts
+    status: pending
+  # FR-13: 管理者認証
+  - ac_id: AC-13-01
+    test_type: e2e
+    test_file: tests/e2e/auth/login.spec.ts
+    status: pending
+  - ac_id: AC-13-02
+    test_type: e2e
+    test_file: tests/e2e/auth/login.spec.ts
+    status: pending
+  - ac_id: AC-13-03
+    test_type: e2e
+    test_file: tests/e2e/auth/login.spec.ts
+    status: pending
+  # FR-14: 生徒管理（管理画面）
+  - ac_id: AC-14-01
+    test_type: e2e
+    test_file: tests/e2e/admin/persons.spec.ts
+    status: pending
+  - ac_id: AC-14-02
+    test_type: e2e
+    test_file: tests/e2e/admin/persons.spec.ts
+    status: pending
+  - ac_id: AC-14-03
+    test_type: e2e
+    test_file: tests/e2e/admin/persons.spec.ts
+    status: pending
+  # FR-15: チャンネル紐付け管理（管理画面）
+  - ac_id: AC-15-01
+    test_type: e2e
+    test_file: tests/e2e/admin/channel-bindings.spec.ts
+    status: pending
+  - ac_id: AC-15-02
+    test_type: e2e
+    test_file: tests/e2e/admin/channel-bindings.spec.ts
+    status: pending
+  - ac_id: AC-15-03
+    test_type: e2e
+    test_file: tests/e2e/admin/channel-bindings.spec.ts
+    status: pending
+  # FR-16: レポート管理（管理画面）
+  - ac_id: AC-16-01
+    test_type: e2e
+    test_file: tests/e2e/admin/reports.spec.ts
+    status: pending
+  - ac_id: AC-16-02
+    test_type: e2e
+    test_file: tests/e2e/admin/reports.spec.ts
+    status: pending
+  - ac_id: AC-16-03
+    test_type: e2e
+    test_file: tests/e2e/admin/reports.spec.ts
+    status: pending
+  # FR-23: BKT知識状態追跡（P1）
+  - ac_id: AC-23-01
+    test_type: unit
+    test_file: src/features/bkt/bktTracker.test.ts
+    status: pending
+  - ac_id: AC-23-02
+    test_type: unit
+    test_file: src/features/bkt/bktTracker.test.ts
+    status: pending
+  - ac_id: AC-23-03
+    test_type: unit
+    test_file: src/features/bkt/bktTracker.test.ts
+    status: pending
+  - ac_id: AC-23-04
+    test_type: unit
+    test_file: src/features/bkt/evaluatorAgent.test.ts
+    status: pending
+  - ac_id: AC-23-05
+    test_type: integration
+    test_file: src/__tests__/integration/bkt-injection.test.ts
+    status: pending
+  - ac_id: AC-23-06
+    test_type: e2e
+    test_file: tests/e2e/admin/persons.spec.ts
+    status: pending
+  - ac_id: AC-23-07
+    test_type: unit
+    test_file: src/features/bkt/bktTracker.test.ts
+    status: pending

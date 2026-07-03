@@ -1,0 +1,12 @@
+ALTER TABLE persons                 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE student_profiles        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reports                 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE report_chunks           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE slack_channel_bindings  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE slack_thread_sessions   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE slack_messages          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE attachments             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_usage_logs           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_error_logs           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE slack_event_receipts    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE jobs                    ENABLE ROW LEVEL SECURITY;
