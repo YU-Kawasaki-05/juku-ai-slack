@@ -32,3 +32,8 @@ Sprint 2 時点でベンダー未確定（Anthropic / OpenRouter Fusion / DeepSe
 - ジョブ孤児化を回収する JOB_TIMEOUT スイーパ（FR-04）
 - event.user と person_id の突き合わせによる多層防御（Sprint 2 のデータ露出前）
 - FR-02 本文の CHANNEL_NOT_BOUND 文言を確定版に合わせて更新（ドキュメントドリフト）
+- **出力モデレーション（未成年向け）**: 安全ルールはシステムプロンプト頼み。プロンプトインジェクションで
+  ロール/安全指示を部分的に破られる余地がある（秘密漏洩リスクは低いがコンテンツ安全面は残存）。
+  Sprint 3+ で出力側の簡易フィルタ/モデレーション導入を検討。特に FR-09 の report 由来テキストが
+  profileText に流れる設計は間接インジェクション経路になり得る
+- **コスト上限（per-person / kill_switch）**: 質問長は上限化したが、per-person のレート/使用量上限は未実装

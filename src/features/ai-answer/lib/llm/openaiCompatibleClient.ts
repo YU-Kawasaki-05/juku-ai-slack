@@ -49,6 +49,10 @@ export function createOpenAiCompatibleClient(opts: OpenAiCompatibleOptions): Llm
         })
 
         const text = res.choices[0]?.message?.content ?? ''
+        // 空応答をそのまま Slack に投げると no_text で失敗し無応答になる → 明示エラーにする
+        if (!text.trim()) {
+          throw new AiResponseFailedError('LLM から空の応答が返りました')
+        }
         return {
           text,
           usage: {
@@ -64,11 +68,19 @@ export function createOpenAiCompatibleClient(opts: OpenAiCompatibleOptions): Llm
   }
 }
 
-function mapOpenAiError(err: unknown): Error {
-  // openai SDK は status を持つ APIError を投げる
+export function mapOpenAiError(err: unknown): Error {
+  // 既に AppError（空応答等）ならそのまま
+  if (
+    err instanceof AiResponseFailedError ||
+    err instanceof AiRateLimitedError ||
+    err instanceof AiTimeoutError
+  ) {
+    return err
+  }
+  // タイムアウトは name/status が付かない実装があるため instanceof で判定（openai v6 で確認済み）
+  if (err instanceof OpenAI.APIConnectionTimeoutError) return new AiTimeoutError()
   const status = (err as { status?: number })?.status
-  const name = (err as { name?: string })?.name
   if (status === 429) return new AiRateLimitedError(err)
-  if (name === 'APIConnectionTimeoutError' || status === 408) return new AiTimeoutError()
+  if (status === 408) return new AiTimeoutError()
   return new AiResponseFailedError(err)
 }

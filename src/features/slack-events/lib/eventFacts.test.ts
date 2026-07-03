@@ -3,7 +3,7 @@
  * @verifies FR-02, FR-03
  */
 import { describe, it, expect } from 'vitest'
-import { containsMention, deriveEventFacts } from './eventFacts'
+import { containsMention, deriveEventFacts, stripBotMention } from './eventFacts'
 import type { SlackMessageEvent } from '../types'
 
 const BOT = 'U_BOT'
@@ -23,6 +23,23 @@ describe('containsMention', () => {
   })
   it('前方一致の別ID <@U_BOTX> は誤検出しない', () => {
     expect(containsMention('<@U_BOTX> やあ', BOT)).toBe(false)
+  })
+})
+
+describe('stripBotMention', () => {
+  it('メンション記法を除去して整形する', () => {
+    expect(stripBotMention('<@U_BOT> 二次方程式は？', 'U_BOT')).toBe('二次方程式は？')
+  })
+  it('ラベル付き <@U|name> も除去', () => {
+    expect(stripBotMention('<@U_BOT|bot> やあ', 'U_BOT')).toBe('やあ')
+  })
+  it('複数メンションを除去', () => {
+    expect(stripBotMention('<@U_BOT> a <@U_BOT> b', 'U_BOT')).toBe('a b')
+  })
+  it('正規表現特殊文字を含む botUserId でも安全（エスケープ）', () => {
+    // 実運用IDでは起きないが、特殊文字が誤解釈されないこと
+    expect(stripBotMention('<@U.B+> hi', 'U.B+')).toBe('hi')
+    expect(stripBotMention('<@UXBY> hi', 'U.B+')).toBe('<@UXBY> hi')
   })
 })
 

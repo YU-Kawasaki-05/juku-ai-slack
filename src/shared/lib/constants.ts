@@ -39,6 +39,9 @@ export const P_MASTERY_SOCRATIC_MAX = 0.8
 /** Tutor 応答の最大出力トークン */
 export const TUTOR_MAX_TOKENS = 1200
 
+/** 質問本文の最大文字数（入力コスト暴走防止）。超過は TOKEN_BUDGET_EXCEEDED */
+export const MAX_QUESTION_CHARS = 6000
+
 /**
  * モデル別の料金（USD / 100万トークン）。プロバイダ非依存。
  * ここに無いモデルは cost=0 で記録される（トークン数は常に記録される）。

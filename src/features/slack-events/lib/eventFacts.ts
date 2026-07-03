@@ -33,8 +33,9 @@ export function containsMention(text: string | undefined, botUserId: string): bo
 /** Bot へのメンション表記 `<@U…>` / `<@U…|name>` を除去して整形する。FR-05 入力 */
 export function stripBotMention(text: string | undefined, botUserId: string): string {
   if (!text) return ''
+  const escaped = botUserId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   return text
-    .replace(new RegExp(`<@${botUserId}(\\|[^>]*)?>`, 'g'), ' ')
+    .replace(new RegExp(`<@${escaped}(\\|[^>]*)?>`, 'g'), ' ')
     .replace(/\s+/g, ' ')
     .trim()
 }

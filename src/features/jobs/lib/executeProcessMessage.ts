@@ -11,7 +11,8 @@
  */
 import type { ServerDb } from '@shared/types/db'
 import { env } from '@shared/lib/env'
-import { AiResponseFailedError } from '@shared/lib/errors/AppError'
+import { MAX_QUESTION_CHARS } from '@shared/lib/constants'
+import { AiResponseFailedError, TokenBudgetExceededError } from '@shared/lib/errors/AppError'
 import { getOrCreateSession } from '@features/thread-sessions'
 import { postMessage } from '@shared/lib/slack/client'
 import { stripBotMention } from '@features/slack-events'
@@ -44,10 +45,15 @@ export async function executeProcessSlackMessage(
 
   const question = stripBotMention(payload.text ?? '', env.SLACK_BOT_USER_ID)
 
+  // 入力コスト暴走防止（BR: TOKEN_BUDGET_EXCEEDED）。LLM 呼び出し前に打ち切る
+  if (question.length > MAX_QUESTION_CHARS) {
+    throw new TokenBudgetExceededError()
+  }
+
   // 生徒データ（他生徒を混入させない。person_id で厳密にフィルタ）
   const [profile, history] = await Promise.all([
     getStudentProfile(db, payload.personId),
-    loadThreadHistory(db, payload.channelId, payload.threadTs),
+    loadThreadHistory(db, payload.channelId, payload.threadTs, payload.personId),
   ])
   // Sprint 2 はトピック検出未実装のため topic=null（デフォルト P → direct）
   const pMastery = await getMastery(db, payload.personId, null)
@@ -70,37 +76,44 @@ export async function executeProcessSlackMessage(
     threadTs: payload.threadTs,
   })
 
-  // 会話履歴の保存（次ターンの文脈に使う）: 生徒質問 → AI 回答
-  await saveMessage(db, {
-    teamId: payload.teamId,
-    channelId: payload.channelId,
-    threadTs: payload.threadTs,
-    messageTs: payload.messageTs,
-    slackUserId: payload.userId,
-    personId: payload.personId,
-    role: 'user',
-    text: question,
-  })
-  await saveMessage(db, {
-    teamId: payload.teamId,
-    channelId: payload.channelId,
-    threadTs: payload.threadTs,
-    // AI 返信の message_ts は Slack 応答から取得できるが、Sprint 2 では messageTs に紐付けて記録
-    messageTs: `${payload.messageTs}-ai`,
-    personId: payload.personId,
-    role: 'assistant',
-    text: result.text,
-    ...(posted.ts ? { messageTs: posted.ts } : {}),
-  })
+  // 返信送信後の副作用はベストエフォート（ここで throw すると processJob が execute を
+  // 再実行し二重返信・二重課金になるため、失敗してもログのみで握りつぶす）
+  try {
+    // 会話履歴の保存（次ターンの文脈に使う）: 生徒質問 → AI 回答
+    await saveMessage(db, {
+      teamId: payload.teamId,
+      channelId: payload.channelId,
+      threadTs: payload.threadTs,
+      messageTs: payload.messageTs,
+      slackUserId: payload.userId,
+      personId: payload.personId,
+      role: 'user',
+      text: question,
+    })
+    await saveMessage(db, {
+      teamId: payload.teamId,
+      channelId: payload.channelId,
+      threadTs: payload.threadTs,
+      // AI 返信の ts（取得できれば）。無ければ元メッセージ ts に紐付けて衝突回避
+      messageTs: posted.ts || `${payload.messageTs}-ai`,
+      personId: payload.personId,
+      role: 'assistant',
+      text: result.text,
+    })
+  } catch (e) {
+    console.error('[executeProcessMessage] failed to persist thread messages:', e)
+  }
 
+  // コスト計算・記録は要求モデル（設定値）で行う。プロバイダのエコー名は名前空間/版差で
+  // MODEL_PRICING と一致しないことがあるため（logUsage は失敗を握りつぶす）
   await logUsage(db, {
     personId: payload.personId,
     channelId: payload.channelId,
     threadTs: payload.threadTs,
     messageTs: payload.messageTs,
-    model: result.model,
+    model,
     usage: result.usage,
-    estimatedCost: calculateCost(result.model, result.usage),
+    estimatedCost: calculateCost(model, result.usage),
     hasImage: false,
     latencyMs,
   })

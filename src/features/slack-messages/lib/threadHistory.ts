@@ -11,11 +11,15 @@
 import type { ServerDb } from '@shared/types/db'
 import type { LlmMessage } from '@features/ai-answer'
 
-/** 直近の履歴を古い順に返す（プロンプト用）。上限件数でトリム */
+/**
+ * 直近の履歴を古い順に返す（プロンプト用）。上限件数でトリム。
+ * person_id でも絞り、チャンネル付け替え等で別生徒の履歴が混入しないようにする（BR-05-11）。
+ */
 export async function loadThreadHistory(
   db: ServerDb,
   channelId: string,
   threadTs: string,
+  personId: string,
   limit = 20,
 ): Promise<LlmMessage[]> {
   const { data, error } = await db
@@ -23,6 +27,7 @@ export async function loadThreadHistory(
     .select('role, text, created_at')
     .eq('slack_channel_id', channelId)
     .eq('thread_ts', threadTs)
+    .eq('person_id', personId)
     .order('created_at', { ascending: false })
     .limit(limit)
 

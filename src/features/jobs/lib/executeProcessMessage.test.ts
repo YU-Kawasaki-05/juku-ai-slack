@@ -101,4 +101,29 @@ describe('executeProcessSlackMessage', () => {
     await executeProcessSlackMessage(db, payload)
     expect(mocks.generate.mock.calls[0][0].system).toContain('direct')
   })
+
+  it('履歴取得は person_id でも絞る（BR-05-11）', async () => {
+    await executeProcessSlackMessage(db, payload)
+    expect(mocks.loadThreadHistory).toHaveBeenCalledWith(
+      db,
+      'C1',
+      '100.1',
+      payload.personId,
+    )
+  })
+
+  it('質問が長すぎる場合は LLM を呼ばず TokenBudgetExceededError（コスト暴走防止）', async () => {
+    const long = { ...payload, text: `<@U_BOT> ${'あ'.repeat(7000)}` }
+    await expect(executeProcessSlackMessage(db, long)).rejects.toMatchObject({
+      code: 'TOKEN_BUDGET_EXCEEDED',
+    })
+    expect(mocks.generate).not.toHaveBeenCalled()
+    expect(mocks.postMessage).not.toHaveBeenCalled()
+  })
+
+  it('返信後の保存失敗はベストエフォート（throw せず＝再返信を招かない）', async () => {
+    mocks.saveMessage.mockRejectedValue(new Error('db blip'))
+    await expect(executeProcessSlackMessage(db, payload)).resolves.toBeUndefined()
+    expect(mocks.postMessage).toHaveBeenCalledOnce()
+  })
 })
