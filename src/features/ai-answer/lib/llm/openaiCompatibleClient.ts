@@ -1,0 +1,74 @@
+/** @file
+ * 機能: OpenAI 互換 Chat Completions API を叩く LlmClient アダプタ
+ *       （OpenRouter / DeepSeek / OpenAI など baseURL 切替で共通利用）
+ * 入力: apiKey, baseURL / generate(params)
+ * 出力: LlmResult
+ * 例外: レート制限→AiRateLimitedError / タイムアウト→AiTimeoutError / その他→AiResponseFailedError
+ * 依存: openai npm SDK
+ * 副作用: 外部 LLM API 呼び出し
+ * セキュリティ: API キーはサーバー環境変数のみ。応答をそのまま Slack に出す前に呼び出し側で整形
+ * @implements FR-05
+ */
+import OpenAI from 'openai'
+import {
+  AiRateLimitedError,
+  AiTimeoutError,
+  AiResponseFailedError,
+} from '@shared/lib/errors/AppError'
+import type { LlmClient, LlmGenerateParams, LlmResult, LlmMessage } from './types'
+
+export interface OpenAiCompatibleOptions {
+  apiKey: string
+  baseURL: string
+  /** リクエストタイムアウト（ミリ秒）。既定 60 秒 */
+  timeoutMs?: number
+}
+
+function toChatMessages(system: string | undefined, messages: LlmMessage[]) {
+  const out: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = []
+  if (system) out.push({ role: 'system', content: system })
+  for (const m of messages) out.push({ role: m.role, content: m.content })
+  return out
+}
+
+export function createOpenAiCompatibleClient(opts: OpenAiCompatibleOptions): LlmClient {
+  const client = new OpenAI({
+    apiKey: opts.apiKey,
+    baseURL: opts.baseURL,
+    timeout: opts.timeoutMs ?? 60_000,
+  })
+
+  return {
+    async generate(params: LlmGenerateParams): Promise<LlmResult> {
+      try {
+        const res = await client.chat.completions.create({
+          model: params.model,
+          messages: toChatMessages(params.system, params.messages),
+          max_tokens: params.maxTokens,
+          temperature: params.temperature,
+        })
+
+        const text = res.choices[0]?.message?.content ?? ''
+        return {
+          text,
+          usage: {
+            inputTokens: res.usage?.prompt_tokens ?? 0,
+            outputTokens: res.usage?.completion_tokens ?? 0,
+          },
+          model: res.model ?? params.model,
+        }
+      } catch (err) {
+        throw mapOpenAiError(err)
+      }
+    },
+  }
+}
+
+function mapOpenAiError(err: unknown): Error {
+  // openai SDK は status を持つ APIError を投げる
+  const status = (err as { status?: number })?.status
+  const name = (err as { name?: string })?.name
+  if (status === 429) return new AiRateLimitedError(err)
+  if (name === 'APIConnectionTimeoutError' || status === 408) return new AiTimeoutError()
+  return new AiResponseFailedError(err)
+}
