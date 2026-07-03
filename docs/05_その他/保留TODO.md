@@ -36,4 +36,8 @@ Sprint 2 時点でベンダー未確定（Anthropic / OpenRouter Fusion / DeepSe
   ロール/安全指示を部分的に破られる余地がある（秘密漏洩リスクは低いがコンテンツ安全面は残存）。
   Sprint 3+ で出力側の簡易フィルタ/モデレーション導入を検討。特に FR-09 の report 由来テキストが
   profileText に流れる設計は間接インジェクション経路になり得る
-- **コスト上限（per-person / kill_switch）**: 質問長は上限化したが、per-person のレート/使用量上限は未実装
+- **コスト上限（per-person / kill_switch）**: 質問長は上限化したが、per-person のレート/使用量上限は未実装。1メッセージ=最大 embedding1+Tutor1+Evaluator1〜2 の LLM 課金。DEC-15 kill_switch は未コード化
+- **質問時トピック検出**（FR-05/FR-23）: BKT は topic 別に書込済みだが、次回質問でその topic を特定して selectMode に反映する処理が未実装。現状は knowledgeSummary をプロンプト注入して LLM に適応させ、モード選択自体は P=0.2→direct 固定。あわせてドロップバック（AC-05-04）も要 Evaluator 連携
+- **applyEvaluation の read→upsert 原子性**: 同一(person,topic)の同時評価で lost-update の可能性（発生確率低）。ON CONFLICT DO UPDATE 式 or RPC で原子化を検討
+- **ワークド例題フェーディング F1〜F4**（FR-26, P1）
+- **レポート保存時の embedding 自動再生成トリガ**（BR-10-07/DEC-14）→ 管理画面レポート CRUD（Sprint 5/6）で `rebuildReportEmbeddings` を接続
