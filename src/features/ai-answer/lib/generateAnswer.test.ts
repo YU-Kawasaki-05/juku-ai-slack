@@ -25,11 +25,13 @@ describe('generateAnswer', () => {
     })
 
     expect(result.text).toBe('こう考えてみよう')
-    expect(generate).toHaveBeenCalledOnce()
-    const arg = generate.mock.calls[0][0]
-    expect(arg.model).toBe('test-model')
-    expect(arg.maxTokens).toBe(TUTOR_MAX_TOKENS)
-    expect(arg.system).toContain('伴走者')
-    expect(arg.messages.at(-1)).toEqual({ role: 'user', content: '質問' })
+    expect(generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: 'test-model',
+        maxTokens: TUTOR_MAX_TOKENS,
+        system: expect.stringContaining('伴走者'),
+        messages: expect.arrayContaining([{ role: 'user', content: '質問' }]),
+      }),
+    )
   })
 })

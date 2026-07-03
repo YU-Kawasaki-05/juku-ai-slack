@@ -9,9 +9,10 @@
  * @implements FR-04, FR-01, AC-04-02, AC-04-03, AC-04-04, AC-01-06
  */
 import type { ServerDb, TablesUpdate } from '@shared/types/db'
-import { addReaction, removeReaction } from '@shared/lib/slack/client'
+import { addReaction, removeReaction, postMessage } from '@shared/lib/slack/client'
 import { JOB_RETRY_BASE_DELAY_MS, THINKING_REACTION } from '@shared/lib/constants'
 import { AppError } from '@shared/lib/errors/AppError'
+import { getUserFacingMessage, isSilentError } from '@shared/lib/errors/userMessages'
 import { logError } from '@features/error-logs'
 import { processSlackMessagePayloadSchema, type ProcessSlackMessagePayload } from '../types'
 import { executeProcessSlackMessage } from './executeProcessMessage'
@@ -35,7 +36,7 @@ const defaultSleep = (ms: number): Promise<void> => new Promise((r) => setTimeou
 const defaultClock = (): string => new Date().toISOString()
 
 /** リアクション操作はサイレント（BR-01-06） */
-async function safeReaction(fn: () => Promise<unknown>): Promise<void> {
+async function safeSlackCall(fn: () => Promise<unknown>): Promise<void> {
   try {
     await fn()
   } catch {
@@ -100,7 +101,7 @@ export async function processJob(
   const payload = parsed.data
   const maxAttempts = claimed.max_attempts
 
-  await safeReaction(() =>
+  await safeSlackCall(() =>
     addReactionFn({ channel: payload.channelId, timestamp: payload.messageTs, name: THINKING_REACTION }),
   )
 
@@ -151,9 +152,20 @@ export async function processJob(
       retryable: false,
       rawError: lastError,
     })
+
+    // FR-05 エラーケース: 非サイレントなエラーはユーザー向け文言を Slack に返す（内部詳細は出さない）
+    if (!isSilentError(code)) {
+      await safeSlackCall(() =>
+        postMessage({
+          channel: payload.channelId,
+          text: getUserFacingMessage(code),
+          threadTs: payload.threadTs,
+        }),
+      )
+    }
     return { status: 'failed', attempts: maxAttempts }
   } finally {
-    await safeReaction(() =>
+    await safeSlackCall(() =>
       removeReactionFn({
         channel: payload.channelId,
         timestamp: payload.messageTs,
