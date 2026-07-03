@@ -1,1 +1,6 @@
 export { getMastery } from './lib/getMastery'
+export { updateBKT, applyForgettingDecay } from './lib/bkt'
+export { evaluationSchema } from './lib/evaluationSchema'
+export type { Evaluation, EvaluationSignal } from './lib/evaluationSchema'
+export { applyEvaluation } from './lib/applyEvaluation'
+export type { ApplyResult, ApplySkipReason } from './lib/applyEvaluation'

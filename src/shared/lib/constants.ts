@@ -42,6 +42,25 @@ export const TUTOR_MAX_TOKENS = 1200
 /** 質問本文の最大文字数（入力コスト暴走防止）。超過は TOKEN_BUDGET_EXCEEDED */
 export const MAX_QUESTION_CHARS = 6000
 
+// --- BKT 知識追跡（FR-23 / DEC-24）---
+
+/** BKT 学習率 P(T) */
+export const BKT_P_LEARN = 0.15
+/** BKT ゲス率 P(G) */
+export const BKT_P_GUESS = 0.2
+/** BKT スリップ率 P(S) */
+export const BKT_P_SLIP = 0.1
+/** 習得済み判定の P(mastery) 閾値 */
+export const BKT_MASTERED_THRESHOLD = 0.95
+/** 習得済み判定に必要な連続正解数 */
+export const BKT_MASTERED_STREAK = 3
+/** Evaluator の確信度がこの値未満なら DB 書き込みしない（BR-23-03, AC-23-07） */
+export const EVAL_MIN_CONFIDENCE = 0.5
+/** forgetting decay を適用する最小経過日数（BR-23-05） */
+export const FORGETTING_DECAY_MIN_DAYS = 14
+/** トピック特定不能を表す ID（この場合 BKT 更新をスキップ） */
+export const UNKNOWN_TOPIC = 'unknown'
+
 /**
  * モデル別の料金（USD / 100万トークン）。プロバイダ非依存。
  * ここに無いモデルは cost=0 で記録される（トークン数は常に記録される）。
