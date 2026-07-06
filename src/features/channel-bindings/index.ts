@@ -1,2 +1,7 @@
 export { lookupBinding } from './lib/lookupBinding'
 export type { LookupBindingResult } from './lib/lookupBinding'
+export { getBindings, getBinding } from './lib/getBindings'
+export type { BindingWithPerson } from './lib/getBindings'
+export { createBindingAction, updateBindingAction } from './actions/bindingActions'
+export { bindingCreateSchema, bindingUpdateSchema } from './schemas/bindingSchema'
+export type { BindingCreateInput, BindingUpdateInput } from './schemas/bindingSchema'
