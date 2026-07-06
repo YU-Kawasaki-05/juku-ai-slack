@@ -54,6 +54,8 @@ export function createMockDb(handlers: MockDbHandlers = {}) {
 
   const builder = {
     select: vi.fn(() => builder),
+    order: vi.fn(() => builder),
+    limit: vi.fn(() => builder),
     eq: vi.fn((column: string, value: unknown) => {
       calls.eq.push([column, value])
       return builder
