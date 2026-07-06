@@ -9,6 +9,7 @@
  * @implements FR-06, AC-06-01, AC-06-03, AC-06-04, BR-06-02, BR-06-03
  */
 import type { ServerDb } from '@shared/types/db'
+import { ImageTooLargeError } from '@shared/lib/errors/AppError'
 import { validateAttachment } from './validateAttachment'
 import { downloadSlackFile, toDataUrl, type DownloadedFile } from './downloadSlackFile'
 import { storeAttachment } from './storeAttachment'
@@ -64,8 +65,9 @@ export async function processAttachments(
     let downloaded: DownloadedFile
     try {
       downloaded = await download(file.urlPrivate, params.botToken)
-    } catch {
-      errorCodes.push('SLACK_FILE_DOWNLOAD_FAILED')
+    } catch (err) {
+      // DL 時にサイズ超過を検出した場合は too_large として区別
+      errorCodes.push(err instanceof ImageTooLargeError ? 'IMAGE_TOO_LARGE' : 'SLACK_FILE_DOWNLOAD_FAILED')
       continue
     }
 

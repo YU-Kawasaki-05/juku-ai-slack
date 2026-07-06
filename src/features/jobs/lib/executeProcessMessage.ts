@@ -81,9 +81,14 @@ export async function executeProcessSlackMessage(
     }
     // 画像のみのメッセージで全画像が失敗 → ユーザーに案内して終了（テキストがあれば継続）
     if (dataUrls.length === 0 && !question && errorCodes.length > 0) {
+      // 「テキストで回答する」旨の IMAGE_PROCESSING_FAILED 文言は返答しない本分岐と矛盾するため、
+      // サイズ超過を優先し、それ以外は取得失敗（再送を促す）文言にする
+      const notifyCode = errorCodes.includes('IMAGE_TOO_LARGE')
+        ? 'IMAGE_TOO_LARGE'
+        : 'SLACK_FILE_DOWNLOAD_FAILED'
       await postMessage({
         channel: payload.channelId,
-        text: getUserFacingMessage(errorCodes[0]),
+        text: getUserFacingMessage(notifyCode),
         threadTs: payload.threadTs,
       })
       return
@@ -92,6 +97,11 @@ export async function executeProcessSlackMessage(
 
   // 画像がある質問は Vision 対応モデルを使う（BR-05-15）。未設定ならデフォルトにフォールバック
   const useModel = imageDataUrls.length > 0 ? (env.LLM_MODEL_COMPLEX ?? model) : model
+  if (imageDataUrls.length > 0 && !env.LLM_MODEL_COMPLEX) {
+    console.warn(
+      '[executeProcessMessage] 画像ありだが LLM_MODEL_COMPLEX 未設定。Vision 非対応モデルだと画像が無視され得る',
+    )
+  }
 
   // 生徒データ（他生徒を混入させない。person_id で厳密にフィルタ）
   const [profile, history, knowledgeSummary] = await Promise.all([
@@ -139,7 +149,9 @@ export async function executeProcessSlackMessage(
       slackUserId: payload.userId,
       personId: payload.personId,
       role: 'user',
-      text: question,
+      // 画像のみ（テキスト空）でも履歴に残るようプレースホルダを入れる（loadThreadHistory は空 text を除外するため）
+      text: question || (imageDataUrls.length > 0 ? '[画像]' : ''),
+      hasAttachments: imageDataUrls.length > 0,
     })
     await saveMessage(db, {
       teamId: payload.teamId,

@@ -19,6 +19,7 @@ import {
   recordEventReceipt,
   deleteReceipt,
   deriveEventFacts,
+  stripBotMention,
   shouldReact,
   slackEnvelopeSchema,
   slackMessageEventSchema,
@@ -141,6 +142,35 @@ export async function POST(req: Request): Promise<NextResponse> {
     })
 
     if (decision.action === 'ignore') {
+      return ok()
+    }
+
+    // AC-06-02: Bot に投げた（反応対象の）メッセージが「対応外ファイルのみ・実質テキストなし」なら
+    // UNSUPPORTED_FILE_TYPE を返す。無言のファイル投下（非反応）は既に ignore 済みで対象外（BR-06-08 と両立）
+    const hasFiles = (messageEvent.files?.length ?? 0) > 0
+    const strippedText = stripBotMention(facts.text, env.SLACK_BOT_USER_ID)
+    if (
+      decision.action === 'process' &&
+      hasFiles &&
+      facts.images.length === 0 &&
+      strippedText.length === 0
+    ) {
+      const unsupportedMsg = getUserFacingMessage('UNSUPPORTED_FILE_TYPE')
+      after(async () => {
+        try {
+          await postMessage({ channel: messageEvent.channel, text: unsupportedMsg, threadTs: facts.threadTs })
+        } catch {
+          // SLACK_POST_FAILED はサイレント
+        }
+        await logError(db, {
+          code: 'UNSUPPORTED_FILE_TYPE',
+          severity: 'warning',
+          channelId: messageEvent.channel,
+          threadTs: facts.threadTs,
+          messageTs: facts.messageTs,
+          userFacingMessage: unsupportedMsg,
+        })
+      })
       return ok()
     }
 

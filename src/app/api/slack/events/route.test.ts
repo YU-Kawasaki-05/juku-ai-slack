@@ -187,6 +187,26 @@ describe('POST /api/slack/events', () => {
     expect(mocks.enqueueJob).not.toHaveBeenCalled()
   })
 
+  it('対応外ファイルのみ+メンション（実質テキストなし）は UNSUPPORTED を返しジョブ登録しない（AC-06-02）', async () => {
+    const res = await POST(
+      signedRequest(
+        messageEvent({
+          subtype: 'file_share',
+          text: '<@U_BOT>',
+          files: [{ id: 'F1', mimetype: 'application/pdf', url_private: 'https://slack/F1', name: 'doc.pdf' }],
+        }),
+      ),
+    )
+    expect(res.status).toBe(200)
+    expect(mocks.enqueueJob).not.toHaveBeenCalled()
+    await flushAfter()
+    expect(mocks.postMessage).toHaveBeenCalledOnce()
+    expect(mocks.logError).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ code: 'UNSUPPORTED_FILE_TYPE' }),
+    )
+  })
+
   it('画像添付(file_share)+メンションはジョブ登録し payload.files に対応画像を積む（FR-06）', async () => {
     const res = await POST(
       signedRequest(

@@ -37,19 +37,23 @@ export async function storeAttachment(db: ServerDb, params: StoreParams): Promis
     .upload(storagePath, params.bytes, { contentType: params.mimetype, upsert: true })
   if (uploadError) throw new ImageProcessingFailedError(uploadError)
 
-  const { error: insertError } = await db.from('attachments').insert({
-    slack_file_id: params.slackFileId,
-    slack_channel_id: params.channelId,
-    thread_ts: params.threadTs,
-    message_ts: params.messageTs,
-    person_id: params.personId,
-    file_type: ext,
-    mime_type: params.mimetype,
-    original_name: params.originalName,
-    storage_path: storagePath,
-    file_size: params.bytes.byteLength,
-    status: 'stored',
-  })
+  // ジョブ再試行時の二重挿入を避けるため slack_file_id で upsert（BR-06。冪等）
+  const { error: insertError } = await db.from('attachments').upsert(
+    {
+      slack_file_id: params.slackFileId,
+      slack_channel_id: params.channelId,
+      thread_ts: params.threadTs,
+      message_ts: params.messageTs,
+      person_id: params.personId,
+      file_type: ext,
+      mime_type: params.mimetype,
+      original_name: params.originalName,
+      storage_path: storagePath,
+      file_size: params.bytes.byteLength,
+      status: 'stored',
+    },
+    { onConflict: 'slack_file_id' },
+  )
   if (insertError) throw new ImageProcessingFailedError(insertError)
 
   return storagePath
