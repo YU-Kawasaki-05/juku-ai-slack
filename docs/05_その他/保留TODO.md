@@ -41,3 +41,6 @@ Sprint 2 時点でベンダー未確定（Anthropic / OpenRouter Fusion / DeepSe
 - **applyEvaluation の read→upsert 原子性**: 同一(person,topic)の同時評価で lost-update の可能性（発生確率低）。ON CONFLICT DO UPDATE 式 or RPC で原子化を検討
 - **ワークド例題フェーディング F1〜F4**（FR-26, P1）
 - **レポート保存時の embedding 自動再生成トリガ**（BR-10-07/DEC-14）→ 管理画面レポート CRUD（Sprint 5/6）で `rebuildReportEmbeddings` を接続
+- **画像のマジックバイト検証**（FR-06）: 現状は Slack 申告 MIME を信頼（serve-back 経路なしのため実害小）。将来配信する場合は先頭バイト検証を追加
+- **テキスト+画像失敗時の通知**（FR-06）: テキストがある場合は画像失敗を Slack に通知せずテキストのみ回答（ログには記録）。混在時の UX 方針は要確認
+- **Vision モデル必須化**（BR-05-15）: 画像あり + `LLM_MODEL_COMPLEX` 未設定時はデフォルト（非Vision可能性）にフォールバックし警告ログのみ。起動時バリデーションで必須化を検討

@@ -12,6 +12,20 @@ export const slackUrlVerificationSchema = z.object({
   challenge: z.string(),
 })
 
+/** Slack ファイルオブジェクト（画像添付。FR-06） */
+export const slackFileSchema = z
+  .object({
+    id: z.string(),
+    name: z.string().optional(),
+    mimetype: z.string().optional(),
+    filetype: z.string().optional(),
+    size: z.number().optional(),
+    url_private: z.string().optional(),
+  })
+  .passthrough()
+
+export type SlackFile = z.infer<typeof slackFileSchema>
+
 /** message イベント本体。未知フィールドは許容（passthrough） */
 export const slackMessageEventSchema = z
   .object({
@@ -23,6 +37,7 @@ export const slackMessageEventSchema = z
     thread_ts: z.string().optional(),
     bot_id: z.string().optional(),
     subtype: z.string().optional(),
+    files: z.array(slackFileSchema).optional(),
   })
   .passthrough()
 
@@ -55,6 +70,8 @@ export interface ShouldReactInput {
   subtype: string | null | undefined
   /** メッセージ本文。BR-02-06 */
   text: string | null | undefined
+  /** 対応画像を含むか（テキストなしでも画像があれば反応対象）。FR-06 BR-06-08 */
+  hasImage: boolean
   /** Bot への明示的メンションを含むか。BR-02-03 */
   hasMention: boolean
   /** スレッド内返信か（thread_ts が存在し、かつ親と異なる）。BR-02-04 */

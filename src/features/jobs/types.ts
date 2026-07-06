@@ -25,6 +25,18 @@ export const processSlackMessagePayloadSchema = z.object({
   reportId: z.string().uuid().nullable(),
   /** 重複判定・トレース用 */
   eventId: z.string(),
+  /** 添付画像（対応 MIME・最大3枚）。FR-06。raw body は含めない */
+  files: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string().nullable(),
+        mimetype: z.string(),
+        size: z.number().nullable(),
+        urlPrivate: z.string(),
+      }),
+    )
+    .optional(),
 })
 
 export type ProcessSlackMessagePayload = z.infer<typeof processSlackMessagePayloadSchema>

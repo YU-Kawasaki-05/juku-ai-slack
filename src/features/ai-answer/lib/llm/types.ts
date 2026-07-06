@@ -7,9 +7,15 @@
  */
 export type LlmRole = 'system' | 'user' | 'assistant'
 
+/** マルチモーダルのコンテンツパーツ（Vision, FR-06） */
+export type LlmContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image'; dataUrl: string }
+
 export interface LlmMessage {
   role: LlmRole
-  content: string
+  /** 文字列（テキストのみ）または パーツ配列（画像含む） */
+  content: string | LlmContentPart[]
 }
 
 export interface LlmGenerateParams {

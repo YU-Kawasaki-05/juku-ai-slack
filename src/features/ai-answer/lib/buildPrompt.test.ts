@@ -39,6 +39,24 @@ describe('buildPrompt', () => {
     expect(without.system).not.toContain('この生徒のメモ')
   })
 
+  it('画像があれば user メッセージをテキスト+画像パーツにする（FR-06）', () => {
+    const { messages } = buildPrompt({
+      ...base,
+      mode: 'direct',
+      imageDataUrls: ['data:image/png;base64,AAA', 'data:image/png;base64,BBB'],
+    })
+    const last = messages.at(-1)!
+    expect(Array.isArray(last.content)).toBe(true)
+    const parts = last.content as Array<{ type: string; text?: string; dataUrl?: string }>
+    expect(parts[0]).toEqual({ type: 'text', text: base.question })
+    expect(parts.filter((p) => p.type === 'image')).toHaveLength(2)
+  })
+
+  it('画像なしなら user content は文字列', () => {
+    const { messages } = buildPrompt({ ...base, mode: 'direct' })
+    expect(typeof messages.at(-1)!.content).toBe('string')
+  })
+
   it('履歴の後に現在の質問を user として積む', () => {
     const history: LlmMessage[] = [
       { role: 'user', content: '前の質問' },

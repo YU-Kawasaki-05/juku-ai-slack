@@ -13,7 +13,9 @@ import type { ServerDb } from '@shared/types/db'
 import { env } from '@shared/lib/env'
 import { MAX_QUESTION_CHARS } from '@shared/lib/constants'
 import { AiResponseFailedError, TokenBudgetExceededError } from '@shared/lib/errors/AppError'
+import { getUserFacingMessage } from '@shared/lib/errors/userMessages'
 import { getOrCreateSession } from '@features/thread-sessions'
+import { processAttachments } from '@features/image-attachments'
 import { postMessage } from '@shared/lib/slack/client'
 import { stripBotMention } from '@features/slack-events'
 import { getStudentProfile } from '@features/student-profiles'
@@ -53,6 +55,54 @@ export async function executeProcessSlackMessage(
     throw new TokenBudgetExceededError()
   }
 
+  // 画像添付処理（FR-06）: DL→保存→Vision 用 data URL
+  const files = payload.files ?? []
+  let imageDataUrls: string[] = []
+  if (files.length > 0) {
+    const { dataUrls, errorCodes } = await processAttachments(db, {
+      personId: payload.personId,
+      channelId: payload.channelId,
+      threadTs: payload.threadTs,
+      messageTs: payload.messageTs,
+      botToken: env.SLACK_BOT_TOKEN,
+      files,
+    })
+    imageDataUrls = dataUrls
+    for (const code of errorCodes) {
+      await logError(db, {
+        code,
+        severity: 'warning',
+        personId: payload.personId,
+        channelId: payload.channelId,
+        threadTs: payload.threadTs,
+        messageTs: payload.messageTs,
+        internalMessage: `image processing: ${code}`,
+      })
+    }
+    // 画像のみのメッセージで全画像が失敗 → ユーザーに案内して終了（テキストがあれば継続）
+    if (dataUrls.length === 0 && !question && errorCodes.length > 0) {
+      // 「テキストで回答する」旨の IMAGE_PROCESSING_FAILED 文言は返答しない本分岐と矛盾するため、
+      // サイズ超過を優先し、それ以外は取得失敗（再送を促す）文言にする
+      const notifyCode = errorCodes.includes('IMAGE_TOO_LARGE')
+        ? 'IMAGE_TOO_LARGE'
+        : 'SLACK_FILE_DOWNLOAD_FAILED'
+      await postMessage({
+        channel: payload.channelId,
+        text: getUserFacingMessage(notifyCode),
+        threadTs: payload.threadTs,
+      })
+      return
+    }
+  }
+
+  // 画像がある質問は Vision 対応モデルを使う（BR-05-15）。未設定ならデフォルトにフォールバック
+  const useModel = imageDataUrls.length > 0 ? (env.LLM_MODEL_COMPLEX ?? model) : model
+  if (imageDataUrls.length > 0 && !env.LLM_MODEL_COMPLEX) {
+    console.warn(
+      '[executeProcessMessage] 画像ありだが LLM_MODEL_COMPLEX 未設定。Vision 非対応モデルだと画像が無視され得る',
+    )
+  }
+
   // 生徒データ（他生徒を混入させない。person_id で厳密にフィルタ）
   const [profile, history, knowledgeSummary] = await Promise.all([
     getStudentProfile(db, payload.personId),
@@ -76,7 +126,8 @@ export async function executeProcessSlackMessage(
     history,
     ragChunks,
     knowledgeSummary,
-    model,
+    imageDataUrls,
+    model: useModel,
   })
   const latencyMs = Date.now() - startedAt
 
@@ -98,7 +149,9 @@ export async function executeProcessSlackMessage(
       slackUserId: payload.userId,
       personId: payload.personId,
       role: 'user',
-      text: question,
+      // 画像のみ（テキスト空）でも履歴に残るようプレースホルダを入れる（loadThreadHistory は空 text を除外するため）
+      text: question || (imageDataUrls.length > 0 ? '[画像]' : ''),
+      hasAttachments: imageDataUrls.length > 0,
     })
     await saveMessage(db, {
       teamId: payload.teamId,
@@ -121,10 +174,10 @@ export async function executeProcessSlackMessage(
     channelId: payload.channelId,
     threadTs: payload.threadTs,
     messageTs: payload.messageTs,
-    model,
+    model: useModel,
     usage: result.usage,
-    estimatedCost: calculateCost(model, result.usage),
-    hasImage: false,
+    estimatedCost: calculateCost(useModel, result.usage),
+    hasImage: imageDataUrls.length > 0,
     latencyMs,
   })
 
@@ -170,7 +223,9 @@ async function runEvaluator(
   model: string,
 ): Promise<void> {
   // 生徒返信が答える対象＝直前の assistant（Bot の確認質問）。無ければ評価しない
-  const botQuestion = [...history].reverse().find((m) => m.role === 'assistant')?.content
+  const priorAssistant = [...history].reverse().find((m) => m.role === 'assistant')?.content
+  // 履歴の assistant はテキストのみ（Bot 返信）。念のため文字列以外は対象外
+  const botQuestion = typeof priorAssistant === 'string' ? priorAssistant : ''
   if (!botQuestion) return
 
   try {

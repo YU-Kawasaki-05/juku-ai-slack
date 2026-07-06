@@ -7,7 +7,8 @@
  * セキュリティ: メンション判定は Bot の User ID 完全一致で行う
  * @implements FR-02, FR-03
  */
-import type { SlackMessageEvent } from '../types'
+import { SUPPORTED_IMAGE_MIMETYPES, MAX_IMAGES_PER_MESSAGE } from '@shared/lib/constants'
+import type { SlackMessageEvent, SlackFile } from '../types'
 
 export interface EventFacts {
   hasBotId: boolean
@@ -19,6 +20,18 @@ export interface EventFacts {
   threadTs: string
   /** 受信メッセージ自身の ts */
   messageTs: string
+  /** 対応 MIME の画像（最大 MAX_IMAGES_PER_MESSAGE 枚）。FR-06 BR-06-01/02 */
+  images: SlackFile[]
+  hasImage: boolean
+}
+
+/** 対応 MIME の画像のみを最大枚数まで抽出する（サイズ検証は処理段で行う） */
+export function extractSupportedImages(files: SlackFile[] | undefined): SlackFile[] {
+  if (!files) return []
+  const supported = (SUPPORTED_IMAGE_MIMETYPES as readonly string[])
+  return files
+    .filter((f) => f.mimetype && supported.includes(f.mimetype))
+    .slice(0, MAX_IMAGES_PER_MESSAGE)
 }
 
 /**
@@ -43,6 +56,7 @@ export function stripBotMention(text: string | undefined, botUserId: string): st
 export function deriveEventFacts(event: SlackMessageEvent, botUserId: string): EventFacts {
   // スレッド返信 = thread_ts が存在し、親（ts）自身でない
   const isThreadReply = Boolean(event.thread_ts && event.thread_ts !== event.ts)
+  const images = extractSupportedImages(event.files)
   return {
     hasBotId: Boolean(event.bot_id),
     subtype: event.subtype,
@@ -51,5 +65,7 @@ export function deriveEventFacts(event: SlackMessageEvent, botUserId: string): E
     isThreadReply,
     threadTs: event.thread_ts ?? event.ts,
     messageTs: event.ts,
+    images,
+    hasImage: images.length > 0,
   }
 }

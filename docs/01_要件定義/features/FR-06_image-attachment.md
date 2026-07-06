@@ -92,6 +92,11 @@ And PDFは無視される（エラーにならない）
 
 ## 実装ステータス（Phase 4 が更新）
 
-- 実装ファイル: -
-- テストファイル: -
-- 最終確認Sprint: -
+- 実装ファイル: `src/features/image-attachments/lib/{validateAttachment,downloadSlackFile,storeAttachment,processAttachments}.ts`, `src/features/slack-events/lib/eventFacts.ts`（extractSupportedImages）, `src/features/ai-answer/lib/llm/{types,openaiCompatibleClient}.ts`（Vision）, `src/features/ai-answer/lib/buildPrompt.ts`, `src/features/jobs/lib/executeProcessMessage.ts`（配線）, `supabase/migrations/022_create_attachments_bucket.sql`
+- テストファイル: `validateAttachment.test.ts`, `processAttachments.test.ts`, `eventFacts.test.ts`, `buildPrompt.test.ts`, `executeProcessMessage.test.ts`, `route.test.ts`
+- 最終確認Sprint: Sprint 4
+- 備考:
+  - 対応MIME(jpg/png/webp)・最大3枚・20MB を検証、Bot token で DL → 非公開 Storage 保存 → attachments 記録 → Vision モデル(LLM_MODEL_COMPLEX)に data URL 渡し
+  - 画像失敗時: too_large/download_fail/storage_fail をコード収集し継続。画像のみ全失敗+テキストなしはエラー文言返信
+  - **AC-06-02（PDF のみ→UNSUPPORTED 返信）**: route で対応外 MIME を除外する設計のため、PDF のみ+メンションのケースで明示返信は未実装（要フォロー）。AC-06-04（混在→対応画像のみ処理）は満たす
+  - Vision は provider-agnostic（OpenAI互換 image_url）。実際の Vision 動作は LLM_MODEL_COMPLEX に Vision 対応モデルを設定して確認
