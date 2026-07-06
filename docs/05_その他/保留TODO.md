@@ -27,6 +27,14 @@ Sprint 2 時点でベンダー未確定（Anthropic / OpenRouter Fusion / DeepSe
 - **決めること**: 本番プロバイダとデフォルト/複雑モデル、実際の単価（`MODEL_PRICING` を更新）、レート制限・データ保持ポリシー
 - コスト試算: 設計docの Haiku 単価（$0.25/$1.25）は旧世代。現行 `claude-haiku-4-5` は $1/$5。DeepSeek/gpt-4o-mini は更に安価。プロバイダ確定後に月次コストを再試算する
 
+## 管理画面の認可・運用前提（Sprint 5 レビュー）
+
+- **ロール分離（staff / admin）未実装**: `requireStaff` は「認証済みか」のみ検証。FR-15 は本来 U-03 管理者専用だが、現状は任意の認証ユーザーが全操作可能。`requireAdmin`（staff/roles テーブル or `app_metadata.role`）を将来追加する
+- **Supabase サインアップは招待制が前提**: 自己登録を許すと任意ユーザーが全生徒 PII（氏名・保護者メール）を閲覧・編集できてしまう。Supabase の Auth 設定でサインアップを無効/招待制にすること（運用前提）
+- **migration 015 の RLS コメントが不正確**: 「auth.uid() being in the staff table」とあるが staff テーブルは存在せず、実体は全 authenticated に `USING (true)`。適用済みのため本体は編集せず、実 staff テーブル参照ポリシーを将来のマイグレーションで導入する
+- **PersonForm のフィールドエラー表示**: displayName/grade の max(100) 超過は汎用エラーのみ（フィールド単位表示は未対応、UX 軽微）
+- **管理画面 UI の E2E（Playwright）**: 認証ユーザー + 起動サーバーが必要。現状は build/型/認証保護のスモークまで
+
 ## 将来 Sprint で対応する既知の制約
 
 - ジョブ孤児化を回収する JOB_TIMEOUT スイーパ（FR-04）

@@ -23,7 +23,7 @@ export const personCreateSchema = z.object({
     .optional()
     .transform((v) => (v && v.trim() ? v.trim() : null))
     .nullable()
-    .refine((v) => v === null || z.string().email().safeParse(v).success, {
+    .refine((v) => v === null || (v.length <= 255 && z.string().email().safeParse(v).success), {
       message: 'メールアドレスの形式が正しくありません',
     }),
 })

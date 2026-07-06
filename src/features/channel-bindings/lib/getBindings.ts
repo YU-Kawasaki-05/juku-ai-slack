@@ -20,3 +20,16 @@ export async function getBindings(db: ServerDb): Promise<BindingWithPerson[]> {
   if (error) throw error
   return (data ?? []) as unknown as BindingWithPerson[]
 }
+
+export async function getBinding(
+  db: ServerDb,
+  id: string,
+): Promise<BindingWithPerson | null> {
+  const { data, error } = await db
+    .from('slack_channel_bindings')
+    .select('*, persons(name)')
+    .eq('id', id)
+    .maybeSingle()
+  if (error) throw error
+  return (data ?? null) as unknown as BindingWithPerson | null
+}

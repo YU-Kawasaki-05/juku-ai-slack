@@ -39,7 +39,14 @@ export default async function ChannelsPage() {
             )}
             {bindings.map((b) => (
               <tr key={b.id} className="border-b last:border-0 hover:bg-accent/50">
-                <td className="px-4 py-2">{b.slack_channel_name ?? '-'}</td>
+                <td className="px-4 py-2">
+                  <Link
+                    href={`/admin/channels/${b.id}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {b.slack_channel_name ?? '(名称未設定)'}
+                  </Link>
+                </td>
                 <td className="px-4 py-2 font-mono text-xs">{b.slack_channel_id}</td>
                 <td className="px-4 py-2">{b.persons?.name ?? b.person_name_snapshot ?? '-'}</td>
                 <td className="px-4 py-2">

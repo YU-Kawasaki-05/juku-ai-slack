@@ -26,13 +26,12 @@ export default async function PersonsPage() {
               <th className="px-4 py-2 font-medium">名前</th>
               <th className="px-4 py-2 font-medium">学年</th>
               <th className="px-4 py-2 font-medium">ステータス</th>
-              <th className="px-4 py-2 font-medium">保護者メール</th>
             </tr>
           </thead>
           <tbody>
             {persons.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
+                <td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">
                   生徒がまだ登録されていません
                 </td>
               </tr>
@@ -56,7 +55,6 @@ export default async function PersonsPage() {
                     {p.status}
                   </span>
                 </td>
-                <td className="px-4 py-2 text-muted-foreground">{p.guardian_email ?? '-'}</td>
               </tr>
             ))}
           </tbody>
