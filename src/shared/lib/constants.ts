@@ -61,6 +61,17 @@ export const FORGETTING_DECAY_MIN_DAYS = 14
 /** トピック特定不能を表す ID（この場合 BKT 更新をスキップ） */
 export const UNKNOWN_TOPIC = 'unknown'
 
+// --- 画像添付（FR-06）---
+
+/** 対応画像 MIME（jpg=image/jpeg）。BR-06-01 */
+export const SUPPORTED_IMAGE_MIMETYPES = ['image/jpeg', 'image/png', 'image/webp'] as const
+/** 1枚あたりの最大バイト数（20MB）。BR-06-03 */
+export const MAX_IMAGE_BYTES = 20 * 1024 * 1024
+/** 1メッセージで処理する最大枚数。BR-06-02 */
+export const MAX_IMAGES_PER_MESSAGE = 3
+/** Supabase Storage の添付バケット名 */
+export const ATTACHMENTS_BUCKET = 'attachments'
+
 // --- RAG（FR-10）---
 
 /** embedding 次元（migration 005/020 の vector(1536) と一致させること） */

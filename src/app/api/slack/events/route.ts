@@ -109,9 +109,14 @@ export async function POST(req: Request): Promise<NextResponse> {
   // receipt 記録済み。以降で失敗した場合は receipt を消して Slack 再送での再処理を可能にする（H-1 対策）
   try {
     const facts = deriveEventFacts(messageEvent, env.SLACK_BOT_USER_ID)
+    const hasText = Boolean(facts.text && facts.text.trim())
 
-    // DB 不要の早期 ignore（Bot自身・subtype・テキストなし・直下メンションなし）
-    if (facts.hasBotId || facts.subtype || !(facts.text && facts.text.trim())) {
+    // DB 不要の早期 ignore（Bot自身・非file_share subtype・コンテンツなし・直下メンションなし）
+    if (
+      facts.hasBotId ||
+      (facts.subtype && facts.subtype !== 'file_share') ||
+      (!hasText && !facts.hasImage)
+    ) {
       return ok()
     }
     if (!facts.isThreadReply && !facts.hasMention) {
@@ -128,6 +133,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       hasBotId: facts.hasBotId,
       subtype: facts.subtype,
       text: facts.text,
+      hasImage: facts.hasImage,
       hasMention: facts.hasMention,
       isThreadReply: facts.isThreadReply,
       bindingStatus,
@@ -172,6 +178,16 @@ export async function POST(req: Request): Promise<NextResponse> {
       personId: activeBinding.person_id,
       reportId: activeBinding.default_report_id,
       eventId: event_id,
+      // 対応画像のみ（url_private/mimetype 必須）。FR-06
+      files: facts.images
+        .filter((f) => f.url_private && f.mimetype)
+        .map((f) => ({
+          id: f.id,
+          name: f.name ?? null,
+          mimetype: f.mimetype as string,
+          size: f.size ?? null,
+          urlPrivate: f.url_private as string,
+        })),
     }
 
     // BR-04-01 / AC-04-01: ACK 前にジョブ登録

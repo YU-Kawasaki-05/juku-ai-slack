@@ -186,4 +186,25 @@ describe('POST /api/slack/events', () => {
     expect(res.status).toBe(200)
     expect(mocks.enqueueJob).not.toHaveBeenCalled()
   })
+
+  it('画像添付(file_share)+メンションはジョブ登録し payload.files に対応画像を積む（FR-06）', async () => {
+    const res = await POST(
+      signedRequest(
+        messageEvent({
+          subtype: 'file_share',
+          text: '<@U_BOT> この問題教えて',
+          files: [
+            { id: 'F1', mimetype: 'image/png', url_private: 'https://slack/F1', name: 'q.png', size: 1234 },
+            { id: 'F2', mimetype: 'application/pdf', url_private: 'https://slack/F2' },
+          ],
+        }),
+      ),
+    )
+    expect(res.status).toBe(200)
+    expect(mocks.enqueueJob).toHaveBeenCalledOnce()
+    const payload = mocks.enqueueJob.mock.calls[0][1]
+    expect(payload.files).toEqual([
+      { id: 'F1', name: 'q.png', mimetype: 'image/png', size: 1234, urlPrivate: 'https://slack/F1' },
+    ])
+  })
 })

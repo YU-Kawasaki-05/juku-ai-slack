@@ -14,8 +14,8 @@ import type { ReactionDecision, ShouldReactInput } from '../types'
  *
  * 優先順位:
  * 1. Bot 自身のメッセージ → ignore（BR-02-01）
- * 2. subtype 付き（message_changed 等）→ ignore（BR-02-02）
- * 3. テキストなし → ignore（BR-02-06。画像のみは Sprint 4 で対応）
+ * 2. subtype 付き（message_changed 等）→ ignore（BR-02-02）。ただし file_share は画像添付なので許容
+ * 3. テキストも対応画像もなし → ignore（BR-02-06 / BR-06-08）
  * 4. スレッド内返信:
  *    - セッション登録済み → 反応対象（BR-02-04, AC-02-03）。ただし binding が無効なら channel_not_bound
  *    - 未登録 + メンションなし → ignore（AC-02-04）
@@ -30,13 +30,14 @@ export function shouldReact(input: ShouldReactInput): ReactionDecision {
     return { action: 'ignore', reason: 'bot_message' }
   }
 
-  if (input.subtype) {
+  // file_share は画像添付を伴う通常メッセージなので許容。それ以外の subtype は無視
+  if (input.subtype && input.subtype !== 'file_share') {
     return { action: 'ignore', reason: `subtype:${input.subtype}` }
   }
 
   const hasText = typeof input.text === 'string' && input.text.trim().length > 0
-  if (!hasText) {
-    return { action: 'ignore', reason: 'no_text' }
+  if (!hasText && !input.hasImage) {
+    return { action: 'ignore', reason: 'no_content' }
   }
 
   // 登録済みスレッド内はメンション不要で反応（AC-02-03）
