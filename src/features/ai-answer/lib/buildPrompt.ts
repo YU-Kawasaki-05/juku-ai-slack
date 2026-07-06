@@ -22,6 +22,8 @@ export interface BuildPromptInput {
   ragChunks?: string[]
   /** 生徒の知識状態サマリー（FR-23, AC-23-05）。無ければ null/未指定 */
   knowledgeSummary?: string | null
+  /** 添付画像の data URL（Vision, FR-06）。あれば現在の質問メッセージに画像を添える */
+  imageDataUrls?: string[]
 }
 
 /** 全モード共通の土台（伴走者フレーミング, DEC-25 / 安全, BR-05-11〜14） */
@@ -70,10 +72,19 @@ export function buildPrompt(input: BuildPromptInput): { system: string; messages
     system += `\n\n【この生徒の過去レポートからの抜粋（参考。使うときは「レポートを見る限り〜」のように出典が分かる形で）】\n${input.ragChunks.map((c) => `- ${c}`).join('\n')}`
   }
 
-  const messages: LlmMessage[] = [
-    ...input.history,
-    { role: 'user', content: input.question },
-  ]
+  const images = input.imageDataUrls ?? []
+  const userMessage: LlmMessage =
+    images.length > 0
+      ? {
+          role: 'user',
+          content: [
+            { type: 'text', text: input.question || '添付した画像について教えて' },
+            ...images.map((dataUrl) => ({ type: 'image' as const, dataUrl })),
+          ],
+        }
+      : { role: 'user', content: input.question }
+
+  const messages: LlmMessage[] = [...input.history, userMessage]
 
   return { system, messages }
 }
