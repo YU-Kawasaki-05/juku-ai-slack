@@ -63,6 +63,7 @@ Then エラー「このチャンネルはすでに紐付けされています」
 
 ## 実装ステータス（Phase 4 が更新）
 
-- 実装ファイル: -
-- テストファイル: -
-- 最終確認Sprint: -
+- 実装ファイル: `src/features/channel-bindings/{schemas/bindingSchema,lib/getBindings,actions/bindingActions,components/BindingForm}.ts(x)`, `src/app/admin/channels/{page,new/page}.tsx`
+- テストファイル: `bindingSchema.test.ts`（+ 既存 lookupBinding.test.ts）
+- 最終確認Sprint: Sprint 5
+- 備考: 作成/更新 Server Action は requireStaff で認証必須。重複チャンネルは 23505 検知（AC-15-03）。更新は name/status のみ=channel_id 変更不可（BR-15-01）。UI の E2E は要ライブ環境（保留TODO）

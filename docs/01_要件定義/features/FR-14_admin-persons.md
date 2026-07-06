@@ -132,6 +132,10 @@ Then Botの返答が通常モードに戻っている
 
 ## 実装ステータス（Phase 4 が更新）
 
-- 実装ファイル: -
-- テストファイル: -
-- 最終確認Sprint: -
+- 実装ファイル: `src/features/persons/{schemas/personSchema,lib/getPersons,actions/personActions,components/PersonForm}.ts(x)`, `src/app/admin/persons/{page,new/page,[id]/page}.tsx`, `src/shared/lib/auth/requireStaff.ts`
+- テストファイル: `personSchema.test.ts`
+- 最終確認Sprint: Sprint 5（基本情報の CRUD）
+- 備考:
+  - 生徒の一覧(SCR-03)・新規・詳細/編集(SCR-04 基本情報①②) + 保護者メール・ステータスを実装
+  - **Sprint 6 送り**: SCR-04 のプロフィール編集③・試験期間設定④・利用推移グラフ⑤・月次レポート一覧⑥（グラフは ai_usage_logs/ai_error_logs 集計, recharts）
+  - UI の E2E は要ライブ環境（認証ユーザー + サーバー）。現状は build/型/認証保護のスモークまで

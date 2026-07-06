@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 
 const nav = [
   { href: '/admin', label: 'ダッシュボード', icon: LayoutDashboard },
-  { href: '/admin/students', label: '生徒管理', icon: Users },
+  { href: '/admin/persons', label: '生徒管理', icon: Users },
   { href: '/admin/reports', label: 'レポート', icon: FileText },
   { href: '/admin/channels', label: 'チャンネル設定', icon: Link2 },
   { href: '/admin/errors', label: 'エラーログ', icon: AlertCircle },
