@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   generate: vi.fn(),
   searchChunks: vi.fn(),
   getEmbeddingClient: vi.fn(),
+  processAttachments: vi.fn(),
 }))
 
 vi.mock('@features/thread-sessions', () => ({ getOrCreateSession: mocks.getOrCreateSession }))
@@ -39,6 +40,7 @@ vi.mock('@features/rag', () => ({
   searchChunks: mocks.searchChunks,
   getEmbeddingClient: mocks.getEmbeddingClient,
 }))
+vi.mock('@features/image-attachments', () => ({ processAttachments: mocks.processAttachments }))
 vi.mock('@shared/lib/slack/client', () => ({ postMessage: mocks.postMessage }))
 
 import { executeProcessSlackMessage } from './executeProcessMessage'
@@ -76,6 +78,7 @@ beforeEach(() => {
   mocks.applyEvaluation.mockResolvedValue({ updated: true, newPMastery: 0.5 })
   mocks.searchChunks.mockResolvedValue([])
   mocks.getEmbeddingClient.mockReturnValue({ embed: vi.fn() })
+  mocks.processAttachments.mockResolvedValue({ dataUrls: [], errorCodes: [] })
   mocks.postMessage.mockResolvedValue({ ts: '200.2' })
   mocks.generate.mockResolvedValue({
     text: '一緒に整理しよう',
@@ -211,5 +214,35 @@ describe('executeProcessSlackMessage', () => {
       expect.anything(),
       expect.objectContaining({ code: 'REPORT_CHUNK_SEARCH_FAILED' }),
     )
+  })
+
+  it('画像があれば Vision モデルで生成し画像を渡す（FR-06, BR-05-15）', async () => {
+    const imgPayload = {
+      ...payload,
+      files: [{ id: 'F1', name: 'q.png', mimetype: 'image/png', size: 100, urlPrivate: 'https://slack/F1' }],
+    }
+    mocks.processAttachments.mockResolvedValue({ dataUrls: ['data:image/png;base64,AAA'], errorCodes: [] })
+    await executeProcessSlackMessage(db, imgPayload)
+    const genArg = mocks.generate.mock.calls[0][0]
+    // Vision モデル（LLM_MODEL_COMPLEX = test-complex-model）
+    expect(genArg.model).toBe('test-complex-model')
+    // 画像がメッセージに含まれる
+    const lastMsg = genArg.messages.at(-1)
+    expect(Array.isArray(lastMsg.content)).toBe(true)
+    expect(lastMsg.content.some((p: { type: string }) => p.type === 'image')).toBe(true)
+    // usage は hasImage
+    expect(mocks.logUsage.mock.calls[0][1].hasImage).toBe(true)
+  })
+
+  it('画像のみで全画像失敗 + テキストなし → エラー文言を返し LLM を呼ばない', async () => {
+    const imgOnly = {
+      ...payload,
+      text: '<@U_BOT>',
+      files: [{ id: 'F1', name: 'q.png', mimetype: 'image/png', size: 100, urlPrivate: 'https://slack/F1' }],
+    }
+    mocks.processAttachments.mockResolvedValue({ dataUrls: [], errorCodes: ['SLACK_FILE_DOWNLOAD_FAILED'] })
+    await executeProcessSlackMessage(db, imgOnly)
+    expect(mocks.generate).not.toHaveBeenCalled()
+    expect(mocks.postMessage).toHaveBeenCalledOnce() // エラー文言
   })
 })

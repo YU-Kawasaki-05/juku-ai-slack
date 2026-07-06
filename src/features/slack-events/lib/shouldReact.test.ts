@@ -10,6 +10,7 @@ const base: ShouldReactInput = {
   hasBotId: false,
   subtype: undefined,
   text: 'こんにちは',
+  hasImage: false,
   hasMention: false,
   isThreadReply: false,
   bindingStatus: 'active',
@@ -56,9 +57,27 @@ describe('shouldReact', () => {
     )
   })
 
-  it('テキストなし → ignore（BR-02-06）', () => {
-    expect(shouldReact({ ...base, text: undefined, hasMention: true }).action).toBe('ignore')
-    expect(shouldReact({ ...base, text: '   ', hasMention: true }).action).toBe('ignore')
+  it('テキストも画像もなし → ignore（BR-02-06/BR-06-08）', () => {
+    expect(shouldReact({ ...base, text: undefined, hasImage: false, hasMention: true }).action).toBe('ignore')
+    expect(shouldReact({ ...base, text: '   ', hasImage: false, hasMention: true }).action).toBe('ignore')
+  })
+
+  it('テキストなしでも画像があり + メンション → process（FR-06）', () => {
+    expect(
+      shouldReact({ ...base, text: '<@U_BOT>', hasImage: true, hasMention: true }).action,
+    ).toBe('process')
+  })
+
+  it('subtype=file_share は許容（画像添付）', () => {
+    expect(
+      shouldReact({ ...base, subtype: 'file_share', hasImage: true, hasMention: true }).action,
+    ).toBe('process')
+  })
+
+  it('file_share 以外の subtype は無視', () => {
+    expect(
+      shouldReact({ ...base, subtype: 'message_changed', hasMention: true }).action,
+    ).toBe('ignore')
   })
 
   it('メンションありだが紐付けなし → channel_not_bound（AC-02-06）', () => {

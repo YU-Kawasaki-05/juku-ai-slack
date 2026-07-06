@@ -24,10 +24,26 @@ export interface OpenAiCompatibleOptions {
   timeoutMs?: number
 }
 
+type OpenAiContent =
+  | string
+  | Array<
+      | { type: 'text'; text: string }
+      | { type: 'image_url'; image_url: { url: string } }
+    >
+
+function toOpenAiContent(content: LlmMessage['content']): OpenAiContent {
+  if (typeof content === 'string') return content
+  return content.map((part) =>
+    part.type === 'text'
+      ? { type: 'text' as const, text: part.text }
+      : { type: 'image_url' as const, image_url: { url: part.dataUrl } },
+  )
+}
+
 function toChatMessages(system: string | undefined, messages: LlmMessage[]) {
-  const out: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = []
+  const out: Array<{ role: 'system' | 'user' | 'assistant'; content: OpenAiContent }> = []
   if (system) out.push({ role: 'system', content: system })
-  for (const m of messages) out.push({ role: m.role, content: m.content })
+  for (const m of messages) out.push({ role: m.role, content: toOpenAiContent(m.content) })
   return out
 }
 
@@ -43,7 +59,10 @@ export function createOpenAiCompatibleClient(opts: OpenAiCompatibleOptions): Llm
       try {
         const res = await client.chat.completions.create({
           model: params.model,
-          messages: toChatMessages(params.system, params.messages),
+          messages: toChatMessages(
+            params.system,
+            params.messages,
+          ) as OpenAI.Chat.Completions.ChatCompletionMessageParam[],
           max_tokens: params.maxTokens,
           temperature: params.temperature,
         })

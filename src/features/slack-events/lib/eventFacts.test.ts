@@ -77,6 +77,30 @@ describe('deriveEventFacts', () => {
     expect(deriveEventFacts(event, BOT).isThreadReply).toBe(false)
   })
 
+  it('対応画像を最大3枚まで抽出し hasImage を立てる（FR-06 BR-06-01/02）', () => {
+    const event: SlackMessageEvent = {
+      type: 'message',
+      channel: 'C1',
+      ts: '1',
+      text: '<@U_BOT> これ教えて',
+      files: [
+        { id: 'F1', mimetype: 'image/png', url_private: 'https://x/1' },
+        { id: 'F2', mimetype: 'application/pdf', url_private: 'https://x/2' }, // 対応外→除外
+        { id: 'F3', mimetype: 'image/jpeg', url_private: 'https://x/3' },
+        { id: 'F4', mimetype: 'image/webp', url_private: 'https://x/4' },
+        { id: 'F5', mimetype: 'image/png', url_private: 'https://x/5' }, // 4枚目以降→切り捨て
+      ],
+    }
+    const f = deriveEventFacts(event, BOT)
+    expect(f.hasImage).toBe(true)
+    expect(f.images.map((i) => i.id)).toEqual(['F1', 'F3', 'F4']) // 対応MIMEのみ・最大3枚
+  })
+
+  it('画像なしは hasImage=false', () => {
+    const event: SlackMessageEvent = { type: 'message', channel: 'C1', ts: '1', text: 'hi' }
+    expect(deriveEventFacts(event, BOT).hasImage).toBe(false)
+  })
+
   it('bot_id / subtype / mention を正しく反映', () => {
     const event: SlackMessageEvent = {
       type: 'message',
