@@ -2,10 +2,20 @@
  * 検証: ジョブの claim・リトライ・状態遷移・二重処理防止・🤔リアクション
  * @verifies AC-04-02, AC-04-03, AC-04-04, AC-01-06
  */
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+const slackMocks = vi.hoisted(() => ({ postMessage: vi.fn(), addReaction: vi.fn(), removeReaction: vi.fn() }))
+vi.mock('@shared/lib/slack/client', () => ({
+  postMessage: slackMocks.postMessage,
+  addReaction: slackMocks.addReaction,
+  removeReaction: slackMocks.removeReaction,
+}))
+
 import { processJob } from './processJob'
 import { createMockDb } from '@/test/mocks/supabaseMock'
 import { THINKING_REACTION } from '@shared/lib/constants'
+import { AiRateLimitedError, LowConfidenceSkipError } from '@shared/lib/errors/AppError'
+import { getUserFacingMessage } from '@shared/lib/errors/userMessages'
 import type { ProcessSlackMessagePayload } from '../types'
 
 const validPayload: ProcessSlackMessagePayload = {
@@ -48,6 +58,11 @@ function makeOptions(
 }
 
 describe('processJob', () => {
+  beforeEach(() => {
+    slackMocks.postMessage.mockReset()
+    slackMocks.postMessage.mockResolvedValue({ ts: 'x' })
+  })
+
   it('claim できない（既に処理済み）なら skipped（AC-04-04）', async () => {
     const db = createMockDb({ maybeSingle: { data: null, error: null } })
     const execute = vi.fn(async () => {})
@@ -146,6 +161,27 @@ describe('processJob', () => {
     const result = await processJob(db, 'job1', options)
     expect(execute).toHaveBeenCalledOnce()
     expect(result.status).toBe('completed')
+  })
+
+  it('最終失敗が非サイレントエラーならユーザー向け文言を Slack に返す（FR-05）', async () => {
+    const db = createMockDb({ maybeSingle: { data: claimedJob({ max_attempts: 1 }), error: null } })
+    const execute = vi.fn(async () => {
+      throw new AiRateLimitedError()
+    })
+    const result = await processJob(db, 'job1', makeOptions(execute).options)
+    expect(result.status).toBe('failed')
+    expect(slackMocks.postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ channel: 'C1', text: getUserFacingMessage('AI_RATE_LIMITED') }),
+    )
+  })
+
+  it('最終失敗がサイレントエラーなら Slack に返信しない', async () => {
+    const db = createMockDb({ maybeSingle: { data: claimedJob({ max_attempts: 1 }), error: null } })
+    const execute = vi.fn(async () => {
+      throw new LowConfidenceSkipError() // LOW_CONFIDENCE_SKIP は SILENT
+    })
+    await processJob(db, 'job1', makeOptions(execute).options)
+    expect(slackMocks.postMessage).not.toHaveBeenCalled()
   })
 
   it('payload が不正なら invalid で failed 化', async () => {

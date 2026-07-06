@@ -25,16 +25,23 @@ export interface LogErrorParams {
   rawError?: unknown
 }
 
+/** 生エラーから安全に記録するキー（provider の生エラーは request/headers に鍵を含み得るため限定） */
+const RAW_ERROR_ALLOWED_KEYS = ['name', 'message', 'code', 'status'] as const
+
 function serializeRawError(raw: unknown): Json {
   if (raw === undefined || raw === null) return null
   if (raw instanceof Error) return { name: raw.name, message: raw.message }
   if (typeof raw === 'object') {
-    try {
-      // 循環参照・非シリアライズ値を除去して Json 準拠にする
-      return JSON.parse(JSON.stringify(raw)) as Json
-    } catch {
-      return { value: String(raw) }
+    // 丸ごと保存せず、許可キーの primitive 値のみ抽出（Authorization ヘッダ等の混入防止）
+    const src = raw as Record<string, unknown>
+    const picked: Record<string, string | number | boolean> = {}
+    for (const key of RAW_ERROR_ALLOWED_KEYS) {
+      const v = src[key]
+      if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
+        picked[key] = v
+      }
     }
+    return picked
   }
   return { value: String(raw) }
 }

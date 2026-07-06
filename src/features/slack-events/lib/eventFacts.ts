@@ -30,6 +30,16 @@ export function containsMention(text: string | undefined, botUserId: string): bo
   return text.includes(`<@${botUserId}>`) || text.includes(`<@${botUserId}|`)
 }
 
+/** Bot へのメンション表記 `<@U…>` / `<@U…|name>` を除去して整形する。FR-05 入力 */
+export function stripBotMention(text: string | undefined, botUserId: string): string {
+  if (!text) return ''
+  const escaped = botUserId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return text
+    .replace(new RegExp(`<@${escaped}(\\|[^>]*)?>`, 'g'), ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 export function deriveEventFacts(event: SlackMessageEvent, botUserId: string): EventFacts {
   // スレッド返信 = thread_ts が存在し、親（ts）自身でない
   const isThreadReply = Boolean(event.thread_ts && event.thread_ts !== event.ts)

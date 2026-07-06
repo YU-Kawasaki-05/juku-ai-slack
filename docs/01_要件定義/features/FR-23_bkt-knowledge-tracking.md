@@ -248,6 +248,10 @@ And ai_error_logs に LOW_CONFIDENCE_SKIP が記録される
 
 ## 実装ステータス
 
-- 実装ファイル: -
-- テストファイル: -
-- 最終確認Sprint: - (Sprint 3 予定)
+- 実装ファイル: `src/features/student-knowledge/lib/{bkt,evaluationSchema,applyEvaluation,evaluate,getMastery}.ts`, `src/features/jobs/lib/executeProcessMessage.ts`（runEvaluator）
+- テストファイル: `bkt.test.ts`, `applyEvaluation.test.ts`, `evaluate.test.ts`, `executeProcessMessage.test.ts`
+- 最終確認Sprint: Sprint 3
+- 備考:
+  - BKT 更新式・忘却減衰・EvaluationSchema・skip凍結・低確信度スキップ・partial=誤答・UPSERT 実装済み
+  - Evaluator は 2エージェント構成で返信後に非同期実行（BR-23-07）、構造化出力は prompt+Zod+リトライ（json_schema 非対応プロバイダ対応）
+  - **未対応（Sprint 3.5 / 要フォロー）**: 質問時のトピック検出。現状 `getMastery(topic=null)` でモード選択はデフォルト P(0.2)→direct 固定。BKT 値は topic 別に書き込まれるが、次回質問時にその topic を特定してモード選択へ反映する処理は未実装（ドロップバック AC-05-04 も同様に Evaluator 連携が必要）

@@ -828,7 +828,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      match_report_chunks: {
+        Args: {
+          p_person_id: string
+          p_query_embedding: string
+          p_threshold?: number
+          p_top_k?: number
+        }
+        Returns: {
+          content: string
+          id: string
+          report_id: string
+          similarity: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

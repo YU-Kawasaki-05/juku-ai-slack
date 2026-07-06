@@ -94,6 +94,11 @@ Then そのチャンクは検索結果に含まれない
 
 ## 実装ステータス（Phase 4 が更新）
 
-- 実装ファイル: -
-- テストファイル: -
-- 最終確認Sprint: -
+- 実装ファイル: `src/features/rag/lib/{chunkReport,searchChunks,rebuildReportEmbeddings,embeddingClient}.ts`, `supabase/migrations/020_create_match_report_chunks.sql`, `src/features/ai-answer/lib/buildPrompt.ts`（ragChunks 注入）, `src/features/jobs/lib/executeProcessMessage.ts`（searchReportChunks）
+- テストファイル: `chunkReport.test.ts`, `searchChunks.test.ts`, `executeProcessMessage.test.ts`
+- 最終確認Sprint: Sprint 3
+- 備考:
+  - 埋め込みも provider-agnostic（EmbeddingClient 抽象 + OpenAI互換, EMBEDDING_* env）。vector(1536) 前提
+  - 検索は match_report_chunks RPC（person_id/is_ai_reference/status/閾値フィルタ）
+  - `rebuildReportEmbeddings` は実装済みだが、レポート保存時の自動トリガ（BR-10-07 DEC-14）は管理画面のレポート CRUD（Sprint 5/6）で接続する
+  - EMBEDDING_* 未設定時は RAG をスキップ（チャンクなしで回答）
