@@ -14,6 +14,7 @@ import {
   AlertCircle,
   BarChart3,
   GraduationCap,
+  MessagesSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -22,6 +23,7 @@ const nav = [
   { href: '/admin/persons', label: '生徒管理', icon: Users },
   { href: '/admin/channels', label: 'チャンネル設定', icon: Link2 },
   { href: '/admin/reports', label: 'レポート', icon: FileText },
+  { href: '/admin/conversations', label: '会話ログ', icon: MessagesSquare },
   { href: '/admin/errors', label: 'エラーログ', icon: AlertCircle },
   { href: '/admin/usage', label: '利用状況', icon: BarChart3 },
 ]

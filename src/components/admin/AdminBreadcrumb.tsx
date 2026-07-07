@@ -14,6 +14,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   reports: 'レポート',
   errors: 'エラーログ',
   usage: '利用状況',
+  conversations: '会話ログ',
   new: '新規作成',
   edit: '編集',
 }

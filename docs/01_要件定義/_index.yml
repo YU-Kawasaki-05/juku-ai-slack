@@ -152,7 +152,7 @@ features:
     file: features/FR-19_admin-conversation-log.md
     title: 会話ログ閲覧
     priority: P1
-    status: defined
+    status: implemented
     related_users: [U-02, U-03]
     related_screens: [SCR-13]
 
