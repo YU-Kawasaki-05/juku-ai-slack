@@ -9,6 +9,7 @@
  * @implements FR-18（SCR-02 サマリーカード）
  */
 import type { ServerDb } from '@shared/types/db'
+import { queryError } from '@shared/lib/supabase/queryError'
 
 const JST_OFFSET_MS = 9 * 3600_000
 
@@ -46,8 +47,16 @@ export async function getUsageSummary(
       .gte('created_at', jstDayStartIso(now)),
     db.from('ai_usage_logs').select('estimated_cost').gte('created_at', jstMonthStartIso(now)),
   ])
-  if (todayRes.error) throw todayRes.error
-  if (monthRes.error) throw monthRes.error
+  if (todayRes.error)
+    throw queryError('getUsageSummary(today count)', todayRes.error, {
+      status: todayRes.status,
+      statusText: todayRes.statusText,
+    })
+  if (monthRes.error)
+    throw queryError('getUsageSummary(month cost)', monthRes.error, {
+      status: monthRes.status,
+      statusText: monthRes.statusText,
+    })
 
   const monthCostUsd = (monthRes.data ?? []).reduce((sum, r) => sum + (r.estimated_cost ?? 0), 0)
   return { todayQuestionCount: todayRes.count ?? 0, monthCostUsd }

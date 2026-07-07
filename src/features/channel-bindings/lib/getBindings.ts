@@ -7,6 +7,7 @@
  * @implements FR-15
  */
 import type { ServerDb, Tables } from '@shared/types/db'
+import { queryError } from '@shared/lib/supabase/queryError'
 
 export type BindingWithPerson = Tables<'slack_channel_bindings'> & {
   persons: { name: string } | null
@@ -17,7 +18,7 @@ export async function getBindings(db: ServerDb): Promise<BindingWithPerson[]> {
     .from('slack_channel_bindings')
     .select('*, persons(name)')
     .order('created_at', { ascending: false })
-  if (error) throw error
+  if (error) throw queryError('getBindings', error)
   return (data ?? []) as unknown as BindingWithPerson[]
 }
 
@@ -30,6 +31,6 @@ export async function getBinding(
     .select('*, persons(name)')
     .eq('id', id)
     .maybeSingle()
-  if (error) throw error
+  if (error) throw queryError('getBinding', error)
   return (data ?? null) as unknown as BindingWithPerson | null
 }

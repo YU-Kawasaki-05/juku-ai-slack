@@ -8,6 +8,7 @@
  * @implements FR-16
  */
 import type { ServerDb, Tables } from '@shared/types/db'
+import { queryError } from '@shared/lib/supabase/queryError'
 
 export type ReportWithPerson = Tables<'reports'> & {
   persons: { name: string } | null
@@ -37,7 +38,7 @@ export async function getReports(
   if (filters.status) query = query.eq('status', filters.status)
 
   const { data, error } = await query
-  if (error) throw error
+  if (error) throw queryError('getReports', error)
   return (data ?? []) as unknown as ReportWithPerson[]
 }
 
@@ -47,6 +48,6 @@ export async function getReport(db: ServerDb, id: string): Promise<ReportWithPer
     .select('*, persons(name)')
     .eq('id', id)
     .maybeSingle()
-  if (error) throw error
+  if (error) throw queryError('getReport', error)
   return (data ?? null) as unknown as ReportWithPerson | null
 }

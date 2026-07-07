@@ -9,13 +9,14 @@
  * @implements FR-14, AC-14-01
  */
 import type { ServerDb, Tables } from '@shared/types/db'
+import { queryError } from '@shared/lib/supabase/queryError'
 
 export async function getPersons(db: ServerDb): Promise<Tables<'persons'>[]> {
   const { data, error } = await db
     .from('persons')
     .select('*')
     .order('created_at', { ascending: false })
-  if (error) throw error
+  if (error) throw queryError('getPersons', error)
   return data ?? []
 }
 
@@ -24,6 +25,6 @@ export async function getPerson(
   id: string,
 ): Promise<Tables<'persons'> | null> {
   const { data, error } = await db.from('persons').select('*').eq('id', id).maybeSingle()
-  if (error) throw error
+  if (error) throw queryError('getPerson', error)
   return data
 }

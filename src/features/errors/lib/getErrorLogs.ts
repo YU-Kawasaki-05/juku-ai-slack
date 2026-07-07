@@ -8,6 +8,7 @@
  * @implements FR-17, AC-17-01, BR-17-02
  */
 import type { ServerDb, Tables } from '@shared/types/db'
+import { queryError } from '@shared/lib/supabase/queryError'
 
 export type ErrorLogWithPerson = Tables<'ai_error_logs'> & {
   persons: { name: string } | null
@@ -34,7 +35,7 @@ async function resolveChannelNames(
     .from('slack_channel_bindings')
     .select('slack_channel_id, slack_channel_name')
     .in('slack_channel_id', channelIds)
-  if (error) throw error
+  if (error) throw queryError('resolveChannelNames', error)
   const map = new Map<string, string>()
   for (const b of data ?? []) {
     if (b.slack_channel_name) map.set(b.slack_channel_id, b.slack_channel_name)
@@ -73,7 +74,7 @@ export async function getErrorLogs(
   if (filters.limit) query = query.limit(filters.limit)
 
   const { data, error } = await query
-  if (error) throw error
+  if (error) throw queryError('getErrorLogs', error)
   const rows = (data ?? []) as unknown as (Tables<'ai_error_logs'> & {
     persons: { name: string } | null
   })[]
@@ -90,7 +91,7 @@ export async function getErrorLog(db: ServerDb, id: string): Promise<ErrorLogWit
     .select('*, persons(name)')
     .eq('id', id)
     .maybeSingle()
-  if (error) throw error
+  if (error) throw queryError('getErrorLog', error)
   if (!data) return null
   const row = data as unknown as Tables<'ai_error_logs'> & { persons: { name: string } | null }
 
@@ -103,11 +104,11 @@ export async function getErrorLog(db: ServerDb, id: string): Promise<ErrorLogWit
 
 /** 未対応（resolved=false, info 除く）の件数。ダッシュボード SCR-02 用 */
 export async function countUnresolvedErrors(db: ServerDb): Promise<number> {
-  const { count, error } = await db
+  const { count, error, status, statusText } = await db
     .from('ai_error_logs')
     .select('*', { count: 'exact', head: true })
     .eq('resolved', false)
     .in('severity', ['error', 'warning'])
-  if (error) throw error
+  if (error) throw queryError('countUnresolvedErrors', error, { status, statusText })
   return count ?? 0
 }
