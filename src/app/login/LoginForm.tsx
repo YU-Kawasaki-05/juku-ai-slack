@@ -1,8 +1,14 @@
+/** @file
+ * 機能: ログインフォーム（Supabase Auth。エラー時は入力保持・パスワードのみクリア）
+ * @implements FR-13
+ */
 'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { AlertCircle, Loader2 } from 'lucide-react'
 import { getBrowserClient } from '@/shared/lib/supabase/browserClient'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -24,6 +30,7 @@ export default function LoginForm() {
 
     if (authError) {
       setError('メールアドレスまたはパスワードが正しくありません。')
+      setPassword('')
       setLoading(false)
       return
     }
@@ -34,6 +41,12 @@ export default function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" aria-hidden="true" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
       <div className="space-y-2">
         <Label htmlFor="email">メールアドレス</Label>
         <Input
@@ -56,8 +69,8 @@ export default function LoginForm() {
           onChange={(e) => setPassword(e.target.value)}
         />
       </div>
-      {error && <p className="text-sm text-destructive">{error}</p>}
       <Button type="submit" className="w-full" disabled={loading}>
+        {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
         {loading ? 'ログイン中...' : 'ログイン'}
       </Button>
     </form>

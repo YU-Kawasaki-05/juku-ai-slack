@@ -9,6 +9,8 @@ const envSchema = z.object({
   SLACK_BOT_TOKEN: z.string().min(1),
   SLACK_SIGNING_SECRET: z.string().min(1),
   SLACK_BOT_USER_ID: z.string().min(1),
+  // 管理画面のエラー詳細から Slack スレッドを開くリンク用（任意。未設定ならリンク非表示）
+  SLACK_WORKSPACE_URL: z.string().url().optional(),
 
   // LLM プロバイダ非依存設定（OpenAI 互換: OpenRouter / DeepSeek / OpenAI など）。
   // 実行時に LLM を呼ぶ箇所で存在チェックする（未確定でもビルド/他機能を壊さないため optional）

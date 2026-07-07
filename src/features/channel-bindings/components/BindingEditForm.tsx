@@ -5,16 +5,19 @@
 'use client'
 
 import { useActionState, useEffect } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { AlertCircle, Loader2 } from 'lucide-react'
 import { updateBindingAction } from '../actions/bindingActions'
 import type { BindingWithPerson } from '../lib/getBindings'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { toast } from '@/components/ui/use-toast'
+import { StatusSelect } from '@/components/admin/StatusSelect'
 import type { ActionResult } from '@shared/types/action'
-
-const selectClass =
-  'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring'
 
 export function BindingEditForm({ binding }: { binding: BindingWithPerson }) {
   const router = useRouter()
@@ -24,54 +27,77 @@ export function BindingEditForm({ binding }: { binding: BindingWithPerson }) {
   )
 
   useEffect(() => {
-    if (state?.ok) router.push('/admin/channels')
+    if (state?.ok) {
+      toast({ description: '紐付けを保存しました' })
+      router.push('/admin/channels')
+    }
   }, [state, router])
 
   return (
-    <form action={formAction} className="max-w-lg space-y-4">
-      <input type="hidden" name="id" value={binding.id} />
+    <Card className="max-w-xl">
+      <CardContent className="pt-6">
+        <form action={formAction} className="space-y-5">
+          <input type="hidden" name="id" value={binding.id} />
 
-      <div className="space-y-2">
-        <Label>チャンネルID（変更不可）</Label>
-        <p className="rounded-md border bg-muted/40 px-3 py-2 font-mono text-sm">
-          {binding.slack_channel_id}
-        </p>
-      </div>
+          {state && !state.ok && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" aria-hidden="true" />
+              <AlertDescription>{state.error}</AlertDescription>
+            </Alert>
+          )}
 
-      <div className="space-y-2">
-        <Label>生徒</Label>
-        <p className="px-1 text-sm">
-          {binding.persons?.name ?? binding.person_name_snapshot ?? '-'}
-        </p>
-      </div>
+          <dl className="space-y-3 rounded-md border bg-muted/40 px-4 py-3 text-sm">
+            <div className="flex items-center justify-between gap-4">
+              <dt className="shrink-0 text-muted-foreground">チャンネルID</dt>
+              <dd>
+                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                  {binding.slack_channel_id}
+                </code>
+              </dd>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <dt className="shrink-0 text-muted-foreground">生徒</dt>
+              <dd className="font-medium">
+                {binding.persons?.name ?? binding.person_name_snapshot ?? '—'}
+              </dd>
+            </div>
+          </dl>
+          <p className="text-xs text-muted-foreground">
+            チャンネルIDと生徒は変更できません。変更する場合は紐付けを作り直してください
+          </p>
 
-      <div className="space-y-2">
-        <Label htmlFor="slackChannelName">チャンネル名（表示用）</Label>
-        <Input
-          id="slackChannelName"
-          name="slackChannelName"
-          defaultValue={binding.slack_channel_name ?? ''}
-        />
-      </div>
+          <div className="space-y-2">
+            <Label htmlFor="slackChannelName">チャンネル名（表示用）</Label>
+            <Input
+              id="slackChannelName"
+              name="slackChannelName"
+              defaultValue={binding.slack_channel_name ?? ''}
+            />
+          </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="status">ステータス（inactive で Bot 反応停止）</Label>
-        <select id="status" name="status" defaultValue={binding.status} className={selectClass}>
-          <option value="active">active</option>
-          <option value="inactive">inactive</option>
-        </select>
-      </div>
+          <div className="space-y-2">
+            <Label htmlFor="status">ステータス</Label>
+            <StatusSelect
+              id="status"
+              defaultValue={binding.status}
+              aria-describedby="status-help"
+            />
+            <p id="status-help" className="text-xs text-muted-foreground">
+              無効にすると、このチャンネルでは Bot が反応しなくなります
+            </p>
+          </div>
 
-      {state && !state.ok && <p className="text-sm text-destructive">{state.error}</p>}
-
-      <div className="flex gap-2">
-        <Button type="submit" disabled={pending}>
-          {pending ? '保存中...' : '保存'}
-        </Button>
-        <Button type="button" variant="outline" onClick={() => router.push('/admin/channels')}>
-          キャンセル
-        </Button>
-      </div>
-    </form>
+          <div className="flex gap-2 pt-1">
+            <Button type="submit" disabled={pending}>
+              {pending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+              {pending ? '保存中...' : '保存'}
+            </Button>
+            <Button type="button" variant="outline" asChild>
+              <Link href="/admin/channels">キャンセル</Link>
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   )
 }
