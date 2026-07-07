@@ -29,7 +29,7 @@ Sprint 2 時点でベンダー未確定（Anthropic / OpenRouter Fusion / DeepSe
 
 ## 管理画面の認可・運用前提（Sprint 5 レビュー）
 
-- **ロール分離（staff / admin）未実装**: `requireStaff` は「認証済みか」のみ検証。FR-15 は本来 U-03 管理者専用だが、現状は任意の認証ユーザーが全操作可能。`requireAdmin`（staff/roles テーブル or `app_metadata.role`）を将来追加する
+- **ロール分離（staff / admin）**: Sprint 6 で `requireAdmin`（Embedding 手動再生成=EP-14 用）を新設。ただし `user_metadata.role` を参照しており、これは Supabase では本人が `auth.updateUser()` で書換可能＝**権限昇格の穴**。`app_metadata.role`（Service Role/Admin API でのみ設定可）へ修正する対応を別タスクで実施中。`docs/02_外部設計/03_権限設計.md` の role 定義も同時に修正すること
 - **Supabase サインアップは招待制が前提**: 自己登録を許すと任意ユーザーが全生徒 PII（氏名・保護者メール）を閲覧・編集できてしまう。Supabase の Auth 設定でサインアップを無効/招待制にすること（運用前提）
 - **migration 015 の RLS コメントが不正確**: 「auth.uid() being in the staff table」とあるが staff テーブルは存在せず、実体は全 authenticated に `USING (true)`。適用済みのため本体は編集せず、実 staff テーブル参照ポリシーを将来のマイグレーションで導入する
 - **PersonForm のフィールドエラー表示**: displayName/grade の max(100) 超過は汎用エラーのみ（フィールド単位表示は未対応、UX 軽微）
@@ -48,7 +48,9 @@ Sprint 2 時点でベンダー未確定（Anthropic / OpenRouter Fusion / DeepSe
 - **質問時トピック検出**（FR-05/FR-23）: BKT は topic 別に書込済みだが、次回質問でその topic を特定して selectMode に反映する処理が未実装。現状は knowledgeSummary をプロンプト注入して LLM に適応させ、モード選択自体は P=0.2→direct 固定。あわせてドロップバック（AC-05-04）も要 Evaluator 連携
 - **applyEvaluation の read→upsert 原子性**: 同一(person,topic)の同時評価で lost-update の可能性（発生確率低）。ON CONFLICT DO UPDATE 式 or RPC で原子化を検討
 - **ワークド例題フェーディング F1〜F4**（FR-26, P1）
-- **レポート保存時の embedding 自動再生成トリガ**（BR-10-07/DEC-14）→ 管理画面レポート CRUD（Sprint 5/6）で `rebuildReportEmbeddings` を接続
+- **レポート保存時の embedding 自動再生成トリガ**（BR-10-07/DEC-14）→ 管理画面レポート CRUD（Sprint 5/6）で `rebuildReportEmbeddings` を接続済み（Sprint 6）。更新時は本文差分があるときのみ再生成（無駄な埋め込み課金の回避）
+- **ダッシュボード「今月コスト」の集計方式**（Sprint 6 レビュー）: `getUsageSummary` は当月 `ai_usage_logs` 行を `.select()` で取得し JS で SUM。Supabase の API「Max rows」既定 1000 件を超えると黙って切り捨てられ**過少表示**になる。月間ログが 1000 件を超える見込みになったら、SUM を返す SQL RPC（`match_report_chunks` と同様のパターン）に置き換える。現行ボリューム（〜数百件/月）では顕在化しない
+- **Embedding 再生成の同期実行**（Sprint 6 レビュー）: レポート保存 Server Action 内で `rebuildReportEmbeddings` を同期 await しているため、保存レスポンスが埋め込み完了までブロックする。大きなレポート/高頻度保存でレイテンシ・関数タイムアウトの懸念。スケール時は `after()`/jobs テーブルで遅延実行に（失敗時に保存を壊さない設計は維持）
 - **画像のマジックバイト検証**（FR-06）: 現状は Slack 申告 MIME を信頼（serve-back 経路なしのため実害小）。将来配信する場合は先頭バイト検証を追加
 - **テキスト+画像失敗時の通知**（FR-06）: テキストがある場合は画像失敗を Slack に通知せずテキストのみ回答（ログには記録）。混在時の UX 方針は要確認
 - **Vision モデル必須化**（BR-05-15）: 画像あり + `LLM_MODEL_COMPLEX` 未設定時はデフォルト（非Vision可能性）にフォールバックし警告ログのみ。起動時バリデーションで必須化を検討
