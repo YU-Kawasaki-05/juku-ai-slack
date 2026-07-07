@@ -2,7 +2,7 @@
 id: FR-15
 title: チャンネル紐付け管理（管理画面）
 priority: P0
-status: defined
+status: implemented
 related_users: [U-03]
 related_screens: [SCR-05, SCR-06]
 version: 1

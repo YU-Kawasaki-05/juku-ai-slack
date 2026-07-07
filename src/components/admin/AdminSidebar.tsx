@@ -16,7 +16,6 @@ import {
   GraduationCap,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Badge } from '@/components/ui/badge'
 
 const nav = [
   { href: '/admin', label: 'ダッシュボード', icon: LayoutDashboard },
@@ -24,10 +23,8 @@ const nav = [
   { href: '/admin/channels', label: 'チャンネル設定', icon: Link2 },
   { href: '/admin/reports', label: 'レポート', icon: FileText },
   { href: '/admin/errors', label: 'エラーログ', icon: AlertCircle },
+  { href: '/admin/usage', label: '利用状況', icon: BarChart3 },
 ]
-
-// 画面設計（SCR 共通レイアウト）にはあるが未実装のメニュー。リンク切れを防ぐため無効表示
-const planned = [{ label: '利用状況', icon: BarChart3 }]
 
 function isActive(pathname: string, href: string) {
   if (href === '/admin') return pathname === '/admin'
@@ -63,22 +60,6 @@ export default function AdminSidebar() {
             </Link>
           )
         })}
-
-        <div className="pt-3">
-          <p className="px-3 pb-1 text-xs font-medium text-sidebar-foreground/50">今後追加予定</p>
-          {planned.map(({ label, icon: Icon }) => (
-            <span
-              key={label}
-              className="flex cursor-not-allowed items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground/40"
-            >
-              <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-              {label}
-              <Badge variant="secondary" className="ml-auto px-1.5 py-0 text-[10px] font-medium">
-                準備中
-              </Badge>
-            </span>
-          ))}
-        </div>
       </nav>
     </aside>
   )

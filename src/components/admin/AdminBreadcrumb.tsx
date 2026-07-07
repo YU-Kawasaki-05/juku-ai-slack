@@ -13,6 +13,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   channels: 'チャンネル紐付け',
   reports: 'レポート',
   errors: 'エラーログ',
+  usage: '利用状況',
   new: '新規作成',
   edit: '編集',
 }

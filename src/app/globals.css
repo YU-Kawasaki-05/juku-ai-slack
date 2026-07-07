@@ -29,6 +29,15 @@
   --chart-3: 197 37% 24%;
   --chart-4: 43 74% 66%;
   --chart-5: 27 87% 67%;
+  /* データ可視化用パレット（dataviz スキルの検証済み hex。categorical, light）。
+     recharts へ var() で直接渡す。shadcn の --chart-* (HSL) とは別系統 */
+  --viz-1: #2a78d6;
+  --viz-2: #1baf7a;
+  --viz-3: #eda100;
+  --viz-4: #008300;
+  --viz-5: #4a3aa7;
+  --viz-grid: #e1e0d9;
+  --viz-axis: #c3c2b7;
   --sidebar-background: 210 40% 98%;
   --sidebar-foreground: 215.3 25% 26.7%;
   --sidebar-primary: 222.2 47.4% 11.2%;
@@ -64,6 +73,14 @@
   --chart-3: 30 80% 55%;
   --chart-4: 280 65% 60%;
   --chart-5: 340 75% 55%;
+  /* データ可視化用パレット（dataviz 検証済み hex。categorical, dark surface 用） */
+  --viz-1: #3987e5;
+  --viz-2: #199e70;
+  --viz-3: #c98500;
+  --viz-4: #008300;
+  --viz-5: #9085e9;
+  --viz-grid: #2c2c2a;
+  --viz-axis: #383835;
   --sidebar-background: 217.2 32.6% 10%;
   --sidebar-foreground: 214.3 31.8% 91.4%;
   --sidebar-primary: 210 40% 98%;

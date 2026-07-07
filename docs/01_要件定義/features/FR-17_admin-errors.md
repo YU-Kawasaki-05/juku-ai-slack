@@ -2,7 +2,7 @@
 id: FR-17
 title: エラー管理（管理画面）
 priority: P0
-status: defined
+status: implemented
 related_users: [U-02, U-03]
 related_screens: [SCR-11, SCR-12]
 version: 1
@@ -72,6 +72,6 @@ Then ai_error_logsのメモカラムに保存される
 
 ## 実装ステータス（Phase 4 が更新）
 
-- 実装ファイル: -
-- テストファイル: -
-- 最終確認Sprint: -
+- 実装ファイル: `src/features/errors/{schemas/errorLogSchema,lib/getErrorLogs,lib/slackThreadUrl,actions/errorActions}.ts`, `src/features/errors/components/{ErrorsFilter,ErrorNotesForm,ResolveErrorButton}.tsx`, `src/app/admin/errors/{page,[id]/page}.tsx`
+- テストファイル: `src/features/errors/schemas/errorLogSchema.test.ts`, `src/features/errors/lib/slackThreadUrl.test.ts`
+- 最終確認Sprint: Sprint 6

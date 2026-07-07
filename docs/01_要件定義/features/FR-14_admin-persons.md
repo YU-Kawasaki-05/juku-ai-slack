@@ -2,7 +2,7 @@
 id: FR-14
 title: 生徒管理（管理画面）
 priority: P0
-status: defined
+status: implemented
 related_users: [U-02, U-03]
 related_screens: [SCR-03, SCR-04]
 version: 2
