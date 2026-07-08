@@ -629,6 +629,7 @@ export type Database = {
           slack_channel_id: string
           slack_team_id: string
           status: string
+          summary_message_count: number
           thread_summary: string | null
           thread_ts: string
           updated_at: string
@@ -643,6 +644,7 @@ export type Database = {
           slack_channel_id: string
           slack_team_id: string
           status?: string
+          summary_message_count?: number
           thread_summary?: string | null
           thread_ts: string
           updated_at?: string
@@ -657,6 +659,7 @@ export type Database = {
           slack_channel_id?: string
           slack_team_id?: string
           status?: string
+          summary_message_count?: number
           thread_summary?: string | null
           thread_ts?: string
           updated_at?: string

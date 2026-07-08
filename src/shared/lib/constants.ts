@@ -42,6 +42,20 @@ export const TUTOR_MAX_TOKENS = 1200
 /** 質問本文の最大文字数（入力コスト暴走防止）。超過は TOKEN_BUDGET_EXCEEDED */
 export const MAX_QUESTION_CHARS = 6000
 
+// --- スレッド長期要約（FR-20 / BR-20-01, BR-03-04）---
+
+/**
+ * 未要約の「しっぽ」がこの件数に達したら古い分を要約する（10往復 = user/assistant 各1行 × 10）。
+ * 判定は「総数 − 要約済み件数 ≥ この値」の単調条件（件数のパリティずれに強い）。
+ */
+export const SUMMARY_TRIGGER_MESSAGES = 20
+/** 要約せずプロンプトにそのまま残す直近メッセージ数（5往復ぶん）。要約は「これより古い分」を対象にする */
+export const SUMMARY_KEEP_RECENT_MESSAGES = 10
+/** 1ターンでプロンプトに載せる履歴（未要約しっぽ）の安全上限。しっぽは通常この未満に保たれる */
+export const SUMMARY_TAIL_MAX_MESSAGES = 30
+/** 要約生成の最大出力トークン */
+export const SUMMARY_MAX_TOKENS = 400
+
 // --- BKT 知識追跡（FR-23 / DEC-24）---
 
 /** BKT 学習率 P(T) */

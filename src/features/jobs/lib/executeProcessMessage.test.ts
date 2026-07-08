@@ -6,12 +6,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   getOrCreateSession: vi.fn(),
+  summarizeThread: vi.fn(),
   getStudentProfile: vi.fn(),
   getMastery: vi.fn(),
   getKnowledgeSummary: vi.fn(),
   evaluate: vi.fn(),
   applyEvaluation: vi.fn(),
   loadThreadHistory: vi.fn(),
+  loadMessageRange: vi.fn(),
   saveMessage: vi.fn(),
   logUsage: vi.fn(),
   logError: vi.fn(),
@@ -22,7 +24,10 @@ const mocks = vi.hoisted(() => ({
   processAttachments: vi.fn(),
 }))
 
-vi.mock('@features/thread-sessions', () => ({ getOrCreateSession: mocks.getOrCreateSession }))
+vi.mock('@features/thread-sessions', () => ({
+  getOrCreateSession: mocks.getOrCreateSession,
+  summarizeThread: mocks.summarizeThread,
+}))
 vi.mock('@features/student-profiles', () => ({ getStudentProfile: mocks.getStudentProfile }))
 vi.mock('@features/student-knowledge', () => ({
   getMastery: mocks.getMastery,
@@ -32,6 +37,7 @@ vi.mock('@features/student-knowledge', () => ({
 }))
 vi.mock('@features/slack-messages', () => ({
   loadThreadHistory: mocks.loadThreadHistory,
+  loadMessageRange: mocks.loadMessageRange,
   saveMessage: mocks.saveMessage,
 }))
 vi.mock('@features/usage-logs', () => ({ logUsage: mocks.logUsage }))
@@ -63,11 +69,18 @@ const db = {} as never
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mocks.getOrCreateSession.mockResolvedValue({ id: 's1' })
+  mocks.getOrCreateSession.mockResolvedValue({
+    id: 's1',
+    person_id: payload.personId,
+    thread_summary: null,
+    summary_message_count: 0,
+  })
+  mocks.summarizeThread.mockResolvedValue({ summarized: false })
   mocks.getStudentProfile.mockResolvedValue({ profileText: null, examMode: false })
   mocks.getMastery.mockResolvedValue(0.2)
   mocks.getKnowledgeSummary.mockResolvedValue(null)
   mocks.loadThreadHistory.mockResolvedValue([])
+  mocks.loadMessageRange.mockResolvedValue([])
   mocks.saveMessage.mockResolvedValue(undefined)
   mocks.logUsage.mockResolvedValue(undefined)
   mocks.logError.mockResolvedValue(undefined)
@@ -132,12 +145,76 @@ describe('executeProcessSlackMessage', () => {
 
   it('履歴取得は person_id でも絞る（BR-05-11）', async () => {
     await executeProcessSlackMessage(db, payload)
-    expect(mocks.loadThreadHistory).toHaveBeenCalledWith(
+    // 要約が無いスレッド（summary_message_count=0）は従来どおり loadThreadHistory（直近）を使う
+    expect(mocks.loadThreadHistory).toHaveBeenCalledWith(db, 'C1', '100.1', payload.personId)
+  })
+
+  it('要約済み接頭辞があるスレッドは「その後ろ全部」を履歴に読む（欠落なし, FR-20）', async () => {
+    mocks.getOrCreateSession.mockResolvedValue({
+      id: 's1',
+      person_id: payload.personId,
+      thread_summary: '前半の要約',
+      summary_message_count: 12,
+    })
+    await executeProcessSlackMessage(db, payload)
+    // offset=summary_message_count(12) 以降を loadMessageRange で取得（loadThreadHistory は使わない）
+    expect(mocks.loadMessageRange).toHaveBeenCalledWith(db, 'C1', '100.1', payload.personId, 12, 30)
+    expect(mocks.loadThreadHistory).not.toHaveBeenCalled()
+    expect(mocks.summarizeThread).toHaveBeenCalledOnce()
+  })
+
+  it('返信後にスレッド要約を試み、既存要約と要約済み件数を渡す（FR-20）', async () => {
+    mocks.getOrCreateSession.mockResolvedValue({
+      id: 's1',
+      person_id: payload.personId,
+      thread_summary: '既存',
+      summary_message_count: 10,
+    })
+    await executeProcessSlackMessage(db, payload)
+    expect(mocks.summarizeThread).toHaveBeenCalledWith(
       db,
-      'C1',
-      '100.1',
-      payload.personId,
+      expect.anything(),
+      expect.objectContaining({
+        channelId: 'C1',
+        threadTs: '100.1',
+        personId: payload.personId,
+        existingSummary: '既存',
+        summarizedCount: 10,
+      }),
     )
+  })
+
+  it('要約生成時は usage を記録する（FR-12 / FR-20）', async () => {
+    mocks.summarizeThread.mockResolvedValue({
+      summarized: true,
+      usage: { inputTokens: 200, outputTokens: 80 },
+      newCount: 10,
+    })
+    await executeProcessSlackMessage(db, payload)
+    expect(mocks.logUsage).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({ messageTs: '100.1-summary' }),
+    )
+  })
+
+  it('別生徒に再割当てされたスレッドでは要約を注入も生成もしない（BR-05-11）', async () => {
+    mocks.getOrCreateSession.mockResolvedValue({
+      id: 's1',
+      person_id: 'other-person', // payload.personId と不一致
+      thread_summary: '生徒Aの要約',
+      summary_message_count: 20,
+    })
+    await executeProcessSlackMessage(db, payload)
+    // 要約は使わず通常履歴にフォールバック、要約生成も呼ばない
+    expect(mocks.loadThreadHistory).toHaveBeenCalledWith(db, 'C1', '100.1', payload.personId)
+    expect(mocks.loadMessageRange).not.toHaveBeenCalled()
+    expect(mocks.summarizeThread).not.toHaveBeenCalled()
+  })
+
+  it('要約生成が失敗しても回答フローは完了する（BR-20-04）', async () => {
+    mocks.summarizeThread.mockRejectedValue(new Error('summary blip'))
+    await expect(executeProcessSlackMessage(db, payload)).resolves.toBeUndefined()
+    expect(mocks.postMessage).toHaveBeenCalled()
   })
 
   it('質問が長すぎる場合は LLM を呼ばず TokenBudgetExceededError（コスト暴走防止）', async () => {

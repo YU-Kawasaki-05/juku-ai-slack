@@ -7,20 +7,20 @@
  * 依存: thread-sessions, ai-answer, student-profiles, student-knowledge, slack-messages, usage-logs, Slack client
  * 副作用: セッション/メッセージ/利用量ログの DB 書き込み, Slack への返信投稿, LLM 呼び出し
  * セキュリティ: person_id は payload（channel_id 解決済み）のみ使用（BR-05-11）。LLM 応答のみ Slack に出す
- * @implements FR-05, FR-03, FR-12, AC-05-01, AC-05-09
+ * @implements FR-05, FR-03, FR-12, FR-20, AC-05-01, AC-05-09, AC-20-01
  */
 import type { ServerDb } from '@shared/types/db'
 import { env } from '@shared/lib/env'
-import { MAX_QUESTION_CHARS } from '@shared/lib/constants'
+import { MAX_QUESTION_CHARS, SUMMARY_TAIL_MAX_MESSAGES } from '@shared/lib/constants'
 import { AiResponseFailedError, TokenBudgetExceededError } from '@shared/lib/errors/AppError'
 import { getUserFacingMessage } from '@shared/lib/errors/userMessages'
-import { getOrCreateSession } from '@features/thread-sessions'
+import { getOrCreateSession, summarizeThread } from '@features/thread-sessions'
 import { processAttachments } from '@features/image-attachments'
 import { postMessage } from '@shared/lib/slack/client'
 import { stripBotMention } from '@features/slack-events'
 import { getStudentProfile } from '@features/student-profiles'
 import { getMastery, getKnowledgeSummary, evaluate, applyEvaluation } from '@features/student-knowledge'
-import { loadThreadHistory, saveMessage } from '@features/slack-messages'
+import { loadThreadHistory, loadMessageRange, saveMessage } from '@features/slack-messages'
 import { logUsage } from '@features/usage-logs'
 import { logError } from '@features/error-logs'
 import { selectMode, generateAnswer, calculateCost, getLlmClient } from '@features/ai-answer'
@@ -34,7 +34,7 @@ export async function executeProcessSlackMessage(
 ): Promise<void> {
   const nowIso = new Date().toISOString()
 
-  await getOrCreateSession(db, {
+  const session = await getOrCreateSession(db, {
     teamId: payload.teamId,
     channelId: payload.channelId,
     threadTs: payload.threadTs,
@@ -103,10 +103,26 @@ export async function executeProcessSlackMessage(
     )
   }
 
+  // FR-20: 要約カバレッジの利用。person 不一致（チャンネル再割当て）時は別生徒の要約を使わない（BR-05-11）
+  const samePerson = session.person_id === payload.personId
+  const summarizedCount = samePerson ? (session.summary_message_count ?? 0) : 0
+  const threadSummary = samePerson ? session.thread_summary : null
+
   // 生徒データ（他生徒を混入させない。person_id で厳密にフィルタ）
+  // 要約済み接頭辞がある場合は「その後ろ全部」を履歴にする（要約 + 直近を欠落なく再構成, FR-20）。
+  // しっぽは閾値で要約されるため件数は有界（上限 SUMMARY_TAIL_MAX_MESSAGES で安全側にキャップ）
   const [profile, history, knowledgeSummary] = await Promise.all([
     getStudentProfile(db, payload.personId),
-    loadThreadHistory(db, payload.channelId, payload.threadTs, payload.personId),
+    summarizedCount > 0
+      ? loadMessageRange(
+          db,
+          payload.channelId,
+          payload.threadTs,
+          payload.personId,
+          summarizedCount,
+          SUMMARY_TAIL_MAX_MESSAGES,
+        )
+      : loadThreadHistory(db, payload.channelId, payload.threadTs, payload.personId),
     getKnowledgeSummary(db, payload.personId),
   ])
   // Sprint 3 時点ではトピック検出（質問時）未実装のため topic=null（デフォルト P → direct）。
@@ -127,6 +143,7 @@ export async function executeProcessSlackMessage(
     ragChunks,
     knowledgeSummary,
     imageDataUrls,
+    threadSummary,
     model: useModel,
   })
   const latencyMs = Date.now() - startedAt
@@ -184,6 +201,58 @@ export async function executeProcessSlackMessage(
   // Evaluator（2エージェント構成）: 返信送信後に非同期で BKT を更新する。
   // BR-23-06: 失敗は AI 回答を妨げない（サイレントフェイル + ai_error_logs 記録）
   await runEvaluator(db, payload, question, history, model)
+
+  // FR-20: 長いスレッドは古い履歴を累積要約し、次ターン以降の文脈に使う。
+  // 返信後のベストエフォート（BR-20-02/04: 失敗は回答を妨げず握りつぶす。throw すると二重返信・二重課金）。
+  // person 不一致のスレッドでは要約しない（別生徒のセッションを混ぜない, BR-05-11）
+  if (samePerson) {
+    await runThreadSummary(db, payload, model, threadSummary, summarizedCount)
+  }
+}
+
+/** スレッド要約を必要時のみ生成し thread_summary を更新する（FR-20。失敗は握りつぶす） */
+async function runThreadSummary(
+  db: ServerDb,
+  payload: ProcessSlackMessagePayload,
+  model: string,
+  existingSummary: string | null,
+  summarizedCount: number,
+): Promise<void> {
+  try {
+    const summary = await summarizeThread(db, getLlmClient(), {
+      channelId: payload.channelId,
+      threadTs: payload.threadTs,
+      personId: payload.personId,
+      model,
+      existingSummary,
+      summarizedCount,
+    })
+    if (summary.summarized && summary.usage) {
+      await logUsage(db, {
+        personId: payload.personId,
+        channelId: payload.channelId,
+        threadTs: payload.threadTs,
+        messageTs: `${payload.messageTs}-summary`,
+        model,
+        usage: summary.usage,
+        estimatedCost: calculateCost(model, summary.usage),
+        hasImage: false,
+      })
+    }
+  } catch (err) {
+    // BR-20-04: 要約失敗は回答を妨げない（次ターンは要約なしで全体履歴を使う）。
+    // 主回答は成功済みのため専用コードで記録し、AI_RESPONSE_FAILED のメトリクスを汚さない
+    await logError(db, {
+      code: 'THREAD_SUMMARY_FAILED',
+      severity: 'warning',
+      personId: payload.personId,
+      channelId: payload.channelId,
+      threadTs: payload.threadTs,
+      messageTs: payload.messageTs,
+      internalMessage: `thread summary failed: ${err instanceof Error ? err.message : String(err)}`,
+      rawError: err,
+    })
+  }
 }
 
 /** レポート由来チャンクを検索する。失敗・未設定はチャンクなしで継続（FR-10 エラーケース） */
