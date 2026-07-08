@@ -232,5 +232,12 @@ Then 生徒Bのプロフィールやレポート情報が回答に含まれな�
 - 備考:
   - **LLM プロバイダ未確定**のため provider-agnostic な `LlmClient` ポート + OpenAI 互換アダプタ（OpenRouter/DeepSeek/OpenAI を env 切替）。詳細は `docs/05_その他/保留TODO.md`
   - Sprint 2 実装済み: 3モード選択（P/試験前）・伴走者プロンプト・回答生成→返信・使用量/コスト記録・最終失敗時のユーザー通知
+
+### 部分実装（Sprint 7 整合性チェックの検証結果）
+
+- ⚠️ **未実装**: AC-05-04 ミッドコンバセーション・ドロップバック（socratic で不正解2連続→direct 降格, BR-05-06）。
+  加えて topic 検出が未実装のため getMastery が常にデフォルト値となり、P 値による socratic/confirmation
+  分岐が実運用で発火しない。AC-05-07（スタッフ向け補足）も未実装。
+- status は主要 AC 未達のため `defined` を維持。次スプリントで topic 検出 + ドロップバックを実装予定。
   - **Sprint 3 予定**: トピック検出・Evaluator LLM・BKT 書込（FR-23）・ミッドコンバセーション・ドロップバック（AC-05-04）・ワークド例題フェーディング（FR-26）。現状 P はデフォルト0.2→direct 固定
   - RAG チャンク（FR-10）組み込みも Sprint 3

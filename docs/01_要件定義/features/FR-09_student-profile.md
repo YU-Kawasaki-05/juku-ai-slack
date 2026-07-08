@@ -70,6 +70,13 @@ And プロフィールなしで（一般的な回答として）AIが回答す�
 
 ## 実装ステータス（Phase 4 が更新）
 
-- 実装ファイル: -
-- テストファイル: -
-- 最終確認Sprint: -
+- 実装ファイル（読み取りのみ）: `src/features/student-profiles/lib/getStudentProfile.ts`（回答生成時に参照）
+- テストファイル: `getStudentProfile.test.ts`
+- 最終確認Sprint: Sprint 7（部分）
+
+### 部分実装（Sprint 7 整合性チェックの検証結果）
+
+- ✅ プロフィールの**読み取り**（回答生成時の profileText 注入・exam_mode 変換）は実装済み
+- ⚠️ **未実装**: AC-09-01 プロフィール要約の作成・UPSERT。student_profiles への書き込み経路が
+  リポジトリに存在せず、管理画面（SCR-04）にも編集 UI が無い（BR-09-01 未達）。
+- status は主要 AC 未達のため `defined` を維持。次スプリントで書き込み経路 + 管理画面編集を実装予定。

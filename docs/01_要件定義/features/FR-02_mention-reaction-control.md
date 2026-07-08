@@ -2,7 +2,7 @@
 id: FR-02
 title: メンション・反応制御
 priority: P0
-status: defined
+status: implemented
 related_users: [U-01, U-02]
 related_screens: []
 version: 1

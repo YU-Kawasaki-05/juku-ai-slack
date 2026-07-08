@@ -2,7 +2,7 @@
 id: FR-12
 title: usage log
 priority: P0
-status: defined
+status: implemented
 related_users: []
 related_screens: [SCR-10]
 version: 1

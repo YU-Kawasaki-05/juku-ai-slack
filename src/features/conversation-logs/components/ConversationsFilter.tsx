@@ -1,5 +1,5 @@
 /** @file
- * 機能: 会話ログ一覧のフィルタ（生徒 / 期間）。URL クエリと同期し SSR で絞り込む
+ * 機能: 会話ログ一覧のフィルタ（生徒 / 期間 / 画像有無 / モデル / エラー有無）。URL クエリと同期し SSR で絞り込む
  * @implements FR-19（SCR-13）
  */
 'use client'
@@ -20,13 +20,18 @@ import { CONVERSATION_RANGES } from '../lib/getConversations'
 export interface ConversationsFilterValue {
   personId?: string
   days?: number
+  hasImage?: boolean
+  hasError?: boolean
+  model?: string
 }
 
 export function ConversationsFilter({
   persons,
+  models,
   value,
 }: {
   persons: { id: string; name: string }[]
+  models: string[]
   value: ConversationsFilterValue
 }) {
   const router = useRouter()
@@ -35,11 +40,16 @@ export function ConversationsFilter({
     const params = new URLSearchParams()
     if (next.personId) params.set('person', next.personId)
     if (next.days) params.set('range', String(next.days))
+    if (next.model) params.set('model', next.model)
+    if (next.hasImage) params.set('image', '1')
+    if (next.hasError) params.set('err', '1')
     const qs = params.toString()
     router.replace(qs ? `/admin/conversations?${qs}` : '/admin/conversations')
   }
 
-  const hasFilter = Boolean(value.personId || value.days)
+  const hasFilter = Boolean(
+    value.personId || value.days || value.model || value.hasImage || value.hasError,
+  )
 
   return (
     <div className="flex flex-wrap items-end gap-3">
@@ -51,7 +61,7 @@ export function ConversationsFilter({
           value={value.personId ?? 'all'}
           onValueChange={(v) => apply({ ...value, personId: v === 'all' ? undefined : v })}
         >
-          <SelectTrigger id="filter-person" className="w-44">
+          <SelectTrigger id="filter-person" className="w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -73,7 +83,7 @@ export function ConversationsFilter({
           value={value.days ? String(value.days) : 'all'}
           onValueChange={(v) => apply({ ...value, days: v === 'all' ? undefined : Number(v) })}
         >
-          <SelectTrigger id="filter-range" className="w-36">
+          <SelectTrigger id="filter-range" className="w-32">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -83,6 +93,51 @@ export function ConversationsFilter({
                 直近{d}日
               </SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {models.length > 0 && (
+        <div className="space-y-1">
+          <Label htmlFor="filter-model" className="text-xs text-muted-foreground">
+            モデル
+          </Label>
+          <Select
+            value={value.model ?? 'all'}
+            onValueChange={(v) => apply({ ...value, model: v === 'all' ? undefined : v })}
+          >
+            <SelectTrigger id="filter-model" className="w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">すべてのモデル</SelectItem>
+              {models.map((m) => (
+                <SelectItem key={m} value={m}>
+                  {m}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      <div className="space-y-1">
+        <Label htmlFor="filter-flags" className="text-xs text-muted-foreground">
+          絞り込み
+        </Label>
+        <Select
+          value={value.hasImage ? 'image' : value.hasError ? 'error' : 'all'}
+          onValueChange={(v) =>
+            apply({ ...value, hasImage: v === 'image' || undefined, hasError: v === 'error' || undefined })
+          }
+        >
+          <SelectTrigger id="filter-flags" className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">すべて</SelectItem>
+            <SelectItem value="image">画像ありのみ</SelectItem>
+            <SelectItem value="error">エラーありのみ</SelectItem>
           </SelectContent>
         </Select>
       </div>

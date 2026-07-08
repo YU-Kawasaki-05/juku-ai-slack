@@ -1,9 +1,9 @@
 /** @file
  * 機能: 会話ログの閲覧（SCR-13 / FR-19）。Slack スレッド単位の会話を管理画面で参照
- * 入力: Supabase クライアント（Service Role）、一覧はフィルタ（生徒 / 期間）
- * 出力: スレッド一覧（生徒名・チャンネル名・件数付き）/ スレッド詳細（メッセージ時系列）
+ * 入力: Supabase クライアント（Service Role）、フィルタ（生徒 / 期間 / 画像有無 / モデル / エラー有無）
+ * 出力: スレッド一覧（生徒名・チャンネル名・件数・メタ付き）/ スレッド詳細（メッセージ時系列）
  * 例外: DB エラーは queryError で文脈付きに変換して伝播
- * 依存: slack_thread_sessions, slack_messages, persons, slack_channel_bindings
+ * 依存: slack_thread_sessions, slack_messages, ai_usage_logs, ai_error_logs, persons, slack_channel_bindings
  * セキュリティ: 会話本文は PII。閲覧はスタッフ/管理者のみ（ページが認証済み・middleware 保護）。
  *   別生徒の履歴混入を防ぐため詳細は person_id + channel_id + thread_ts で厳密に絞る（BR-05-11）
  * @implements FR-19
@@ -20,13 +20,30 @@ export type ConversationRangeDays = (typeof CONVERSATION_RANGES)[number]
 export interface ConversationFilters {
   personId?: string
   days?: ConversationRangeDays
+  /** 画像添付を含むスレッドのみ */
+  hasImage?: boolean
+  /** エラーが発生したスレッドのみ */
+  hasError?: boolean
+  /** 指定モデルを使ったスレッドのみ */
+  model?: string
   limit?: number
+}
+
+/** スレッド1件分の集計メタ */
+export interface ThreadMeta {
+  count: number
+  hasImage: boolean
+  hasError: boolean
+  models: string[]
 }
 
 export type ThreadListItem = Tables<'slack_thread_sessions'> & {
   persons: { name: string } | null
   channelName: string | null
   messageCount: number
+  hasImage: boolean
+  hasError: boolean
+  models: string[]
 }
 
 export interface ConversationMessage {
@@ -44,14 +61,44 @@ export interface ThreadDetail {
   messages: ConversationMessage[]
 }
 
-/** チャンネル×スレッドを一意キーにしてメッセージ件数を数える（thread_ts はチャンネル内一意） */
-export function countMessagesByThread(
-  rows: { slack_channel_id: string; thread_ts: string }[],
-): Map<string, number> {
-  const map = new Map<string, number>()
-  for (const r of rows) {
-    const key = `${r.slack_channel_id}:${r.thread_ts}`
-    map.set(key, (map.get(key) ?? 0) + 1)
+/** チャンネル×スレッドを一意キーにする（thread_ts はチャンネル内一意） */
+function threadKey(channelId: string, threadTs: string): string {
+  return `${channelId}:${threadTs}`
+}
+
+/**
+ * メッセージ・利用ログ・エラーログからスレッド単位のメタ（件数・画像有無・モデル・エラー有無）を集計する。
+ * 純関数（DB 非依存・テスト対象）。
+ */
+export function buildThreadMeta(
+  messages: { slack_channel_id: string | null; thread_ts: string | null; has_attachments: boolean }[],
+  usage: { slack_channel_id: string | null; thread_ts: string | null; model: string | null }[],
+  errors: { slack_channel_id: string | null; thread_ts: string | null }[],
+): Map<string, ThreadMeta> {
+  const map = new Map<string, ThreadMeta>()
+  const ensure = (ch: string, ts: string): ThreadMeta => {
+    const key = threadKey(ch, ts)
+    let m = map.get(key)
+    if (!m) {
+      m = { count: 0, hasImage: false, hasError: false, models: [] }
+      map.set(key, m)
+    }
+    return m
+  }
+  for (const r of messages) {
+    if (!r.slack_channel_id || !r.thread_ts) continue
+    const m = ensure(r.slack_channel_id, r.thread_ts)
+    m.count += 1
+    if (r.has_attachments) m.hasImage = true
+  }
+  for (const u of usage) {
+    if (!u.slack_channel_id || !u.thread_ts) continue
+    const m = ensure(u.slack_channel_id, u.thread_ts)
+    if (u.model && !m.models.includes(u.model)) m.models.push(u.model)
+  }
+  for (const e of errors) {
+    if (!e.slack_channel_id || !e.thread_ts) continue
+    ensure(e.slack_channel_id, e.thread_ts).hasError = true
   }
   return map
 }
@@ -74,11 +121,19 @@ async function resolveChannelNames(
   return map
 }
 
+/** フィルタ選択肢用: これまでに利用されたモデル一覧（昇順・重複排除） */
+export async function getUsedModels(db: ServerDb): Promise<string[]> {
+  const { data, error } = await db.from('ai_usage_logs').select('model')
+  if (error) throw queryError('getUsedModels', error)
+  return [...new Set((data ?? []).map((r) => r.model).filter((m): m is string => Boolean(m)))].sort()
+}
+
 export async function getThreads(
   db: ServerDb,
   filters: ConversationFilters = {},
 ): Promise<ThreadListItem[]> {
-  const limit = filters.limit ?? 200
+  // 集計後にメタでも絞り込むため、まず広めに取得する
+  const limit = filters.limit ?? 500
   let query = db
     .from('slack_thread_sessions')
     .select('*, persons(name)')
@@ -101,18 +156,40 @@ export async function getThreads(
   const channelIds = [...new Set(sessions.map((s) => s.slack_channel_id))]
   const threadTsList = [...new Set(sessions.map((s) => s.thread_ts))]
 
-  const [countRes, channelNames] = await Promise.all([
-    db.from('slack_messages').select('slack_channel_id, thread_ts').in('thread_ts', threadTsList),
+  const [msgRes, usageRes, errRes, channelNames] = await Promise.all([
+    db.from('slack_messages').select('slack_channel_id, thread_ts, has_attachments').in('thread_ts', threadTsList),
+    db.from('ai_usage_logs').select('slack_channel_id, thread_ts, model').in('thread_ts', threadTsList),
+    db.from('ai_error_logs').select('slack_channel_id, thread_ts').in('thread_ts', threadTsList),
     resolveChannelNames(db, channelIds),
   ])
-  if (countRes.error) throw queryError('getThreads(counts)', countRes.error)
-  const counts = countMessagesByThread(countRes.data ?? [])
+  if (msgRes.error) throw queryError('getThreads(messages)', msgRes.error)
+  if (usageRes.error) throw queryError('getThreads(usage)', usageRes.error)
+  if (errRes.error) throw queryError('getThreads(errors)', errRes.error)
 
-  return sessions.map((s) => ({
-    ...s,
-    channelName: channelNames.get(s.slack_channel_id) ?? null,
-    messageCount: counts.get(`${s.slack_channel_id}:${s.thread_ts}`) ?? 0,
-  }))
+  const meta = buildThreadMeta(msgRes.data ?? [], usageRes.data ?? [], errRes.data ?? [])
+
+  let items: ThreadListItem[] = sessions.map((s) => {
+    const m = meta.get(threadKey(s.slack_channel_id, s.thread_ts)) ?? {
+      count: 0,
+      hasImage: false,
+      hasError: false,
+      models: [],
+    }
+    return {
+      ...s,
+      channelName: channelNames.get(s.slack_channel_id) ?? null,
+      messageCount: m.count,
+      hasImage: m.hasImage,
+      hasError: m.hasError,
+      models: m.models,
+    }
+  })
+
+  if (filters.hasImage) items = items.filter((i) => i.hasImage)
+  if (filters.hasError) items = items.filter((i) => i.hasError)
+  if (filters.model) items = items.filter((i) => i.models.includes(filters.model!))
+
+  return items
 }
 
 export async function getThreadDetail(db: ServerDb, id: string): Promise<ThreadDetail | null> {

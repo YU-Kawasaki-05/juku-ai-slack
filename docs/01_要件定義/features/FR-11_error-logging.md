@@ -2,7 +2,7 @@
 id: FR-11
 title: エラー分類・ログ
 priority: P0
-status: defined
+status: implemented
 related_users: []
 related_screens: [SCR-11, SCR-12]
 version: 1

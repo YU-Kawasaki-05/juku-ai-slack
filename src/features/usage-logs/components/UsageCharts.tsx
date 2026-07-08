@@ -7,6 +7,7 @@
  */
 'use client'
 
+import { useState } from 'react'
 import {
   Area,
   AreaChart,
@@ -21,33 +22,115 @@ import {
 } from 'recharts'
 import { AlertTriangle, BarChart3, TrendingUp, Users } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 import type { UsageAnalytics } from '../lib/getUsageAnalytics'
 
 const VIZ = 'var(--viz-1)'
 const AXIS_TICK = { fill: 'hsl(var(--muted-foreground))', fontSize: 12 }
 
+/** 同じ数値をグラフと表で切り替えられる（dataviz: SR / 印刷 / CVD 向けの table view） */
 function ChartCard({
   title,
   icon: Icon,
   description,
   children,
+  table,
 }: {
   title: string
   icon: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }>
   description?: string
   children: React.ReactNode
+  table?: React.ReactNode
 }) {
+  const [view, setView] = useState<'chart' | 'table'>('chart')
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-          <Icon className="h-4 w-4" aria-hidden={true} />
-          {title}
-        </CardTitle>
+        <div className="flex items-start justify-between gap-3">
+          <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <Icon className="h-4 w-4" aria-hidden={true} />
+            {title}
+          </CardTitle>
+          {table && (
+            <div
+              role="group"
+              aria-label={`${title}の表示切替`}
+              className="inline-flex shrink-0 rounded-md border bg-card p-0.5 text-xs"
+            >
+              {(['chart', 'table'] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  aria-pressed={view === v}
+                  onClick={() => setView(v)}
+                  className={cn(
+                    'rounded px-2 py-0.5 font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+                    view === v
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {v === 'chart' ? 'グラフ' : '表'}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         {description && <p className="text-xs text-muted-foreground/80">{description}</p>}
       </CardHeader>
-      <CardContent>{children}</CardContent>
+      <CardContent>{view === 'table' && table ? table : children}</CardContent>
     </Card>
+  )
+}
+
+/** チャートと同じ数値の表。最後の numericFrom 列以降を右寄せ・tabular-nums にする */
+function DataTable({
+  caption,
+  headers,
+  rows,
+  numericFrom = 1,
+}: {
+  caption: string
+  headers: string[]
+  rows: (string | number)[][]
+  numericFrom?: number
+}) {
+  return (
+    <div className="max-h-[260px] overflow-auto rounded-md border">
+      <table className="w-full text-sm">
+        <caption className="sr-only">{caption}</caption>
+        <thead className="sticky top-0 bg-muted/80 backdrop-blur">
+          <tr>
+            {headers.map((h, i) => (
+              <th
+                key={i}
+                scope="col"
+                className={cn(
+                  'px-3 py-1.5 font-medium text-muted-foreground',
+                  i >= numericFrom ? 'text-right' : 'text-left',
+                )}
+              >
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, ri) => (
+            <tr key={ri} className="border-t">
+              {r.map((c, ci) => (
+                <td
+                  key={ci}
+                  className={cn('px-3 py-1.5', ci >= numericFrom && 'text-right tabular-nums')}
+                >
+                  {c}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   )
 }
 
@@ -87,7 +170,18 @@ export function UsageCharts({ analytics }: { analytics: UsageAnalytics }) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <ChartCard title="日別 質問数" icon={TrendingUp} description="生徒からの質問件数の推移">
+        <ChartCard
+          title="日別 質問数"
+          icon={TrendingUp}
+          description="生徒からの質問件数の推移"
+          table={
+            <DataTable
+              caption="日別の質問数"
+              headers={['日付', '質問数']}
+              rows={daily.map((d) => [d.label, d.count])}
+            />
+          }
+        >
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={daily} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
               <CartesianGrid stroke="var(--viz-grid)" vertical={false} />
@@ -125,7 +219,18 @@ export function UsageCharts({ analytics }: { analytics: UsageAnalytics }) {
           </ResponsiveContainer>
         </ChartCard>
 
-        <ChartCard title="日別 コスト" icon={TrendingUp} description="AI API の推定利用額（USD）">
+        <ChartCard
+          title="日別 コスト"
+          icon={TrendingUp}
+          description="AI API の推定利用額（USD）"
+          table={
+            <DataTable
+              caption="日別のコスト"
+              headers={['日付', 'コスト']}
+              rows={daily.map((d) => [d.label, formatUsd(d.costUsd)])}
+            />
+          }
+        >
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={daily} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
               <CartesianGrid stroke="var(--viz-grid)" vertical={false} />
@@ -170,7 +275,17 @@ export function UsageCharts({ analytics }: { analytics: UsageAnalytics }) {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <ChartCard title="モデル別 利用回数" icon={BarChart3}>
+        <ChartCard
+          title="モデル別 利用回数"
+          icon={BarChart3}
+          table={
+            <DataTable
+              caption="モデル別の利用回数とコスト"
+              headers={['モデル', '回数', 'コスト']}
+              rows={byModel.map((m) => [m.model, m.count, formatUsd(m.costUsd)])}
+            />
+          }
+        >
           {byModel.length === 0 ? (
             <EmptyChart message="この期間の利用はありません" />
           ) : (
@@ -218,7 +333,17 @@ export function UsageCharts({ analytics }: { analytics: UsageAnalytics }) {
           )}
         </ChartCard>
 
-        <ChartCard title="生徒別 質問数（上位10）" icon={Users}>
+        <ChartCard
+          title="生徒別 質問数（上位10）"
+          icon={Users}
+          table={
+            <DataTable
+              caption="生徒別の質問数（上位10）"
+              headers={['生徒', '質問数']}
+              rows={byPerson.map((p) => [p.name, p.count])}
+            />
+          }
+        >
           {byPerson.length === 0 ? (
             <EmptyChart message="この期間の利用はありません" />
           ) : (
@@ -267,6 +392,13 @@ export function UsageCharts({ analytics }: { analytics: UsageAnalytics }) {
           title="エラーコード別 発生数"
           icon={AlertTriangle}
           description="この期間に記録されたエラーの内訳"
+          table={
+            <DataTable
+              caption="エラーコード別の発生数"
+              headers={['エラーコード', '件数']}
+              rows={errorsByCode.map((e) => [e.code, e.count])}
+            />
+          }
         >
           <ResponsiveContainer width="100%" height={Math.max(120, errorsByCode.length * 40)}>
             <BarChart
