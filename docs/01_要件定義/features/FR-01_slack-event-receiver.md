@@ -2,7 +2,7 @@
 id: FR-01
 title: Slackイベント受信・署名検証
 priority: P0
-status: defined
+status: implemented
 related_users: []
 related_screens: []
 version: 1

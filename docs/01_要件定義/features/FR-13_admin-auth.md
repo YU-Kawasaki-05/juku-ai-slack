@@ -2,7 +2,7 @@
 id: FR-13
 title: 管理画面認証
 priority: P0
-status: defined
+status: implemented
 related_users: [U-02, U-03]
 related_screens: [SCR-01]
 version: 1

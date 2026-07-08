@@ -2,7 +2,7 @@
 id: FR-04
 title: 非同期ジョブ処理
 priority: P0
-status: defined
+status: implemented
 related_users: []
 related_screens: []
 version: 1
