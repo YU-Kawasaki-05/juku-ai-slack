@@ -160,7 +160,7 @@ features:
     file: features/FR-20_thread-summary.md
     title: スレッド長期要約
     priority: P1
-    status: defined
+    status: implemented
     related_users: [U-01, U-02]
     related_screens: []
 

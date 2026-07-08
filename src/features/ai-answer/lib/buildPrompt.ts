@@ -18,6 +18,8 @@ export interface BuildPromptInput {
   profileText: string | null
   /** スレッド履歴（古い順）。現在の質問は含めない */
   history: LlmMessage[]
+  /** 長いスレッドの前半を圧縮した要約（FR-20）。あれば直近履歴の前に文脈として与える。無ければ null/未指定 */
+  threadSummary?: string | null
   /** RAG で取得したレポート由来チャンク（FR-10）。無ければ空/未指定 */
   ragChunks?: string[]
   /** 生徒の知識状態サマリー（FR-23, AC-23-05）。無ければ null/未指定 */
@@ -66,6 +68,10 @@ export function buildPrompt(input: BuildPromptInput): { system: string; messages
   if (input.knowledgeSummary) {
     // AC-23-05: 知識状態サマリーをプロンプトに含める（苦手トピックは丁寧に説明）
     system += `\n\n【この生徒の知識状態（AI参照用。苦手トピックは特に丁寧に）】\n${input.knowledgeSummary}`
+  }
+  if (input.threadSummary) {
+    // FR-20: 長いスレッドの前半要約。直近履歴（messages）と併せて文脈を維持する
+    system += `\n\n【このスレッドのこれまでの要約（前半の会話。直近のやり取りは別途続きます）】\n${input.threadSummary}`
   }
   if (input.ragChunks && input.ragChunks.length > 0) {
     // BR-05-10: レポート由来と一般知識を区別できる表現を促す

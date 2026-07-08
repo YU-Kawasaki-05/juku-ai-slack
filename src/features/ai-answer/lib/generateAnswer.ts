@@ -28,6 +28,7 @@ export async function generateAnswer(
     ragChunks: input.ragChunks,
     knowledgeSummary: input.knowledgeSummary,
     imageDataUrls: input.imageDataUrls,
+    threadSummary: input.threadSummary,
   })
 
   return llm.generate({

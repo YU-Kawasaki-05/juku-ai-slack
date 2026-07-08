@@ -42,6 +42,56 @@ export async function loadThreadHistory(
     .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.text as string }))
 }
 
+/**
+ * スレッドの user/assistant メッセージ総数を数える（要約トリガー判定用, FR-20）。
+ * person_id で厳密フィルタ（BR-05-11）。
+ */
+export async function countThreadMessages(
+  db: ServerDb,
+  channelId: string,
+  threadTs: string,
+  personId: string,
+): Promise<number> {
+  const { count, error } = await db
+    .from('slack_messages')
+    .select('*', { count: 'exact', head: true })
+    .eq('slack_channel_id', channelId)
+    .eq('thread_ts', threadTs)
+    .eq('person_id', personId)
+    .in('role', ['user', 'assistant'])
+  if (error) throw error
+  return count ?? 0
+}
+
+/**
+ * 古い順の一定範囲のメッセージを返す（要約対象ウィンドウの取得用, FR-20）。
+ * offset から limit 件（asc）。text のある user/assistant のみ整形。
+ */
+export async function loadMessageRange(
+  db: ServerDb,
+  channelId: string,
+  threadTs: string,
+  personId: string,
+  offset: number,
+  limit: number,
+): Promise<LlmMessage[]> {
+  const { data, error } = await db
+    .from('slack_messages')
+    .select('role, text, created_at')
+    .eq('slack_channel_id', channelId)
+    .eq('thread_ts', threadTs)
+    .eq('person_id', personId)
+    // count（countThreadMessages）と母集合を揃える（offset のズレ防止）
+    .in('role', ['user', 'assistant'])
+    .order('created_at', { ascending: true })
+    .range(offset, offset + limit - 1)
+  if (error) throw error
+  if (!data) return []
+  return data
+    .filter((m) => (m.role === 'user' || m.role === 'assistant') && m.text)
+    .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.text as string }))
+}
+
 export interface SaveMessageParams {
   teamId: string
   channelId: string
