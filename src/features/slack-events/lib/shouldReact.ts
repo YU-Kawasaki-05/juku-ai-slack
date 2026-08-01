@@ -23,7 +23,8 @@ import type { ReactionDecision, ShouldReactInput } from '../types'
  * 5. チャンネル直下:
  *    - メンションなし → ignore（BR-02-03, AC-02-02）※スタッフ雑談に反応しない
  *    - メンションあり → binding 判定へ
- * 6. binding: active → process / それ以外 → channel_not_bound（BR-02-05, BR-07-03, AC-02-06）
+ * 6. binding: person_inactive → 無言 ignore（H-6。退塾生チャンネルには投稿しない）
+ * 7. binding: active → process / それ以外 → channel_not_bound（BR-02-05, BR-07-03, AC-02-06）
  */
 export function shouldReact(input: ShouldReactInput): ReactionDecision {
   if (input.hasBotId) {
@@ -51,6 +52,13 @@ export function shouldReact(input: ShouldReactInput): ReactionDecision {
         reason: input.isThreadReply ? 'unregistered_thread_no_mention' : 'channel_no_mention',
       }
     }
+  }
+
+  // H-6: 退塾生のチャンネルは無言で無視する。
+  // 紐付け不備（channel_not_bound）と違い、案内を投稿しても生徒が取れる行動は無く、
+  // 退塾済みチャンネルに Bot が発言し続ける方が事故になる
+  if (input.bindingStatus === 'person_inactive') {
+    return { action: 'ignore', reason: 'person_inactive' }
   }
 
   // ここに来る = 反応候補。紐付け状態を確認（BR-02-05 / BR-07-03）

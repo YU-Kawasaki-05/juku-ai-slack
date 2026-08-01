@@ -199,6 +199,32 @@ describe('POST /api/slack/events', () => {
     expect(mocks.enqueueJob).not.toHaveBeenCalled()
   })
 
+  it('退塾生のチャンネルには何も投稿せず PERSON_INACTIVE を info で残す（H-6）', async () => {
+    mocks.lookupBinding.mockResolvedValue({
+      status: 'person_inactive',
+      binding: { person_id: 'p1', default_report_id: null },
+    })
+    const res = await POST(signedRequest(messageEvent()))
+    expect(res.status).toBe(200)
+    expect(mocks.enqueueJob).not.toHaveBeenCalled()
+
+    await flushAfter()
+    // 退塾生チャンネルには案内すら投稿しない（無言 ignore）
+    expect(mocks.postMessage).not.toHaveBeenCalled()
+    expect(mocks.logError).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ code: 'PERSON_INACTIVE', severity: 'info', personId: 'p1' }),
+    )
+    expect(mocks.markReceiptStatus).toHaveBeenCalledWith(expect.anything(), 'Ev1', 'skipped')
+  })
+
+  it('通常の ignore（メンションなし）ではログを書かない（H-6 の記録は退塾生に限る）', async () => {
+    const res = await POST(signedRequest(messageEvent({ text: '雑談' })))
+    expect(res.status).toBe(200)
+    await flushAfter()
+    expect(mocks.logError).not.toHaveBeenCalled()
+  })
+
   it('対応外ファイルのみ+メンション（実質テキストなし）は UNSUPPORTED を返しジョブ登録しない（AC-06-02）', async () => {
     const res = await POST(
       signedRequest(

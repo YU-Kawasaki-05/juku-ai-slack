@@ -1,7 +1,7 @@
 /** @file
- * 機能: ダッシュボード（SCR-02）。サマリー4カード + 最近のエラー
- * 備考: DEC-15 の kill_switch 状態表示は kill_switch 自体が未実装（バックエンド領域）のため未対応
- * @implements FR-18
+ * 機能: ダッシュボード（SCR-02）。AI応答の状態カード（DEC-15）+ サマリー4カード + 最近のエラー
+ * 備考: kill_switch は停止に気づかず放置されるのが最大のリスクなので最上部に置く（DEC-15）
+ * @implements FR-18, DEC-15
  */
 import type { Metadata } from 'next'
 import Link from 'next/link'
@@ -17,6 +17,8 @@ import { createServerClient } from '@/shared/lib/supabase/serverClient'
 import { getUsageSummary } from '@features/usage-logs'
 import { countActivePersons } from '@features/persons'
 import { getErrorLogs, countUnresolvedErrors } from '@features/errors'
+import { getAIKillSwitch } from '@features/kill-switch'
+import { KillSwitchCard } from '@features/kill-switch/components/KillSwitchCard'
 import { StatusBadge } from '@/components/admin/StatusBadge'
 import { formatDateTime } from '@/components/admin/formatDate'
 import { cn } from '@/lib/utils'
@@ -26,12 +28,13 @@ export const metadata: Metadata = { title: 'ダッシュボード' }
 export default async function AdminDashboardPage() {
   const db = createServerClient()
 
-  const [usage, unresolvedCount, studentCount, recentErrors] = await Promise.all([
+  const [usage, unresolvedCount, studentCount, recentErrors, killSwitch] = await Promise.all([
     getUsageSummary(db),
     countUnresolvedErrors(db),
     // H-6: 「無効にした生徒は集計から外れます」の説明どおり active のみ数える
     countActivePersons(db),
     getErrorLogs(db, { limit: 5 }),
+    getAIKillSwitch(db),
   ])
 
   return (
@@ -40,6 +43,8 @@ export default async function AdminDashboardPage() {
         <h1 className="text-2xl font-bold tracking-tight">ダッシュボード</h1>
         <p className="text-sm text-muted-foreground">じゅくAI の利用状況サマリー</p>
       </div>
+
+      <KillSwitchCard state={killSwitch} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>

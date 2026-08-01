@@ -34,6 +34,33 @@ export const JOB_RETRY_RATE_LIMIT_FACTOR = 3
 /** Sprint 1 の暫定返信文言（Sprint 2 で AI 回答に置換） */
 export const SPRINT1_ACK_REPLY = '受け付けました（テスト返信）🙌'
 
+// --- 滞留ジョブの回収・保持期間（A-1 後半 / A-14。DEC-13 により Cron は使わない）---
+
+/**
+ * processing のまま放置されたジョブを failed 扱いにするまでの分数。
+ * route.ts の maxDuration=300（5分）+ リトライ待機を吸収できる余裕を取る。
+ */
+export const JOB_PROCESSING_TIMEOUT_MIN = 10
+/**
+ * pending のまま放置されたジョブ（after() 自体が走らなかった孤児）を failed 扱いにするまでの分数。
+ * enqueue 直後に after() が走る設計なので、これを超える pending は実行機会を失っている。
+ */
+export const JOB_PENDING_TIMEOUT_MIN = 15
+/** slack_event_receipts の保持日数（運用設計 1.1: 30日で定期削除） */
+export const RECEIPT_RETENTION_DAYS = 30
+/** jobs（完了系）の保持日数（運用設計 1.1: 7日で定期削除） */
+export const JOB_RETENTION_DAYS = 7
+
+// --- 暴走防止のレート制限（F-2 / 運用設計 3.4）---
+
+/**
+ * person_id 単位の質問回数の上限（直近1時間）。運用設計 3.4。
+ * LLM 呼び出しの手前で判定し、超過分は課金を発生させずに定型文で返す。
+ */
+export const RATE_LIMIT_QUESTIONS_PER_HOUR = 10
+/** レート制限の集計ウィンドウ（ミリ秒） */
+export const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000
+
 // --- AI 回答（FR-05 / DEC-23）---
 
 /** P(mastery) 未取得トピックのデフォルト（P(L0)）。BR-05-05 */

@@ -114,7 +114,7 @@ export function PersonForm({
               aria-describedby="status-help"
             />
             <p id="status-help" className="text-xs text-muted-foreground">
-              無効にした生徒は Bot の対象生徒プルダウン・集計から外れます（生徒一覧には残ります）
+              無効にすると Bot が応答しなくなり、集計・選択肢からも除外されます（生徒一覧には残ります）
             </p>
             <FieldError id="status-error" message={err?.fieldErrors?.status} />
           </div>

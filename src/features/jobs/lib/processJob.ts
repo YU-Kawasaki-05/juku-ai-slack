@@ -19,6 +19,7 @@ import {
 import { AppError } from '@shared/lib/errors/AppError'
 import { getUserFacingMessage, isSilentError } from '@shared/lib/errors/userMessages'
 import { logError } from '@features/error-logs'
+import { isAIEnabled } from '@features/kill-switch'
 import { processSlackMessagePayloadSchema, type ProcessSlackMessagePayload } from '../types'
 import { executeProcessSlackMessage, type ExecuteContext } from './executeProcessMessage'
 
@@ -120,6 +121,36 @@ export async function processJob(
   }
 
   const payload = parsed.data
+
+  // F-1 / DEC-15: kill_switch が停止中なら LLM を一切呼ばずに定型文だけ返す。
+  // ここ（execute の手前 = 🤔 を付ける前）で判定するのがコスト遮断の要件。
+  // 停止は障害・コスト対応の意図的な状態なので failed ではなく completed で閉じ、
+  // error_code に理由を残す（再実行しても同じ結果になるためリトライさせない）。
+  if (!(await isAIEnabled(db))) {
+    await safeSlackCall(() =>
+      postMessage({
+        channel: payload.channelId,
+        text: getUserFacingMessage('AI_PAUSED'),
+        threadTs: payload.threadTs,
+      }),
+    )
+    await updateJobStatus(db, jobId, {
+      status: 'completed',
+      finished_at: clock(),
+      error_code: 'AI_PAUSED',
+    })
+    await logError(db, {
+      code: 'AI_PAUSED',
+      severity: 'info',
+      personId: payload.personId,
+      channelId: payload.channelId,
+      threadTs: payload.threadTs,
+      messageTs: payload.messageTs,
+      internalMessage: 'kill switch ai_responses is disabled; skipped LLM call',
+    })
+    return { status: 'completed', attempts: 0 }
+  }
+
   const maxAttempts = claimed.max_attempts
 
   // A-3: 生成済みの回答は attempt をまたいで持ち回す（リトライで LLM を再課金しない）。

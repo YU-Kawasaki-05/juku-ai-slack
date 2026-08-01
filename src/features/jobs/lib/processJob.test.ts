@@ -1,6 +1,6 @@
 /** @file
- * 検証: ジョブの claim・リトライ・状態遷移・二重処理防止・🤔リアクション
- * @verifies AC-04-02, AC-04-03, AC-04-04, AC-01-06, A-3, A-11
+ * 検証: ジョブの claim・リトライ・状態遷移・二重処理防止・🤔リアクション・kill_switch
+ * @verifies AC-04-02, AC-04-03, AC-04-04, AC-01-06, A-3, A-11, DEC-15, F-1
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
@@ -10,6 +10,9 @@ vi.mock('@shared/lib/slack/client', () => ({
   addReaction: slackMocks.addReaction,
   removeReaction: slackMocks.removeReaction,
 }))
+
+const killSwitch = vi.hoisted(() => ({ isAIEnabled: vi.fn() }))
+vi.mock('@features/kill-switch', () => ({ isAIEnabled: killSwitch.isAIEnabled }))
 
 import { processJob, retryDelayMs } from './processJob'
 import { createMockDb } from '@/test/mocks/supabaseMock'
@@ -73,6 +76,8 @@ describe('processJob', () => {
   beforeEach(() => {
     slackMocks.postMessage.mockReset()
     slackMocks.postMessage.mockResolvedValue({ ts: 'x' })
+    killSwitch.isAIEnabled.mockReset()
+    killSwitch.isAIEnabled.mockResolvedValue(true)
   })
 
   it('claim できない（既に処理済み）なら skipped（AC-04-04）', async () => {
@@ -275,6 +280,56 @@ describe('processJob', () => {
     const { options } = makeOptions(execute)
     await processJob(db, 'job1', options)
     expect(seen[0]).toEqual({ jobId: 'job1', resultText: '生成済みの回答' })
+  })
+
+  // --- F-1 / DEC-15: kill_switch ---
+  it('kill_switch が停止中なら execute（LLM）を呼ばずに定型文を返す（コスト遮断, F-1）', async () => {
+    killSwitch.isAIEnabled.mockResolvedValue(false)
+    const db = createMockDb({ maybeSingle: { data: claimedJob(), error: null } })
+    const execute = vi.fn(async () => {})
+    const { options, addReactionFn } = makeOptions(execute)
+
+    const result = await processJob(db, 'job1', options)
+
+    expect(execute).not.toHaveBeenCalled()
+    expect(slackMocks.postMessage).toHaveBeenCalledWith({
+      channel: 'C1',
+      text: getUserFacingMessage('AI_PAUSED'),
+      threadTs: '100.1',
+    })
+    // 🤔（処理中）も付けない。応答しないのに考えているように見せない
+    expect(addReactionFn).not.toHaveBeenCalled()
+    expect(result.status).toBe('completed')
+  })
+
+  it('停止中のジョブは completed + error_code=AI_PAUSED で閉じる（リトライさせない, F-1）', async () => {
+    killSwitch.isAIEnabled.mockResolvedValue(false)
+    const db = createMockDb({ maybeSingle: { data: claimedJob(), error: null } })
+    await processJob(db, 'job1', makeOptions(vi.fn(async () => {})).options)
+
+    const last = db.__calls.update.at(-1) as Record<string, unknown>
+    expect(last).toMatchObject({ status: 'completed', error_code: 'AI_PAUSED' })
+  })
+
+  it('停止中は AI_PAUSED を severity=info で 1 件だけ記録する（F-1）', async () => {
+    killSwitch.isAIEnabled.mockResolvedValue(false)
+    const db = createMockDb({ maybeSingle: { data: claimedJob(), error: null } })
+    await processJob(db, 'job1', makeOptions(vi.fn(async () => {})).options)
+
+    const logs = db.__calls.insert as Array<Record<string, unknown>>
+    expect(logs).toHaveLength(1)
+    expect(logs[0]).toMatchObject({
+      error_code: 'AI_PAUSED',
+      severity: 'info',
+      person_id: validPayload.personId,
+    })
+  })
+
+  it('kill_switch が有効なら従来どおり execute する（F-1 の回帰）', async () => {
+    const db = createMockDb({ maybeSingle: { data: claimedJob(), error: null } })
+    const execute = vi.fn(async () => {})
+    await processJob(db, 'job1', makeOptions(execute).options)
+    expect(execute).toHaveBeenCalledOnce()
   })
 
   it('生成済みの回答は同じ ctx でリトライに引き継がれる（A-3）', async () => {

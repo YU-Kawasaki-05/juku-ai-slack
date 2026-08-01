@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   searchChunks: vi.fn(),
   getEmbeddingClient: vi.fn(),
   processAttachments: vi.fn(),
+  checkQuestionRateLimit: vi.fn(),
 }))
 
 vi.mock('@features/thread-sessions', () => ({
@@ -51,6 +52,7 @@ vi.mock('@features/rag', async (importOriginal) => ({
   getEmbeddingClient: mocks.getEmbeddingClient,
 }))
 vi.mock('@features/image-attachments', () => ({ processAttachments: mocks.processAttachments }))
+vi.mock('@features/rate-limit', () => ({ checkQuestionRateLimit: mocks.checkQuestionRateLimit }))
 vi.mock('@shared/lib/slack/client', () => ({ postMessage: mocks.postMessage }))
 
 import { executeProcessSlackMessage, TRUNCATED_ANSWER_NOTICE } from './executeProcessMessage'
@@ -118,6 +120,7 @@ beforeEach(() => {
   mocks.searchChunks.mockResolvedValue([])
   mocks.getEmbeddingClient.mockReturnValue({ embed: vi.fn() })
   mocks.processAttachments.mockResolvedValue({ dataUrls: [], errorCodes: [] })
+  mocks.checkQuestionRateLimit.mockResolvedValue({ limited: false, count: 1 })
   mocks.postMessage.mockResolvedValue({ ts: '200.2' })
   mocks.generate.mockResolvedValue({
     text: '一緒に整理しよう',
@@ -272,6 +275,66 @@ describe('executeProcessSlackMessage', () => {
     })
     expect(mocks.generate).not.toHaveBeenCalled()
     expect(mocks.postMessage).not.toHaveBeenCalled()
+  })
+
+  // --- F-2: per-person レート制限（運用設計 3.4: 10回/時）---
+  it('上限超過なら LLM を呼ばず定型文だけ返す（コスト遮断, F-2）', async () => {
+    mocks.checkQuestionRateLimit.mockResolvedValue({ limited: true, count: 10 })
+
+    await expect(executeProcessSlackMessage(db, payload)).resolves.toBeUndefined()
+
+    expect(mocks.generate).not.toHaveBeenCalled()
+    expect(mocks.logUsage).not.toHaveBeenCalled()
+    expect(mocks.postMessage).toHaveBeenCalledWith({
+      channel: 'C1',
+      text: getUserFacingMessage('RATE_LIMITED'),
+      threadTs: '100.1',
+    })
+  })
+
+  it('上限超過の判定は person_id 単位で行う（F-2）', async () => {
+    mocks.checkQuestionRateLimit.mockResolvedValue({ limited: true, count: 10 })
+    await executeProcessSlackMessage(db, payload)
+    expect(mocks.checkQuestionRateLimit).toHaveBeenCalledWith(db, payload.personId)
+  })
+
+  it('上限超過は RATE_LIMITED を info で記録し、質問は保存しない（F-2）', async () => {
+    mocks.checkQuestionRateLimit.mockResolvedValue({ limited: true, count: 12 })
+
+    await executeProcessSlackMessage(db, payload)
+
+    expect(mocks.logError).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        code: 'RATE_LIMITED',
+        severity: 'info',
+        personId: payload.personId,
+      }),
+    )
+    // 画像 DL・セッション確保・履歴保存といった後続コストも発生させない
+    expect(mocks.saveMessage).not.toHaveBeenCalled()
+    expect(mocks.getOrCreateSession).not.toHaveBeenCalled()
+    expect(mocks.processAttachments).not.toHaveBeenCalled()
+  })
+
+  it('レート制限の判定は LLM 呼び出しより前に走る（F-2）', async () => {
+    await executeProcessSlackMessage(db, payload)
+    expect(mocks.checkQuestionRateLimit.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.generate.mock.invocationCallOrder[0],
+    )
+  })
+
+  it('カウント不能（limited=false）なら通常どおり回答する（可用性優先, F-2）', async () => {
+    mocks.checkQuestionRateLimit.mockResolvedValue({ limited: false, count: null })
+    await executeProcessSlackMessage(db, payload)
+    expect(mocks.generate).toHaveBeenCalledOnce()
+  })
+
+  it('生成済み回答の配信リトライではレート制限を評価しない（既に課金済み, F-2 / A-3）', async () => {
+    mocks.checkQuestionRateLimit.mockResolvedValue({ limited: true, count: 99 })
+    await executeProcessSlackMessage(db, payload, { jobId: 'job1', resultText: '生成済みの回答' })
+    expect(mocks.checkQuestionRateLimit).not.toHaveBeenCalled()
+    expect(mocks.postMessage.mock.calls[0][0].text).toBe('生成済みの回答')
   })
 
   it('返信後の保存失敗はベストエフォート（throw せず＝再返信を招かない）', async () => {

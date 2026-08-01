@@ -47,6 +47,11 @@ const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string 
   // ai_error_logs の対応状況（FR-17）
   resolved: { label: '対応済み', ...emerald },
   unresolved: { label: '未対応', ...amber },
+  // jobs（FR-04 / F-4。error/warning と語彙が重ならないよう DB の値をそのままキーにする）
+  pending: { label: '待機中', ...amber },
+  processing: { label: '処理中', ...blue },
+  completed: { label: '完了', ...emerald },
+  failed: { label: '失敗', ...red },
 }
 
 // 未知の status は生の値のまま中立色で表示する（enum 追加時に UI が壊れないように）

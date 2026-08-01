@@ -1,5 +1,5 @@
 /** @file
- * 機能: process_slack_message ジョブの実処理（セッション確保 → 履歴/プロフィール取得 →
+ * 機能: process_slack_message ジョブの実処理（レート制限判定 → セッション確保 → 履歴/プロフィール取得 →
  *       モード選択 → 質問保存 → AI 回答生成 → 利用量記録 → Slack 返信 → 回答保存）
  * 入力: Supabase クライアント, ProcessSlackMessagePayload, ExecuteContext（リトライ用の生成キャッシュ）
  * 出力: なし
@@ -12,7 +12,11 @@
  */
 import type { ServerDb } from '@shared/types/db'
 import { env } from '@shared/lib/env'
-import { MAX_QUESTION_CHARS, SUMMARY_TAIL_MAX_MESSAGES } from '@shared/lib/constants'
+import {
+  MAX_QUESTION_CHARS,
+  RATE_LIMIT_QUESTIONS_PER_HOUR,
+  SUMMARY_TAIL_MAX_MESSAGES,
+} from '@shared/lib/constants'
 import {
   ConfigurationError,
   TokenBudgetExceededError,
@@ -33,6 +37,7 @@ import {
 } from '@features/slack-messages'
 import { logUsage } from '@features/usage-logs'
 import { logError } from '@features/error-logs'
+import { checkQuestionRateLimit } from '@features/rate-limit'
 import { selectMode, generateAnswer, calculateCost, getLlmClient } from '@features/ai-answer'
 import type { TutorMode } from '@features/ai-answer'
 import { searchChunks, getEmbeddingClient, EmbeddingNotConfiguredError } from '@features/rag'
@@ -105,6 +110,27 @@ export async function executeProcessSlackMessage(
   // 生成（リトライ可）と配信（1回限り）の分離。
   if (ctx.resultText) {
     await deliverAnswer(db, payload, ctx.resultText)
+    return
+  }
+
+  // F-2 / 運用設計 3.4: person 単位 10回/時。生成フェーズ（LLM・画像 DL・Embedding）より前に
+  // 判定して打ち切る。正常終了として返すので processJob は completed 扱いにしリトライしない
+  const rateLimit = await checkQuestionRateLimit(db, payload.personId)
+  if (rateLimit.limited) {
+    await postMessage({
+      channel: payload.channelId,
+      text: getUserFacingMessage('RATE_LIMITED'),
+      threadTs: payload.threadTs,
+    })
+    await logError(db, {
+      code: 'RATE_LIMITED',
+      severity: 'info',
+      personId: payload.personId,
+      channelId: payload.channelId,
+      threadTs: payload.threadTs,
+      messageTs: payload.messageTs,
+      internalMessage: `rate limit hit: ${rateLimit.count} questions in the last hour (limit ${RATE_LIMIT_QUESTIONS_PER_HOUR})`,
+    })
     return
   }
 

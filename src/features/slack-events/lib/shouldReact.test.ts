@@ -108,4 +108,25 @@ describe('shouldReact', () => {
       shouldReact({ ...base, hasBotId: true, hasMention: true, bindingStatus: 'none' }).action,
     ).toBe('ignore')
   })
+
+  // --- H-6: 退塾生（persons.status != active）---
+  it('生徒が退塾済みなら無言 ignore（案内も投稿しない, H-6）', () => {
+    const d = shouldReact({ ...base, hasMention: true, bindingStatus: 'person_inactive' })
+    expect(d.action).toBe('ignore')
+    if (d.action === 'ignore') expect(d.reason).toBe('person_inactive')
+    // channel_not_bound（案内文言を投稿する分岐）に落ちないこと
+    expect(d.action).not.toBe('channel_not_bound')
+  })
+
+  it('登録済みスレッド内でも退塾生なら無言 ignore（H-6）', () => {
+    const d = shouldReact({
+      ...base,
+      isThreadReply: true,
+      sessionExists: true,
+      hasMention: false,
+      bindingStatus: 'person_inactive',
+    })
+    expect(d.action).toBe('ignore')
+    if (d.action === 'ignore') expect(d.reason).toBe('person_inactive')
+  })
 })

@@ -17,6 +17,12 @@ export const USER_FACING_MESSAGES: Record<string, string> = {
     'うまく処理できなかったみたい :sweat_smile: もう一度試してみて。続くようなら先生に教えてね。',
   TOKEN_BUDGET_EXCEEDED: '質問が少し長すぎて処理できなかったよ。短くして送ってみてね！',
   JOB_TIMEOUT: '処理がタイムアウトしちゃった。もう一度質問を送ってみてね！',
+  // F-1 / DEC-15: kill_switch で AI 応答を停止している間の返信（障害・コスト対応中）
+  AI_PAUSED:
+    'いまメンテナンス中でお返事ができないんだ :bow: しばらく経ってからもう一度質問してね。',
+  // F-2 / 運用設計 3.4: person 単位 10回/時の上限に達したときの返信
+  RATE_LIMITED:
+    '今日はたくさん質問してくれてありがとう！ちょっと休憩して、1時間ほどしてからまた質問してね :relaxed:',
   UNKNOWN_ERROR:
     'うまく処理できなかったみたい :sweat_smile: もう一度試してみて。続くようなら先生に教えてね。',
 }
@@ -28,6 +34,8 @@ export const SILENT_ERROR_CODES = new Set([
   'SLACK_EVENT_DUPLICATE',
   'SLACK_POST_FAILED',
   'LOW_CONFIDENCE_SKIP',
+  // H-6: 退塾生（persons.status=inactive）のチャンネルには何も投稿しない
+  'PERSON_INACTIVE',
 ])
 
 export function getUserFacingMessage(code: string): string {

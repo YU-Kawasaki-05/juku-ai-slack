@@ -176,6 +176,22 @@ export async function POST(req: Request): Promise<NextResponse> {
     })
 
     if (decision.action === 'ignore') {
+      // H-6: 退塾生チャンネルは Slack に何も返さない。ただし運用で気づけるよう info だけ残す
+      // （頻度が低い前提。増えるようなら binding 側を inactive にするのが正しい対処）
+      if (decision.reason === 'person_inactive') {
+        safeAfter(db, 'person-inactive-log', async () => {
+          await logError(db, {
+            code: 'PERSON_INACTIVE',
+            severity: 'info',
+            personId: binding?.person_id ?? null,
+            channelId: messageEvent.channel,
+            threadTs: facts.threadTs,
+            messageTs: facts.messageTs,
+            internalMessage: 'person is inactive; bot stayed silent',
+          })
+          await markReceiptStatus(db, event_id, 'skipped')
+        })
+      }
       return ok()
     }
 

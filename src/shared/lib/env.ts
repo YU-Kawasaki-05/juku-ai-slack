@@ -11,6 +11,10 @@ const envSchema = z.object({
   SLACK_BOT_USER_ID: z.string().min(1),
   // 管理画面のエラー詳細から Slack スレッドを開くリンク用（任意。未設定ならリンク非表示）
   SLACK_WORKSPACE_URL: z.string().url().optional(),
+  // 運用アラートの通知先チャンネル ID（DEC-15: kill_switch の停止・再開通知）。
+  // 任意にしているのは、未設定で env のパースが落ちると Slack 連携ごと 500 になるため。
+  // 未設定時は通知をスキップして console.warn のみ（切替操作自体は成功する）
+  SLACK_ALERTS_CHANNEL_ID: z.string().min(1).optional(),
 
   // LLM プロバイダ非依存設定（OpenAI 互換: OpenRouter / DeepSeek / OpenAI など）。
   // 実行時に LLM を呼ぶ箇所で存在チェックする（未確定でもビルド/他機能を壊さないため optional）

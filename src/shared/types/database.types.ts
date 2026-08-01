@@ -273,6 +273,30 @@ export type Database = {
         }
         Relationships: []
       }
+      kill_switches: {
+        Row: {
+          enabled: boolean
+          name: string
+          reason: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          enabled?: boolean
+          name: string
+          reason?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          enabled?: boolean
+          name?: string
+          reason?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       learning_concepts: {
         Row: {
           archived_at: string | null

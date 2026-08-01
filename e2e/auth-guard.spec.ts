@@ -13,6 +13,7 @@ const PROTECTED_PATHS = [
   '/admin/reports',
   '/admin/reports/new',
   '/admin/errors',
+  '/admin/jobs',
   '/admin/usage',
   '/admin/conversations',
 ]

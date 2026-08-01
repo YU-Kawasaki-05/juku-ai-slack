@@ -23,6 +23,7 @@ test.describe('認証後フロー', () => {
       ['生徒管理', /\/admin\/persons/],
       ['レポート', /\/admin\/reports/],
       ['会話ログ', /\/admin\/conversations/],
+      ['ジョブ', /\/admin\/jobs/],
       ['利用状況', /\/admin\/usage/],
     ] as const) {
       await page.getByRole('link', { name }).click()
