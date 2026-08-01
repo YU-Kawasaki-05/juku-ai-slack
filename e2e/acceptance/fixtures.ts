@@ -369,7 +369,7 @@ export async function shotErrorDetail(
   page: Page,
   args: { channelId: string; code: string; name: string },
 ): Promise<void> {
-  const logs = await findErrorLogs(args.channelId)
+  const logs = await findErrorLogs(args.channelId, { code: args.code })
   const target = logs.find((l) => l.error_code === args.code)
   expect(target, `AT: ${args.code} のエラーログが見つかりません（証拠を撮れません）`).toBeTruthy()
 
@@ -378,11 +378,31 @@ export async function shotErrorDetail(
   await shot(page, args.name)
 }
 
-export async function findErrorLogs(channelId: string): Promise<Array<Record<string, unknown>>> {
-  const { data } = await adminDb()
-    .from('ai_error_logs')
-    .select('*')
-    .eq('slack_channel_id', channelId)
-    .order('created_at', { ascending: false })
-  return (data as Array<Record<string, unknown>>) ?? []
+/**
+ * エラーログを取得する。`code` を指定すると、その行が現れるまでポーリングする。
+ *
+ * ジョブ処理は「Slack へ投稿 → jobs 更新 → logError」の順なので、
+ * モック Slack への投稿を観測した時点ではログがまだ書かれていないことがある。
+ * 単発 SELECT だと稀に取りこぼす（AT-40 が実際にフレークした）。
+ */
+export async function findErrorLogs(
+  channelId: string,
+  opts: { code?: string; timeoutMs?: number } = {},
+): Promise<Array<Record<string, unknown>>> {
+  const deadline = Date.now() + (opts.timeoutMs ?? 10_000)
+  let logs: Array<Record<string, unknown>> = []
+
+  for (;;) {
+    const { data } = await adminDb()
+      .from('ai_error_logs')
+      .select('*')
+      .eq('slack_channel_id', channelId)
+      .order('created_at', { ascending: false })
+    logs = (data as Array<Record<string, unknown>>) ?? []
+
+    const satisfied = opts.code ? logs.some((l) => l.error_code === opts.code) : logs.length > 0
+    if (satisfied || Date.now() >= deadline) return logs
+
+    await new Promise((r) => setTimeout(r, 200))
+  }
 }

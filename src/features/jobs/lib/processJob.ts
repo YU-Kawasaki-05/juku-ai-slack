@@ -147,6 +147,8 @@ export async function processJob(
       threadTs: payload.threadTs,
       messageTs: payload.messageTs,
       internalMessage: 'kill switch ai_responses is disabled; skipped LLM call',
+      // 生徒には定型文を返している。記録しないとエラー詳細画面が「返信なし」と誤表示する
+      userFacingMessage: getUserFacingMessage('AI_PAUSED'),
     })
     return { status: 'completed', attempts: 0 }
   }

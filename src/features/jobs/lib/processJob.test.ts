@@ -322,6 +322,8 @@ describe('processJob', () => {
       error_code: 'AI_PAUSED',
       severity: 'info',
       person_id: validPayload.personId,
+      // 生徒に定型文を返しているので記録する。無いとエラー詳細が「返信なし」と誤表示する（OBS-07）
+      user_facing_message: getUserFacingMessage('AI_PAUSED'),
     })
   })
 

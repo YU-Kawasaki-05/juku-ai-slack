@@ -167,6 +167,8 @@ const server = createServer(async (req, res) => {
 })
 
 server.listen(PORT, '127.0.0.1', () => {
+  // テスト専用プロセスの起動バナー。どのポートで待ち受けたかは E2E 失敗時の切り分けに要る
+  // eslint-disable-next-line no-console
   console.log(`[mock] slack+llm mock listening on http://127.0.0.1:${PORT}`)
 })
 

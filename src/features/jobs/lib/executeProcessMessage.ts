@@ -130,6 +130,8 @@ export async function executeProcessSlackMessage(
       threadTs: payload.threadTs,
       messageTs: payload.messageTs,
       internalMessage: `rate limit hit: ${rateLimit.count} questions in the last hour (limit ${RATE_LIMIT_QUESTIONS_PER_HOUR})`,
+      // 生徒には定型文を返している。記録しないとエラー詳細画面が「返信なし」と誤表示する
+      userFacingMessage: getUserFacingMessage('RATE_LIMITED'),
     })
     return
   }

@@ -147,7 +147,7 @@ test('AT-31 同じ event_id の再送では LLM を二度呼ばない（重複�
   await new Promise((r) => setTimeout(r, 3_000))
 
   expect(await mockCalls(request, { kind: 'llm', contains: marker })).toHaveLength(1)
-  const logs = await findErrorLogs(channelId)
+  const logs = await findErrorLogs(channelId, { code: 'SLACK_EVENT_DUPLICATE' })
   expect(logs.some((l) => l.error_code === 'SLACK_EVENT_DUPLICATE')).toBeTruthy()
 })
 
@@ -171,7 +171,7 @@ test('AT-32 未紐付けチャンネルには案内文言だけを返し LLM を
   expect(postedTexts(posts)[0]).toContain('まだBotの設定が完了していない')
   expect(await mockCalls(request, { kind: 'llm', contains: marker })).toHaveLength(0)
 
-  const logs = await findErrorLogs(channelId)
+  const logs = await findErrorLogs(channelId, { code: 'CHANNEL_NOT_BOUND' })
   expect(logs.some((l) => l.error_code === 'CHANNEL_NOT_BOUND')).toBeTruthy()
   await shotErrorDetail(page, {
     channelId,
@@ -221,7 +221,7 @@ test('AT-34 退塾生（persons.status=inactive）のチャンネルには一切
 
   // H-6: 案内すら投稿しない（無言 ignore）。ただし運用で気づけるよう info ログは残る
   await expectNoMockCalls(request, { kind: 'slack', channel: channelId })
-  const logs = await findErrorLogs(channelId)
+  const logs = await findErrorLogs(channelId, { code: 'PERSON_INACTIVE' })
   expect(logs.some((l) => l.error_code === 'PERSON_INACTIVE')).toBeTruthy()
 })
 
@@ -351,7 +351,7 @@ test('AT-39 LLM 障害時は内部情報を出さないユーザー向け文言�
 
   const job = await findJobByEventId(eventId)
   expect(job?.status).toBe('failed')
-  const logs = await findErrorLogs(channelId)
+  const logs = await findErrorLogs(channelId, { code: 'AI_RESPONSE_FAILED' })
   expect(logs.some((l) => l.error_code === 'AI_RESPONSE_FAILED')).toBeTruthy()
   await shotErrorDetail(page, {
     channelId,

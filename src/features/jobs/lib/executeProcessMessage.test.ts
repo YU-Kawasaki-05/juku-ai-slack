@@ -357,6 +357,8 @@ describe('executeProcessSlackMessage', () => {
         code: 'RATE_LIMITED',
         severity: 'info',
         personId: payload.personId,
+        // 生徒に定型文を返しているので記録する。無いとエラー詳細が「返信なし」と誤表示する（OBS-07）
+        userFacingMessage: getUserFacingMessage('RATE_LIMITED'),
       }),
     )
     // 画像 DL・セッション確保・履歴保存といった後続コストも発生させない

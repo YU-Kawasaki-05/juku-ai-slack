@@ -96,7 +96,7 @@ test('AT-40 kill_switch 停止中は LLM を呼ばずメンテナンス文言だ
     // コスト遮断の要件: LLM は 1 回も呼ばれない
     expect(await mockCalls(request, { kind: 'llm', contains: marker })).toHaveLength(0)
 
-    const logs = await findErrorLogs(channelId)
+    const logs = await findErrorLogs(channelId, { code: 'AI_PAUSED' })
     expect(logs.some((l) => l.error_code === 'AI_PAUSED')).toBeTruthy()
     await shotErrorDetail(page, {
       channelId,
@@ -160,6 +160,7 @@ test('AT-43 kill_switch の状態変化が #alerts に通知される（DEC-15�
 
 test('AT-44 直近1時間で10回に達した生徒には定型文を返し LLM を呼ばない（F-2）', async ({
   request,
+  page,
 }) => {
   const { person, channelId } = await newBoundPerson('レート制限', 'RATE')
   // 上限 RATE_LIMIT_QUESTIONS_PER_HOUR = 10
@@ -185,8 +186,13 @@ test('AT-44 直近1時間で10回に達した生徒には定型文を返し LLM 
   expect(postedTexts(posts)[0]).toContain('ちょっと休憩して、1時間ほどしてからまた質問してね')
   expect(await mockCalls(request, { kind: 'llm', contains: marker })).toHaveLength(0)
 
-  const logs = await findErrorLogs(channelId)
+  const logs = await findErrorLogs(channelId, { code: 'RATE_LIMITED' })
   expect(logs.some((l) => l.error_code === 'RATE_LIMITED')).toBeTruthy()
+  await shotErrorDetail(page, {
+    channelId,
+    code: 'RATE_LIMITED',
+    name: 'AT-44_レート制限到達時はLLMを呼ばない',
+  })
 })
 
 test('AT-44b 上限未満（9回）の生徒は通常どおり回答を受け取れる', async ({ request }) => {
