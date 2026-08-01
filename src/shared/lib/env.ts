@@ -15,6 +15,9 @@ const envSchema = z.object({
   // 任意にしているのは、未設定で env のパースが落ちると Slack 連携ごと 500 になるため。
   // 未設定時は通知をスキップして console.warn のみ（切替操作自体は成功する）
   SLACK_ALERTS_CHANNEL_ID: z.string().min(1).optional(),
+  // Slack Web API の向き先差し替え（受け入れテストのモックサーバー用）。
+  // セキュリティ: Bot Token の流出経路にしないため、ループバック宛て以外は client.ts 側で拒否する。
+  SLACK_API_BASE_URL: z.string().url().optional(),
 
   // LLM プロバイダ非依存設定（OpenAI 互換: OpenRouter / DeepSeek / OpenAI など）。
   // 実行時に LLM を呼ぶ箇所で存在チェックする（未確定でもビルド/他機能を壊さないため optional）

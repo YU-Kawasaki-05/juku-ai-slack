@@ -1,17 +1,28 @@
 import { test, expect, type Page } from '@playwright/test'
 import { ADMIN_STATE, STAFF_STATE } from './fixtures/users'
 import { resetKillSwitch } from './fixtures/db'
+import { acquireLock, KILL_SWITCH_LOCK } from './fixtures/lock'
 import { toast } from './fixtures/ui'
 
 /**
  * AI 応答の緊急停止スイッチ（DEC-15 / F-1）。
  * kill_switches は全生徒に効くグローバル状態なので、この spec は直列実行し
  * 最後に必ず「稼働中」へ戻す。
+ *
+ * さらに、同じ行を触る受け入れテスト（e2e/acceptance/kill-switch-rate-limit.spec.ts）とは
+ * 別ワーカーで並列になり得るため、ファイル間ロックで排他する。
  */
 test.describe.configure({ mode: 'serial' })
 
+let release: (() => void) | undefined
+
+test.beforeAll(async () => {
+  release = await acquireLock(KILL_SWITCH_LOCK)
+})
+
 test.afterAll(async () => {
   await resetKillSwitch()
+  release?.()
 })
 
 /** 現在の状態からトグルボタンのラベルを決める（他テストの実行順に依存しないため） */

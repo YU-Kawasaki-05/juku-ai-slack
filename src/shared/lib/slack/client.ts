@@ -11,10 +11,34 @@
  */
 import { SlackPostFailedError } from '@shared/lib/errors/AppError'
 
-const SLACK_API_BASE = 'https://slack.com/api'
+const SLACK_API_BASE_DEFAULT = 'https://slack.com/api'
 
 /** Web API 1 回あたりのタイムアウト（ミリ秒）。無限ハングで実行時間を食い潰さない */
 const SLACK_API_TIMEOUT_MS = 10_000
+
+/**
+ * 受け入れテストのモックサーバーへ向けるための差し替え口。
+ *
+ * セキュリティ: 差し替え先はループバック（localhost / 127.0.0.1 / ::1）に限定する。
+ * ここを任意ホストに向けられると `Authorization: Bearer <SLACK_BOT_TOKEN>` を
+ * 外部へ送り出す経路になるため、env が汚染された場合の被害を封じ込める。
+ */
+function resolveSlackApiBase(): string {
+  const override = process.env.SLACK_API_BASE_URL
+  if (!override) return SLACK_API_BASE_DEFAULT
+  let host: string
+  try {
+    host = new URL(override).hostname
+  } catch {
+    console.warn('[slack] SLACK_API_BASE_URL が URL として不正なため無視します')
+    return SLACK_API_BASE_DEFAULT
+  }
+  if (host !== 'localhost' && host !== '127.0.0.1' && host !== '::1' && host !== '[::1]') {
+    console.warn('[slack] SLACK_API_BASE_URL はループバック宛てのみ許可されます。無視します')
+    return SLACK_API_BASE_DEFAULT
+  }
+  return override.replace(/\/$/, '')
+}
 
 interface SlackApiResponse {
   ok: boolean
@@ -39,7 +63,7 @@ function getBotToken(): string {
 async function callSlack(method: string, payload: Record<string, unknown>): Promise<SlackApiResponse> {
   let res: Response
   try {
-    res = await fetch(`${SLACK_API_BASE}/${method}`, {
+    res = await fetch(`${resolveSlackApiBase()}/${method}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json; charset=utf-8',

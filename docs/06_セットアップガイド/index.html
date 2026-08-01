@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>じゅくAI セットアップガイド</title>
+<style>
+:root{--fg:#191c21;--muted:#5c6470;--line:#d9dee6;--bg:#fff;--soft:#f6f8fa;--soft2:#eef2f7;--accent:#1f5fa9;--code:#0f2b46;
+--warn:#7a4d00;--warnbg:#fff8e8;--warnline:#e6c579;--danger:#96262c;--dangerbg:#fdf1f2;--dangerline:#e3adb1;
+--ok:#1a6444;--okbg:#f0f8f4;--okline:#a5d5bd;--info:#144a73;--infobg:#eef6fc;--infoline:#9dc6e4;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);line-height:1.85;font-size:16px;
+font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,-apple-system,"Segoe UI",sans-serif;}
+.wrap{max-width:940px;margin:0 auto;padding:28px 20px 90px}
+.topbar{border-bottom:1px solid var(--line);background:var(--soft);}
+.topbar .inner{max-width:940px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
+.topbar a{color:var(--accent);text-decoration:none}
+.topbar a:hover{text-decoration:underline}
+.crumb{font-size:13px;color:var(--muted)}
+h1{font-size:27px;line-height:1.45;margin:26px 0 8px;letter-spacing:.01em}
+h2{font-size:21px;margin:44px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--line)}
+h3{font-size:17px;margin:30px 0 8px}
+h4{font-size:15px;margin:22px 0 6px;color:var(--muted)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:1.6em}
+li{margin:5px 0}
+code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13.5px;
+background:var(--soft2);padding:1px 5px;border-radius:3px;word-break:break-all}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:14px 14px;overflow-x:auto;
+font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13px;line-height:1.7;color:var(--code);margin:12px 0}
+pre code{background:none;padding:0;font-size:13px;word-break:normal}
+.codewrap{position:relative}
+.codewrap>pre{padding-right:82px}
+.copy{position:absolute;top:8px;right:8px;font:inherit;font-size:12px;padding:3px 10px;border:1px solid var(--line);
+background:#fff;color:var(--muted);border-radius:4px;cursor:pointer}
+.copy:hover{color:var(--fg);border-color:var(--muted)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--soft2);font-weight:600;white-space:nowrap}
+td code{font-size:12.8px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scroll table{min-width:640px}
+.note,.warnbox,.dangerbox,.okbox{border:1px solid;border-radius:6px;padding:12px 14px;margin:16px 0;font-size:15px}
+.note{border-color:var(--infoline);background:var(--infobg);color:var(--info)}
+.warnbox{border-color:var(--warnline);background:var(--warnbg);color:var(--warn)}
+.dangerbox{border-color:var(--dangerline);background:var(--dangerbg);color:var(--danger)}
+.okbox{border-color:var(--okline);background:var(--okbg);color:var(--ok)}
+.note b,.warnbox b,.dangerbox b,.okbox b{font-weight:700}
+.note p:first-child,.warnbox p:first-child,.dangerbox p:first-child,.okbox p:first-child{margin-top:0}
+.note p:last-child,.warnbox p:last-child,.dangerbox p:last-child,.okbox p:last-child{margin-bottom:0}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 6px}
+.meta div{flex:1 1 240px;border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--soft)}
+.meta .k{font-size:12px;color:var(--muted);display:block;margin-bottom:2px}
+.meta .v{font-size:15px;font-weight:600}
+ul.check{list-style:none;padding-left:0}
+ul.check li{margin:6px 0;display:flex;gap:9px;align-items:flex-start}
+ul.check input{margin-top:7px;flex:0 0 auto;width:15px;height:15px}
+ul.check label{cursor:pointer}
+.steps{list-style:none;padding-left:0;margin:20px 0}
+.steps li{border:1px solid var(--line);border-radius:7px;margin:10px 0;padding:0}
+.steps a{display:block;padding:13px 16px;text-decoration:none;color:inherit}
+.steps a:hover{background:var(--soft)}
+.steps .n{display:inline-block;min-width:74px;font-size:12px;color:#fff;background:var(--accent);border-radius:11px;
+padding:1px 9px;text-align:center;margin-right:10px;vertical-align:2px}
+.steps .n.alt{background:#6b7280}
+.steps .t{font-weight:600;font-size:16.5px}
+.steps .d{display:block;color:var(--muted);font-size:14px;margin-top:3px;padding-left:0}
+.steps .tm{float:right;color:var(--muted);font-size:13px;font-weight:400}
+.nav{display:flex;justify-content:space-between;gap:14px;margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:15px}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+.nav span{color:#b6bcc6}
+.ph{background:#fff5d6;border-bottom:1px dotted #b08a19;padding:0 2px;font-weight:600}
+.diagram{font-size:12.5px;line-height:1.55;background:#fff;border:1px solid var(--line)}
+.small{font-size:13.5px;color:var(--muted)}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+@media print{
+ .topbar,.nav,.copy{display:none}
+ body{font-size:11.5pt}
+ a{color:#000;text-decoration:none}
+ pre,table,.note,.warnbox,.dangerbox,.okbox{page-break-inside:avoid}
+ h2{page-break-after:avoid}
+}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="inner">
+<span class="crumb">じゅくAI セットアップガイド</span>
+<span class="crumb">全 9 ステップ / 所要 約 3 時間</span>
+</div></div>
+
+<div class="wrap">
+
+<h1>じゅくAI 新規セットアップガイド</h1>
+<p>塾ごとに <b>Slack + Supabase + Vercel</b> の環境を新しく用意して、じゅくAI を稼働させるまでの手順書です。
+上から順に進めれば、生徒が Slack で質問して AI が答えるところまで到達します。</p>
+
+<div class="note">
+<p><b>このガイドの読み方</b></p>
+<ul>
+<li><span class="ph">&lt;あなたのドメイン&gt;</span> のような <span class="ph">&lt;角括弧&gt;</span> は、あなたの環境の実値に置き換える箇所です。</li>
+<li>各ステップの先頭に「所要時間」「このステップで手に入るもの（控えるべき値）」があります。<b>控えるべき値は必ずメモに残してください</b>（後のステップで使います）。</li>
+<li>チェックボックスはブラウザに保存されます（同じブラウザで開き直せば状態が残ります）。</li>
+</ul>
+</div>
+
+<h2>1. 全体像</h2>
+
+<pre class="diagram nocopy"><code>          生徒（Slack）
+              │  @じゅくAI  この問題わからない
+              ▼
+   ┌──────────────────────────────┐
+   │  Slack Events API             │  ※署名付きで POST
+   └───────────────┬──────────────┘
+                   │ POST https://&lt;あなたのドメイン&gt;/api/slack/events
+                   ▼
+   ┌──────────────────────────────────────────────────┐
+   │  Vercel ── Next.js 15 (App Router)                │
+   │   ① 署名検証 → 重複排除 → 反応するか判定           │
+   │   ② jobs テーブルに登録 → 3 秒以内に 200 を返す     │
+   │   ③ after() で本処理（maxDuration = 300 秒）       │
+   │        🤔 付与 → RAG 検索 → LLM 生成               │
+   │        → Slack に投稿 → 🤔 解除                    │
+   │   ④ /admin 管理画面（スタッフ・管理者のみ）         │
+   └───────┬───────────────────────────┬──────────────┘
+           │                           │
+           ▼                           ▼
+   ┌───────────────────────┐   ┌──────────────────────────┐
+   │  Supabase             │   │  LLM / Embedding          │
+   │   PostgreSQL + RLS    │   │   OpenAI 互換 API          │
+   │   pgvector (1536 次元) │   │   /chat/completions       │
+   │   Auth（招待制）       │   │   /embeddings             │
+   │   Storage: attachments│   └──────────────────────────┘
+   └───────────────────────┘</code></pre>
+
+<p class="small">ポイントは 3 つ。<b>(a)</b> Slack への ACK は 3 秒以内に返し、重い AI 処理は <code>after()</code> に逃がす。
+<b>(b)</b> 「誰の質問か」は Slack のチャンネル ID から決まる（生徒が名乗る必要はない）。
+<b>(c)</b> Cron は使わない。滞留ジョブの回収は管理画面を開いたときに走る。</p>
+
+<h2>2. 必要なアカウント</h2>
+
+<div class="scroll">
+<table>
+<thead><tr><th>サービス</th><th>用途</th><th>プラン</th><th>備考</th></tr></thead>
+<tbody>
+<tr><td>GitHub</td><td>このリポジトリを Vercel にインポートする</td><td>Free で可</td><td>Private リポジトリ推奨</td></tr>
+<tr><td>Supabase</td><td>DB（PostgreSQL + pgvector）/ 認証 / 画像ストレージ</td><td><b>Pro 推奨</b></td><td>Free はプロジェクトが休止するため本番不可。<a href="step1_事前準備.html#plan">理由</a></td></tr>
+<tr><td>Vercel</td><td>Next.js アプリのホスティング</td><td><b>Pro 推奨</b></td><td>Hobby は関数実行時間が足りない。<a href="step1_事前準備.html#plan">理由</a></td></tr>
+<tr><td>Slack（塾のワークスペース）</td><td>生徒との会話の場</td><td>Free で可</td><td>アプリを追加できる管理者権限が必要</td></tr>
+<tr><td>LLM プロバイダ</td><td>回答生成（OpenAI 互換 <code>/chat/completions</code>）</td><td>従量課金</td><td>OpenAI / OpenRouter / DeepSeek から 1 つ</td></tr>
+<tr><td>Embedding プロバイダ</td><td>レポート検索用のベクトル化（<code>/embeddings</code>）</td><td>従量課金</td><td><b>1536 次元必須</b>。LLM と別プロバイダでも可</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>3. ステップ一覧</h2>
+
+<ol class="steps">
+<li><a href="step1_事前準備.html"><span class="n">STEP 1</span><span class="t">事前準備 — 決めること</span><span class="tm">約 30 分</span>
+<span class="d">LLM / Embedding プロバイダの選定、生徒チャンネルを公開にするか非公開にするか、プラン、月額コストの見積り</span></a></li>
+
+<li><a href="step2_supabase作成.html"><span class="n">STEP 2</span><span class="t">Supabase プロジェクト作成</span><span class="tm">約 15 分</span>
+<span class="d">プロジェクト作成、API キー 3 種の取得、<b>サインアップ無効化（必須）</b>、URL 設定</span></a></li>
+
+<li><a href="step3_DBマイグレーション.html"><span class="n">STEP 3</span><span class="t">DB マイグレーション適用</span><span class="tm">約 15 分</span>
+<span class="d">32 本の migration を <code>supabase db push</code>、テーブル・バケット・kill_switches の確認</span></a></li>
+
+<li><a href="step4_slackアプリ作成.html"><span class="n">STEP 4</span><span class="t">Slack アプリ作成</span><span class="tm">約 20 分</span>
+<span class="d">manifest からアプリ作成、必要スコープ 5 種、Bot Token / Signing Secret / Bot User ID の取得</span></a></li>
+
+<li><a href="step5_vercelデプロイ.html"><span class="n">STEP 5</span><span class="t">Vercel デプロイ</span><span class="tm">約 20 分</span>
+<span class="d">リポジトリのインポート、環境変数 18 個の設定、デプロイ、<code>/login</code> の表示確認</span></a></li>
+
+<li><a href="step6_slackイベント購読.html"><span class="n">STEP 6</span><span class="t">Slack イベント購読の設定</span><span class="tm">約 10 分</span>
+<span class="d">Request URL の登録と Verified 確認、bot events の追加、再インストール</span></a></li>
+
+<li><a href="step7_管理ユーザーと生徒登録.html"><span class="n">STEP 7</span><span class="t">管理ユーザーと生徒の登録</span><span class="tm">約 30 分</span>
+<span class="d">Auth ユーザー作成 + ロール付与 SQL、生徒登録 → AI プロフィール → チャンネル作成 → Bot 招待 → 紐付け → レポート</span></a></li>
+
+<li><a href="step8_疎通確認.html"><span class="n">STEP 8</span><span class="t">本番疎通確認</span><span class="tm">約 20 分</span>
+<span class="d">実際の Slack で質問 → 🤔 → 回答、スレッド追撃、画像、コスト記録、エラー/ジョブの確認</span></a></li>
+
+<li><a href="step9_運用ガイド.html"><span class="n">STEP 9</span><span class="t">運用ガイド（引き渡し前に読む）</span><span class="tm">約 15 分</span>
+<span class="d">緊急停止、レート制限、ジョブ管理、エラー対応フロー、退塾処理、月次コスト確認、バックアップ</span></a></li>
+
+<li><a href="troubleshooting.html"><span class="n alt">別冊</span><span class="t">トラブルシューティング</span><span class="tm">随時</span>
+<span class="d">症状 → 原因 → 対処の早見表。詰まったらここを先に見る</span></a></li>
+</ol>
+
+<h2>4. 進行チェックリスト</h2>
+<p class="small">ステップを終えるたびにチェックしてください。控えた値もここで確認できます。</p>
+
+<h3>準備</h3>
+<ul class="check">
+<li><input type="checkbox" id="c-a1"><label for="c-a1">LLM プロバイダとモデル名を決めた（<code>MODEL_PRICING</code> 登録済みか確認した）</label></li>
+<li><input type="checkbox" id="c-a2"><label for="c-a2">Embedding プロバイダとモデル（1536 次元）を決めた</label></li>
+<li><input type="checkbox" id="c-a3"><label for="c-a3">生徒チャンネルを公開／非公開のどちらにするか決めた</label></li>
+<li><input type="checkbox" id="c-a4"><label for="c-a4">Supabase / Vercel のプランを決めた</label></li>
+</ul>
+
+<h3>構築</h3>
+<ul class="check">
+<li><input type="checkbox" id="c-b1"><label for="c-b1">Supabase プロジェクトを作成し、API キー 3 種を控えた</label></li>
+<li><input type="checkbox" id="c-b2"><label for="c-b2"><b>Supabase の「Allow new users to sign up」を OFF にした</b></label></li>
+<li><input type="checkbox" id="c-b3"><label for="c-b3">migration 32 本を適用し、テーブル・バケット・kill_switches を確認した</label></li>
+<li><input type="checkbox" id="c-b4"><label for="c-b4">Slack アプリを作成し、Bot Token / Signing Secret / Bot User ID を控えた</label></li>
+<li><input type="checkbox" id="c-b5"><label for="c-b5">Vercel に環境変数を設定してデプロイし、<code>/login</code> が表示された</label></li>
+<li><input type="checkbox" id="c-b6"><label for="c-b6">Slack の Request URL が <b>Verified</b> になり、bot events を追加して再インストールした</label></li>
+</ul>
+
+<h3>データ登録</h3>
+<ul class="check">
+<li><input type="checkbox" id="c-c1"><label for="c-c1">管理ユーザーを作成し <code>app_metadata.role</code> を付与、再ログインした</label></li>
+<li><input type="checkbox" id="c-c2"><label for="c-c2">生徒を登録し、AI 用プロフィールを入力した</label></li>
+<li><input type="checkbox" id="c-c3"><label for="c-c3">生徒チャンネルを作成し、<b>Bot を <code>/invite</code> した</b></label></li>
+<li><input type="checkbox" id="c-c4"><label for="c-c4">チャンネル紐付けを登録した（チャンネル ID / チーム ID）</label></li>
+<li><input type="checkbox" id="c-c5"><label for="c-c5">レポートを登録し、Embedding 警告が出ないことを確認した</label></li>
+</ul>
+
+<h3>確認・引き渡し</h3>
+<ul class="check">
+<li><input type="checkbox" id="c-d1"><label for="c-d1">本番 Slack でメンション → 🤔 → 回答を確認した</label></li>
+<li><input type="checkbox" id="c-d2"><label for="c-d2">スレッド追撃・未紐付けチャンネル・画像付き質問を確認した</label></li>
+<li><input type="checkbox" id="c-d3"><label for="c-d3">/admin/usage でコストが <b>0 円になっていない</b>ことを確認した</label></li>
+<li><input type="checkbox" id="c-d4"><label for="c-d4">/admin/errors と /admin/jobs に想定外の残りがないことを確認した</label></li>
+<li><input type="checkbox" id="c-d5"><label for="c-d5">緊急停止（kill switch）の場所と手順を塾側に説明した</label></li>
+</ul>
+
+<h2>5. 控えるべき値の一覧（作業メモ用）</h2>
+<p class="small">セットアップ中に手元のメモへ書き出しておく値です。すべて秘密情報なので、Slack や共有ドキュメントに貼らないでください。</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>値</th><th>取得ステップ</th><th>使う場所</th></tr></thead>
+<tbody>
+<tr><td>Project URL（<code>https://xxxx.supabase.co</code>）</td><td>STEP 2</td><td>環境変数 <code>NEXT_PUBLIC_SUPABASE_URL</code></td></tr>
+<tr><td>anon public key</td><td>STEP 2</td><td>環境変数 <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code></td></tr>
+<tr><td>service_role key</td><td>STEP 2</td><td>環境変数 <code>SUPABASE_SERVICE_ROLE_KEY</code></td></tr>
+<tr><td>DB パスワード</td><td>STEP 2</td><td><code>supabase link</code> / <code>db push</code></td></tr>
+<tr><td>Project Ref（20 文字程度の英字）</td><td>STEP 2</td><td><code>supabase link --project-ref</code></td></tr>
+<tr><td>Bot User OAuth Token（<code>xoxb-</code>）</td><td>STEP 4</td><td>環境変数 <code>SLACK_BOT_TOKEN</code></td></tr>
+<tr><td>Signing Secret</td><td>STEP 4</td><td>環境変数 <code>SLACK_SIGNING_SECRET</code></td></tr>
+<tr><td>Bot User ID（<code>U...</code>）</td><td>STEP 4</td><td>環境変数 <code>SLACK_BOT_USER_ID</code></td></tr>
+<tr><td>LLM API キー / Base URL / モデル名</td><td>STEP 1</td><td>環境変数 <code>LLM_*</code></td></tr>
+<tr><td>Embedding API キー / Base URL / モデル名</td><td>STEP 1</td><td>環境変数 <code>EMBEDDING_*</code></td></tr>
+<tr><td>本番ドメイン（<code>https://xxx.vercel.app</code>）</td><td>STEP 5</td><td>Slack Request URL / Supabase URL 設定</td></tr>
+<tr><td>#alerts チャンネル ID（<code>C...</code>）</td><td>STEP 7</td><td>環境変数 <code>SLACK_ALERTS_CHANNEL_ID</code>（任意）</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="nav">
+<span>&nbsp;</span>
+<a href="step1_事前準備.html">次へ: STEP 1 事前準備 →</a>
+</div>
+
+</div>
+
+<script>
+(function(){
+  document.querySelectorAll('pre:not(.nocopy)').forEach(function(pre){
+    var w=document.createElement('div');w.className='codewrap';
+    pre.parentNode.insertBefore(w,pre);w.appendChild(pre);
+    var b=document.createElement('button');b.type='button';b.className='copy';b.textContent='コピー';
+    b.addEventListener('click',function(){
+      var el=pre.querySelector('code');var t=el?el.innerText:pre.innerText;
+      var done=function(ok){b.textContent=ok?'コピーしました':'手動でコピーしてください';
+        setTimeout(function(){b.textContent='コピー';},1600);};
+      if(navigator.clipboard&&window.isSecureContext){
+        navigator.clipboard.writeText(t).then(function(){done(true);},function(){done(false);});
+      }else{
+        try{var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';
+          document.body.appendChild(ta);ta.select();var ok=document.execCommand('copy');
+          document.body.removeChild(ta);done(ok);}catch(e){done(false);}
+      }
+    });
+    w.appendChild(b);
+  });
+  var key='jukuai-setup:'+location.pathname.split('/').pop();
+  document.querySelectorAll('ul.check input[type=checkbox]').forEach(function(cb){
+    var k=key+':'+cb.id;
+    try{if(localStorage.getItem(k)==='1')cb.checked=true;}catch(e){}
+    cb.addEventListener('change',function(){try{localStorage.setItem(k,cb.checked?'1':'0');}catch(e){}});
+  });
+})();
+</script>
+</body>
+</html>
