@@ -1,6 +1,6 @@
 /** @file
- * 検証: AI回答フローのオーケストレーション（プロフィール/履歴取得→モード→生成→返信→保存→記録）
- * @verifies FR-05, AC-05-01, AC-05-09
+ * 検証: AI回答フローのオーケストレーション（プロフィール/履歴取得→モード→質問保存→生成→記録→返信）
+ * @verifies FR-05, AC-05-01, AC-05-09, A-3, A-4, A-8, A-9, A-12, A-15, C-3
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
@@ -13,7 +13,8 @@ const mocks = vi.hoisted(() => ({
   evaluate: vi.fn(),
   applyEvaluation: vi.fn(),
   loadThreadHistory: vi.fn(),
-  loadMessageRange: vi.fn(),
+  loadThreadTail: vi.fn(),
+  loadPrecedingAssistantText: vi.fn(),
   saveMessage: vi.fn(),
   logUsage: vi.fn(),
   logError: vi.fn(),
@@ -37,19 +38,24 @@ vi.mock('@features/student-knowledge', () => ({
 }))
 vi.mock('@features/slack-messages', () => ({
   loadThreadHistory: mocks.loadThreadHistory,
-  loadMessageRange: mocks.loadMessageRange,
+  loadThreadTail: mocks.loadThreadTail,
+  loadPrecedingAssistantText: mocks.loadPrecedingAssistantText,
   saveMessage: mocks.saveMessage,
 }))
 vi.mock('@features/usage-logs', () => ({ logUsage: mocks.logUsage }))
 vi.mock('@features/error-logs', () => ({ logError: mocks.logError }))
-vi.mock('@features/rag', () => ({
+// EmbeddingNotConfiguredError は instanceof で判定されるため実体を渡す
+vi.mock('@features/rag', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@features/rag')>()),
   searchChunks: mocks.searchChunks,
   getEmbeddingClient: mocks.getEmbeddingClient,
 }))
 vi.mock('@features/image-attachments', () => ({ processAttachments: mocks.processAttachments }))
 vi.mock('@shared/lib/slack/client', () => ({ postMessage: mocks.postMessage }))
 
-import { executeProcessSlackMessage } from './executeProcessMessage'
+import { executeProcessSlackMessage, TRUNCATED_ANSWER_NOTICE } from './executeProcessMessage'
+import { EmbeddingNotConfiguredError } from '@features/rag'
+import { getUserFacingMessage } from '@shared/lib/errors/userMessages'
 import { __setLlmClientForTest } from '@features/ai-answer'
 import type { ProcessSlackMessagePayload } from '../types'
 
@@ -65,9 +71,28 @@ const payload: ProcessSlackMessagePayload = {
   eventId: 'Ev1',
 }
 
-const db = {} as never
+/** 画像のみ（テキストなし）のメッセージ。添付が全滅したときの案内文言の検証に使う */
+const imageOnlyPayload: ProcessSlackMessagePayload = {
+  ...payload,
+  text: '<@U_BOT>',
+  files: [
+    { id: 'F1', name: 'q.png', mimetype: 'image/png', size: 100, urlPrivate: 'https://slack/F1' },
+  ],
+}
+
+/** jobs.result_text の退避（executeProcessMessage が直接 db を触る唯一の箇所）を受けられる fake */
+const jobUpdates: unknown[] = []
+const dbChain: Record<string, unknown> = {}
+dbChain.update = (v: unknown) => {
+  jobUpdates.push(v)
+  return dbChain
+}
+dbChain.eq = () => dbChain
+dbChain.then = (onF: (r: { error: unknown }) => unknown) => onF({ error: null })
+const db = { from: () => dbChain } as never
 
 beforeEach(() => {
+  jobUpdates.length = 0
   vi.clearAllMocks()
   mocks.getOrCreateSession.mockResolvedValue({
     id: 's1',
@@ -80,7 +105,8 @@ beforeEach(() => {
   mocks.getMastery.mockResolvedValue(0.2)
   mocks.getKnowledgeSummary.mockResolvedValue(null)
   mocks.loadThreadHistory.mockResolvedValue([])
-  mocks.loadMessageRange.mockResolvedValue([])
+  mocks.loadThreadTail.mockResolvedValue([])
+  mocks.loadPrecedingAssistantText.mockResolvedValue(null)
   mocks.saveMessage.mockResolvedValue(undefined)
   mocks.logUsage.mockResolvedValue(undefined)
   mocks.logError.mockResolvedValue(undefined)
@@ -143,13 +169,20 @@ describe('executeProcessSlackMessage', () => {
     expect(mocks.generate.mock.calls[0][0].system).toContain('direct')
   })
 
-  it('履歴取得は person_id でも絞る（BR-05-11）', async () => {
+  it('履歴取得は person_id でも絞り、今回の質問自身は除外する（BR-05-11 / A-4）', async () => {
     await executeProcessSlackMessage(db, payload)
     // 要約が無いスレッド（summary_message_count=0）は従来どおり loadThreadHistory（直近）を使う
-    expect(mocks.loadThreadHistory).toHaveBeenCalledWith(db, 'C1', '100.1', payload.personId)
+    expect(mocks.loadThreadHistory).toHaveBeenCalledWith(
+      db,
+      'C1',
+      '100.1',
+      payload.personId,
+      undefined,
+      '100.1',
+    )
   })
 
-  it('要約済み接頭辞があるスレッドは「その後ろ全部」を履歴に読む（欠落なし, FR-20）', async () => {
+  it('要約済み接頭辞があるスレッドは「その後ろ」を履歴に読む（欠落なし, FR-20 / A-12）', async () => {
     mocks.getOrCreateSession.mockResolvedValue({
       id: 's1',
       person_id: payload.personId,
@@ -157,8 +190,16 @@ describe('executeProcessSlackMessage', () => {
       summary_message_count: 12,
     })
     await executeProcessSlackMessage(db, payload)
-    // offset=summary_message_count(12) 以降を loadMessageRange で取得（loadThreadHistory は使わない）
-    expect(mocks.loadMessageRange).toHaveBeenCalledWith(db, 'C1', '100.1', payload.personId, 12, 30)
+    // A-12: 上限超過時に新しい側を残す loadThreadTail 経由で取得（loadThreadHistory は使わない）
+    expect(mocks.loadThreadTail).toHaveBeenCalledWith(
+      db,
+      'C1',
+      '100.1',
+      payload.personId,
+      12,
+      30,
+      '100.1',
+    )
     expect(mocks.loadThreadHistory).not.toHaveBeenCalled()
     expect(mocks.summarizeThread).toHaveBeenCalledOnce()
   })
@@ -206,8 +247,15 @@ describe('executeProcessSlackMessage', () => {
     })
     await executeProcessSlackMessage(db, payload)
     // 要約は使わず通常履歴にフォールバック、要約生成も呼ばない
-    expect(mocks.loadThreadHistory).toHaveBeenCalledWith(db, 'C1', '100.1', payload.personId)
-    expect(mocks.loadMessageRange).not.toHaveBeenCalled()
+    expect(mocks.loadThreadHistory).toHaveBeenCalledWith(
+      db,
+      'C1',
+      '100.1',
+      payload.personId,
+      undefined,
+      '100.1',
+    )
+    expect(mocks.loadThreadTail).not.toHaveBeenCalled()
     expect(mocks.summarizeThread).not.toHaveBeenCalled()
   })
 
@@ -232,14 +280,22 @@ describe('executeProcessSlackMessage', () => {
     expect(mocks.postMessage).toHaveBeenCalledOnce()
   })
 
-  it('履歴に直前の確認質問があれば Evaluator を実行し BKT を更新（FR-23）', async () => {
-    mocks.loadThreadHistory.mockResolvedValue([
-      { role: 'user', content: '前の質問' },
-      { role: 'assistant', content: '判別式ってどういう意味？' },
-    ])
+  // --- A-8: Evaluator の起動条件 ---
+  it('direct モードでは Evaluator を起動しない（確認質問が無いターン, A-8）', async () => {
+    mocks.getMastery.mockResolvedValue(0.2) // → direct
+    mocks.loadPrecedingAssistantText.mockResolvedValue('前回の説明')
+    await executeProcessSlackMessage(db, payload)
+    expect(mocks.evaluate).not.toHaveBeenCalled()
+    expect(mocks.applyEvaluation).not.toHaveBeenCalled()
+    // 直前 assistant の取得すら行わない（無駄なクエリを撃たない）
+    expect(mocks.loadPrecedingAssistantText).not.toHaveBeenCalled()
+  })
+
+  it('confirmation モードでは Evaluator を起動し BKT を更新（FR-23 / A-8）', async () => {
+    mocks.getMastery.mockResolvedValue(0.9) // → confirmation
+    mocks.loadPrecedingAssistantText.mockResolvedValue('判別式ってどういう意味？')
     await executeProcessSlackMessage(db, payload)
     expect(mocks.evaluate).toHaveBeenCalledOnce()
-    // 直前の assistant（確認質問）と生徒返信を渡す
     expect(mocks.evaluate.mock.calls[0][1]).toEqual({
       botQuestion: '判別式ってどういう意味？',
       studentReply: '二次方程式がわからない',
@@ -247,22 +303,55 @@ describe('executeProcessSlackMessage', () => {
     expect(mocks.applyEvaluation).toHaveBeenCalledOnce()
   })
 
+  it('socratic モードでも Evaluator を起動する（A-8）', async () => {
+    mocks.getMastery.mockResolvedValue(0.5) // → socratic
+    mocks.loadPrecedingAssistantText.mockResolvedValue('どうなると思う？')
+    await executeProcessSlackMessage(db, payload)
+    expect(mocks.evaluate).toHaveBeenCalledOnce()
+  })
+
+  // --- A-9: 評価対象の取り違え防止 ---
+  it('評価対象の Bot 発言は「今回の質問より前」の assistant を明示的に引く（A-9）', async () => {
+    mocks.getMastery.mockResolvedValue(0.9)
+    mocks.loadPrecedingAssistantText.mockResolvedValue('Q?')
+    // 履歴末尾に並行ジョブが書いた「未来の回答」があっても、そちらは使わない
+    mocks.loadThreadHistory.mockResolvedValue([{ role: 'assistant', content: '別ジョブの回答' }])
+    await executeProcessSlackMessage(db, payload)
+    expect(mocks.loadPrecedingAssistantText).toHaveBeenCalledWith(
+      db,
+      'C1',
+      '100.1',
+      payload.personId,
+      '100.1',
+    )
+    expect(mocks.evaluate.mock.calls[0][1].botQuestion).toBe('Q?')
+  })
+
   it('直前の確認質問が無ければ Evaluator を呼ばない（初回ターン）', async () => {
-    mocks.loadThreadHistory.mockResolvedValue([])
+    mocks.getMastery.mockResolvedValue(0.9)
+    mocks.loadPrecedingAssistantText.mockResolvedValue(null)
     await executeProcessSlackMessage(db, payload)
     expect(mocks.evaluate).not.toHaveBeenCalled()
   })
 
-  it('Evaluator 失敗は回答を妨げない（サイレント、logError 記録）（BR-23-06）', async () => {
-    mocks.loadThreadHistory.mockResolvedValue([{ role: 'assistant', content: 'Q?' }])
+  it('Evaluator 失敗は回答を妨げず EVALUATOR_FAILED で記録（Tutor 失敗と区別する, BR-23-06）', async () => {
+    mocks.getMastery.mockResolvedValue(0.9)
+    mocks.loadPrecedingAssistantText.mockResolvedValue('Q?')
     mocks.evaluate.mockRejectedValue(new Error('eval boom'))
     await expect(executeProcessSlackMessage(db, payload)).resolves.toBeUndefined()
     expect(mocks.postMessage).toHaveBeenCalledOnce() // 回答は送信済み
-    expect(mocks.logError).toHaveBeenCalled()
+    expect(mocks.logError).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ code: 'EVALUATOR_FAILED', severity: 'warning' }),
+    )
+    // 主回答は成功しているので AI_RESPONSE_FAILED のメトリクスは汚さない
+    const codes = mocks.logError.mock.calls.map((c) => c[1].code)
+    expect(codes).not.toContain('AI_RESPONSE_FAILED')
   })
 
   it('低確信度は LOW_CONFIDENCE_SKIP を記録（AC-23-07）', async () => {
-    mocks.loadThreadHistory.mockResolvedValue([{ role: 'assistant', content: 'Q?' }])
+    mocks.getMastery.mockResolvedValue(0.9)
+    mocks.loadPrecedingAssistantText.mockResolvedValue('Q?')
     mocks.applyEvaluation.mockResolvedValue({ updated: false, reason: 'low_confidence' })
     await executeProcessSlackMessage(db, payload)
     expect(mocks.logError).toHaveBeenCalledWith(
@@ -289,8 +378,17 @@ describe('executeProcessSlackMessage', () => {
     expect(mocks.postMessage).toHaveBeenCalledOnce()
     expect(mocks.logError).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ code: 'REPORT_CHUNK_SEARCH_FAILED' }),
+      expect.objectContaining({ code: 'REPORT_CHUNK_SEARCH_FAILED', severity: 'warning' }),
     )
+  })
+
+  it('EMBEDDING 未設定（RAG 無効）は logError せずチャンクなしで継続（B-8: ログ洪水の防止）', async () => {
+    mocks.getEmbeddingClient.mockImplementation(() => {
+      throw new EmbeddingNotConfiguredError()
+    })
+    await expect(executeProcessSlackMessage(db, payload)).resolves.toBeUndefined()
+    expect(mocks.postMessage).toHaveBeenCalledOnce()
+    expect(mocks.logError).not.toHaveBeenCalled()
   })
 
   it('画像があれば Vision モデルで生成し画像を渡す（FR-06, BR-05-15）', async () => {
@@ -312,14 +410,143 @@ describe('executeProcessSlackMessage', () => {
   })
 
   it('画像のみで全画像失敗 + テキストなし → エラー文言を返し LLM を呼ばない', async () => {
-    const imgOnly = {
-      ...payload,
-      text: '<@U_BOT>',
-      files: [{ id: 'F1', name: 'q.png', mimetype: 'image/png', size: 100, urlPrivate: 'https://slack/F1' }],
-    }
     mocks.processAttachments.mockResolvedValue({ dataUrls: [], errorCodes: ['SLACK_FILE_DOWNLOAD_FAILED'] })
-    await executeProcessSlackMessage(db, imgOnly)
+    await executeProcessSlackMessage(db, imageOnlyPayload)
     expect(mocks.generate).not.toHaveBeenCalled()
     expect(mocks.postMessage).toHaveBeenCalledOnce() // エラー文言
+  })
+
+  it('非対応形式は「取得に失敗」ではなく対応形式の案内を返す', async () => {
+    mocks.processAttachments.mockResolvedValue({
+      dataUrls: [],
+      errorCodes: ['UNSUPPORTED_FILE_TYPE'],
+    })
+    await executeProcessSlackMessage(db, imageOnlyPayload)
+    expect(mocks.postMessage.mock.calls[0][0].text).toBe(
+      getUserFacingMessage('UNSUPPORTED_FILE_TYPE'),
+    )
+  })
+
+  it('サイズ超過と非対応形式が混在したらサイズ超過を優先して案内する', async () => {
+    mocks.processAttachments.mockResolvedValue({
+      dataUrls: [],
+      errorCodes: ['UNSUPPORTED_FILE_TYPE', 'IMAGE_TOO_LARGE'],
+    })
+    await executeProcessSlackMessage(db, imageOnlyPayload)
+    expect(mocks.postMessage.mock.calls[0][0].text).toBe(getUserFacingMessage('IMAGE_TOO_LARGE'))
+  })
+
+  // --- A-4: 質問の保存タイミング ---
+  it('質問の保存は回答生成の「前」（並行時の文脈欠落防止, A-4）', async () => {
+    await executeProcessSlackMessage(db, payload)
+    const userSave = mocks.saveMessage.mock.calls.find((c) => c[1].role === 'user')!
+    const userSaveOrder =
+      mocks.saveMessage.mock.invocationCallOrder[mocks.saveMessage.mock.calls.indexOf(userSave)]
+    expect(userSaveOrder).toBeLessThan(mocks.generate.mock.invocationCallOrder[0])
+    expect(userSave[1].text).toBe('二次方程式がわからない')
+  })
+
+  it('質問の保存は履歴ロードの「後」（プロンプトに質問が二重に載らない, A-4）', async () => {
+    mocks.loadThreadHistory.mockResolvedValue([{ role: 'user', content: '前の質問' }])
+    await executeProcessSlackMessage(db, payload)
+    const userSaveOrder = mocks.saveMessage.mock.invocationCallOrder[0]
+    expect(mocks.loadThreadHistory.mock.invocationCallOrder[0]).toBeLessThan(userSaveOrder)
+
+    // buildPrompt の messages に「今回の質問」が1回だけ現れる
+    const genMessages = mocks.generate.mock.calls[0][0].messages as Array<{ content: unknown }>
+    const occurrences = genMessages.filter((m) => m.content === '二次方程式がわからない')
+    expect(occurrences).toHaveLength(1)
+    expect(genMessages.at(-1)!.content).toBe('二次方程式がわからない')
+  })
+
+  it('質問の保存に失敗しても回答は生成・送信する（ベストエフォート）', async () => {
+    mocks.saveMessage.mockRejectedValue(new Error('db blip'))
+    await expect(executeProcessSlackMessage(db, payload)).resolves.toBeUndefined()
+    expect(mocks.generate).toHaveBeenCalledOnce()
+    expect(mocks.postMessage).toHaveBeenCalledOnce()
+  })
+
+  // --- A-3: 生成と配信の分離 ---
+  it('生成結果を投稿の前に jobs.result_text へ退避する（A-3）', async () => {
+    const ctx = { jobId: 'job1' }
+    await executeProcessSlackMessage(db, payload, ctx)
+    expect(jobUpdates).toContainEqual({ result_text: '一緒に整理しよう' })
+    expect(ctx).toMatchObject({ resultText: '一緒に整理しよう' })
+  })
+
+  it('result_text が既にあれば再生成せず配信からやり直す（二重課金の防止, A-3）', async () => {
+    await executeProcessSlackMessage(db, payload, { jobId: 'job1', resultText: '生成済みの回答' })
+    expect(mocks.generate).not.toHaveBeenCalled()
+    expect(mocks.logUsage).not.toHaveBeenCalled() // 課金は前 attempt で記録済み
+    expect(mocks.postMessage).toHaveBeenCalledWith({
+      channel: 'C1',
+      text: '生成済みの回答',
+      threadTs: '100.1',
+    })
+    // 回答の履歴保存だけは配信の一部として行う
+    expect(mocks.saveMessage).toHaveBeenCalledOnce()
+    expect(mocks.saveMessage.mock.calls[0][1].role).toBe('assistant')
+  })
+
+  it('投稿が失敗しても生成分の利用量は記録済み（コスト過少計上の防止, A-3）', async () => {
+    mocks.postMessage.mockRejectedValue(new Error('slack down'))
+    const ctx = { jobId: 'job1' }
+    await expect(executeProcessSlackMessage(db, payload, ctx)).rejects.toBeTruthy()
+    expect(mocks.logUsage).toHaveBeenCalledOnce()
+    expect(mocks.logUsage.mock.calls[0][1].usage).toEqual({ inputTokens: 100, outputTokens: 40 })
+    // 生成結果も退避済みなので、リトライされても再生成されない
+    expect(jobUpdates).toContainEqual({ result_text: '一緒に整理しよう' })
+    expect(ctx).toMatchObject({ resultText: '一緒に整理しよう' })
+  })
+
+  it('利用量の記録は投稿より先に行う（A-3）', async () => {
+    await executeProcessSlackMessage(db, payload)
+    expect(mocks.logUsage.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.postMessage.mock.invocationCallOrder[0],
+    )
+  })
+
+  // --- C-3: Slack エスケープ ---
+  it('LLM 生成テキストをエスケープしてから投稿する（<!channel> インジェクション防止, C-3）', async () => {
+    mocks.generate.mockResolvedValue({
+      text: 'x < 5 のとき <!channel> と書くと危ない & 注意',
+      usage: { inputTokens: 10, outputTokens: 5 },
+      model: 'test-default-model',
+    })
+    await executeProcessSlackMessage(db, payload)
+    expect(mocks.postMessage.mock.calls[0][0].text).toBe(
+      'x &lt; 5 のとき &lt;!channel&gt; と書くと危ない &amp; 注意',
+    )
+  })
+
+  it('履歴には未エスケープの原文を保存する（次ターンの LLM 入力を壊さない, C-3）', async () => {
+    mocks.generate.mockResolvedValue({
+      text: 'x < 5',
+      usage: { inputTokens: 10, outputTokens: 5 },
+      model: 'test-default-model',
+    })
+    await executeProcessSlackMessage(db, payload)
+    const assistantSave = mocks.saveMessage.mock.calls.find((c) => c[1].role === 'assistant')!
+    expect(assistantSave[1].text).toBe('x < 5')
+  })
+
+  // --- A-15 / G-3: 出力打ち切り ---
+  it('finish_reason=length の打ち切りを検知して案内を添える（A-15 / G-3）', async () => {
+    mocks.generate.mockResolvedValue({
+      text: '途中まで説明したところで',
+      usage: { inputTokens: 10, outputTokens: 1200 },
+      model: 'test-default-model',
+      truncated: true,
+    })
+    await executeProcessSlackMessage(db, payload)
+    expect(mocks.postMessage.mock.calls[0][0].text).toBe(
+      `途中まで説明したところで${TRUNCATED_ANSWER_NOTICE}`,
+    )
+    expect(TRUNCATED_ANSWER_NOTICE).toContain('続きを教えて')
+  })
+
+  it('打ち切られていなければ案内は付かない', async () => {
+    await executeProcessSlackMessage(db, payload)
+    expect(mocks.postMessage.mock.calls[0][0].text).toBe('一緒に整理しよう')
   })
 })

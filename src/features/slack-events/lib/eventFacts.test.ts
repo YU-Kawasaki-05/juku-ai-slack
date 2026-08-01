@@ -39,7 +39,55 @@ describe('stripBotMention', () => {
   it('正規表現特殊文字を含む botUserId でも安全（エスケープ）', () => {
     // 実運用IDでは起きないが、特殊文字が誤解釈されないこと
     expect(stripBotMention('<@U.B+> hi', 'U.B+')).toBe('hi')
-    expect(stripBotMention('<@UXBY> hi', 'U.B+')).toBe('<@UXBY> hi')
+    // Bot 以外のメンションは「除去せず」人間可読化する（G-2）ので原文のままにはならない
+    expect(stripBotMention('<@UXBY> hi', 'U.B+')).toBe('@ユーザー hi')
+  })
+
+  // --- G-1: 改行保持 ---
+  it('改行を保持する（連立方程式が1行に潰れない）', () => {
+    const text = '<@U_BOT> 次を解いて\n2x + 3y = 12\n4x - y = 5'
+    expect(stripBotMention(text, BOT)).toBe('次を解いて\n2x + 3y = 12\n4x - y = 5')
+  })
+  it('箇条書きの行構造を保持する', () => {
+    expect(stripBotMention('<@U_BOT> わからない点\n- 判別式\n- 平方完成', BOT)).toBe(
+      'わからない点\n- 判別式\n- 平方完成',
+    )
+  })
+  it('行内の連続空白のみ圧縮し、段落（空行）は1つに丸める', () => {
+    expect(stripBotMention('<@U_BOT> a   b\n\n\n\nc', BOT)).toBe('a b\n\nc')
+  })
+  it('行末・行頭の空白を落として空行判定を壊さない', () => {
+    expect(stripBotMention('<@U_BOT> a  \n   \n  \nb', BOT)).toBe('a\n\nb')
+  })
+
+  // --- G-2: HTML エンティティ復号 ---
+  it('不等号のエンティティを復号する（数学の中核語彙）', () => {
+    expect(stripBotMention('<@U_BOT> x &lt; 5 のとき', BOT)).toBe('x < 5 のとき')
+    expect(stripBotMention('<@U_BOT> 3 &gt; 2 &amp; 5 &lt; 7', BOT)).toBe('3 > 2 & 5 < 7')
+  })
+  it('&amp; の復号は最後（&amp;lt; はリテラル &lt; のまま）', () => {
+    expect(stripBotMention('<@U_BOT> &amp;lt;', BOT)).toBe('&lt;')
+  })
+  it('復号したエンティティはメンション記法として再解釈されない', () => {
+    expect(stripBotMention('<@U_BOT> &lt;@U_OTHER&gt; と書きたい', BOT)).toBe(
+      '<@U_OTHER> と書きたい',
+    )
+  })
+
+  // --- G-2: Slack リンク記法の人間可読化 ---
+  it('他ユーザーのメンションは表示名 or 総称に置換する', () => {
+    expect(stripBotMention('<@U_BOT> <@U123|taro> にも聞いた', BOT)).toBe('@taro にも聞いた')
+    expect(stripBotMention('<@U_BOT> <@U123> にも聞いた', BOT)).toBe('@ユーザー にも聞いた')
+  })
+  it('チャンネル参照は #name にする', () => {
+    expect(stripBotMention('<@U_BOT> <#C123|math> を見て', BOT)).toBe('#math を見て')
+  })
+  it('URL はラベル付きなら「ラベル (URL)」、素ならそのまま', () => {
+    expect(stripBotMention('<@U_BOT> <https://ex.com/a|参考>', BOT)).toBe('参考 (https://ex.com/a)')
+    expect(stripBotMention('<@U_BOT> <https://ex.com/a>', BOT)).toBe('https://ex.com/a')
+  })
+  it('@channel などの特殊メンションを平文化する', () => {
+    expect(stripBotMention('<@U_BOT> <!channel> みんな見て', BOT)).toBe('@channel みんな見て')
   })
 })
 

@@ -38,6 +38,11 @@ export interface LlmResult {
   usage: LlmUsage
   /** 実際に応答したモデル（プロバイダが返す値。無ければ要求モデル） */
   model: string
+  /**
+   * 出力トークン上限（finish_reason='length'）で打ち切られたか（A-15 / G-3）。
+   * 途中で切れた回答をそのまま投稿・保存すると履歴と要約にも欠損が伝播する。
+   */
+  truncated?: boolean
 }
 
 /**

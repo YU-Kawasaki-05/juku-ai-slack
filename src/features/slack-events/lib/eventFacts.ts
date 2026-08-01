@@ -43,14 +43,67 @@ export function containsMention(text: string | undefined, botUserId: string): bo
   return text.includes(`<@${botUserId}>`) || text.includes(`<@${botUserId}|`)
 }
 
-/** Bot へのメンション表記 `<@U…>` / `<@U…|name>` を除去して整形する。FR-05 入力 */
+/**
+ * Slack のリンク記法を人間（および LLM）が読める形に開く。G-2
+ *
+ * Slack は `<...>` を制御シーケンスとして送ってくる。素通しすると LLM にも管理画面にも
+ * `<#C123|math>` のような内部表現が出てしまうため、意味を保った平文に落とす。
+ */
+function humanizeSlackMarkup(text: string): string {
+  return (
+    text
+      // 他ユーザーへのメンション。ID をそのまま LLM に渡しても意味がないので表示名 or 総称にする
+      .replace(/<@([^>|\s]+)(?:\|([^>]*))?>/g, (_m, _id: string, label?: string) =>
+        label ? `@${label}` : '@ユーザー',
+      )
+      // チャンネル参照
+      .replace(/<#([^>|\s]+)(?:\|([^>]*))?>/g, (_m, id: string, label?: string) =>
+        label ? `#${label}` : `#${id}`,
+      )
+      // 特殊メンション（@channel / @here / @everyone）
+      .replace(/<!(channel|here|everyone)(?:\|[^>]*)?>/g, '@$1')
+      // mailto / tel はラベル（=アドレス自身のことが多い）だけで十分
+      .replace(/<(?:mailto|tel):[^|>]+\|([^>]*)>/g, '$1')
+      .replace(/<(?:mailto|tel):([^|>]+)>/g, '$1')
+      // URL: ラベル付きは「ラベル (URL)」、素の URL はそのまま
+      .replace(/<((?:https?|ftp):[^|>]+)\|([^>]*)>/g, '$2 ($1)')
+      .replace(/<((?:https?|ftp):[^|>]+)>/g, '$1')
+  )
+}
+
+/**
+ * Slack が送ってくる HTML エンティティを復号する。G-2
+ *
+ * Slack は本文中の `&`, `<`, `>` を必ずエンコードして送るため、復号しないと
+ * `x &lt; 5` のような不等号（数学チューターの中核語彙）がそのまま LLM と DB に入る。
+ * `&amp;` を最後に戻すこと（先に戻すと `&amp;lt;` が `<` に化ける）。
+ */
+function decodeSlackEntities(text: string): string {
+  return text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+}
+
+/**
+ * Bot へのメンション表記 `<@U…>` / `<@U…|name>` を除去して整形する。FR-05 入力
+ *
+ * G-1: 改行は保持する。`\s+` で潰すと連立方程式・箇条書き・コードブロックが
+ *      1 行に平坦化され、LLM・DB・管理画面のすべてに伝播する。
+ * G-2: Slack のリンク記法を平文化し、最後に HTML エンティティを復号する。
+ *      復号を最後に置くのは、生徒が入力した `&lt;@U123&gt;`（文字としての `<@U123>`）を
+ *      メンションとして誤解釈しないため。
+ */
 export function stripBotMention(text: string | undefined, botUserId: string): string {
   if (!text) return ''
   const escaped = botUserId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return text
-    .replace(new RegExp(`<@${escaped}(\\|[^>]*)?>`, 'g'), ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
+  const withoutBotMention = text.replace(new RegExp(`<@${escaped}(\\|[^>]*)?>`, 'g'), ' ')
+  return decodeSlackEntities(
+    humanizeSlackMarkup(withoutBotMention)
+      // 行内の空白のみ圧縮（\r\n は温存）
+      .replace(/[^\S\r\n]+/g, ' ')
+      // 行末・行頭の余分な空白を落としてから、空行の連続を最大 1 行に丸める
+      .replace(/[^\S\r\n]*\r?\n[^\S\r\n]*/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim(),
+  )
 }
 
 export function deriveEventFacts(event: SlackMessageEvent, botUserId: string): EventFacts {

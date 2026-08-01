@@ -45,6 +45,11 @@ export async function applyEvaluation(
     return { updated: false, reason: 'low_confidence' }
   }
 
+  // A-9（既知の制約）: ここは read-modify-write のため、同一 person × topic の評価が
+  // 完全に並行すると attempt_count が lost update になりうる。
+  // 単文 UPDATE に畳むには BKT 式を SQL 側に持つ RPC が必要でスコープが大きいため、
+  // まず A-8（Evaluator を socratic/confirmation ターンに限定）で並行度そのものを落とす。
+  // 影響は attempt_count の過少計上のみで、p_mastery は次回評価で追いつく。
   const { data: existing, error: readError } = await db
     .from('student_knowledge_states')
     .select('*')

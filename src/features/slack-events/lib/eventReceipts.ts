@@ -41,6 +41,30 @@ export async function recordEventReceipt(
   throw error
 }
 
+/** 受信イベントの終了状態（012 + migration 028 の CHECK と一致させること） */
+export type ReceiptStatus = 'received' | 'processed' | 'skipped' | 'failed'
+
+/**
+ * receipt の処理状態を確定させる（A-2）。
+ * ACK 後のバックグラウンド処理は Slack から見えないため、成否をここに残して
+ * 「無音で消えたイベント」を後から特定・再処理できるようにする。
+ * ベストエフォート（失敗しても主処理を止めない）。
+ */
+export async function markReceiptStatus(
+  db: ServerDb,
+  eventId: string,
+  status: ReceiptStatus,
+  processedAtIso: string = new Date().toISOString(),
+): Promise<void> {
+  const { error } = await db
+    .from('slack_event_receipts')
+    .update({ status, processed_at: processedAtIso })
+    .eq('event_id', eventId)
+  if (error) {
+    console.warn('[markReceiptStatus] failed to update receipt', eventId, error.message)
+  }
+}
+
 /**
  * receipt を削除する（H-1 対策）。
  * receipt 記録後の後続処理が失敗した場合に呼び、Slack 再送で再処理できるようにする。

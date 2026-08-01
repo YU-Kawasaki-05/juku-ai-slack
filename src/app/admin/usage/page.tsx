@@ -36,7 +36,7 @@ export default async function UsagePage({
   const tiles = [
     {
       label: '質問数',
-      value: totals.questionCount.toLocaleString(),
+      value: totals.questionCount.toLocaleString('ja-JP'),
       hint: `直近${days}日`,
       icon: MessageCircleQuestion,
     },
@@ -54,7 +54,7 @@ export default async function UsagePage({
     },
     {
       label: '画像付き質問',
-      value: totals.imageCount.toLocaleString(),
+      value: totals.imageCount.toLocaleString('ja-JP'),
       hint: `全体の ${totals.questionCount > 0 ? Math.round((totals.imageCount / totals.questionCount) * 100) : 0}%`,
       icon: ImageIcon,
     },

@@ -35,6 +35,16 @@ describe('searchChunks', () => {
     )
   })
 
+  it('クエリが空白のみなら embed も RPC も呼ばない（画像のみメッセージ対策）', async () => {
+    const { db, rpc } = mockDbWithRpc([])
+    const embed = vi.fn()
+    for (const queryText of ['', '   ', '\n\t']) {
+      expect(await searchChunks(db, { embed }, { personId: 'p1', queryText })).toEqual([])
+    }
+    expect(embed).not.toHaveBeenCalled()
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
   it('embedding が空なら空配列（RPC を呼ばない）', async () => {
     const { db, rpc } = mockDbWithRpc([])
     const emptyEmbedder: EmbeddingClient = { embed: vi.fn(async () => []) }

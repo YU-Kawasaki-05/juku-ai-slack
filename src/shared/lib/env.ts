@@ -25,8 +25,10 @@ const envSchema = z.object({
   // Anthropic 直アダプタを使う場合のみ
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
 
-  RESEND_API_KEY: z.string().min(1),
-  RESEND_FROM_EMAIL: z.string().email(),
+  // 保護者メール送信（FR-08 想定）。現時点でコード上の利用箇所はゼロのため optional。
+  // 必須にすると未設定環境で env のパースが落ち、Slack 連携ごと 500 になる
+  RESEND_API_KEY: z.string().min(1).optional(),
+  RESEND_FROM_EMAIL: z.string().email().optional(),
 })
 
 const parsed = envSchema.safeParse(process.env)

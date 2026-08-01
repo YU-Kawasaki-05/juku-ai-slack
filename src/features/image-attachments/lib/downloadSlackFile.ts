@@ -12,6 +12,9 @@
 import { MAX_IMAGE_BYTES } from '@shared/lib/constants'
 import { SlackFileDownloadFailedError, ImageTooLargeError } from '@shared/lib/errors/AppError'
 
+/** 画像 1 枚のダウンロードにかける上限（ミリ秒）。無限ハングでジョブ時間を食い潰さない */
+const DOWNLOAD_TIMEOUT_MS = 30_000
+
 export interface DownloadedFile {
   bytes: Uint8Array
   contentType: string
@@ -43,8 +46,10 @@ export async function downloadSlackFile(
     res = await fetch(urlPrivate, {
       headers: { Authorization: `Bearer ${botToken}` },
       redirect: 'manual', // 別ホストへのリダイレクトにトークンを持ち回らない
+      signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
     })
   } catch (err) {
+    // タイムアウト（TimeoutError）もネットワーク障害も同じエラー型に正規化する
     throw new SlackFileDownloadFailedError(err)
   }
 

@@ -117,14 +117,30 @@ export async function summarizeThread(
     maxTokens: SUMMARY_MAX_TOKENS,
   })
 
-  // person_id も条件に含め、再割当てで別生徒のセッションを書き換えない（BR-05-11）
-  const { error } = await db
+  // person_id も条件に含め、再割当てで別生徒のセッションを書き換えない（BR-05-11）。
+  // A-6: summary_message_count を CAS 条件にする。並行ジョブが同じ計画で要約した場合、
+  // 先に書いた方だけが成功し、後発は「後勝ちで上書き」せず破棄される
+  // （読み取り時点の件数から進んでいれば 0 行更新になる）。
+  const { data, error } = await db
     .from('slack_thread_sessions')
     .update({ thread_summary: result.text, summary_message_count: plan.newCount })
     .eq('slack_channel_id', params.channelId)
     .eq('thread_ts', params.threadTs)
     .eq('person_id', params.personId)
+    .eq('summary_message_count', params.summarizedCount)
+    .select('thread_ts')
   if (error) throw error
+
+  if (!data || data.length === 0) {
+    // 並行実行に負けた（or セッションが再割当てされた）。今回の要約は捨てる
+    // （プロジェクトの lint 設定では console.debug が使えないため warn。発生頻度は稀）
+    console.warn(
+      '[summarizeThread] discarded: summary_message_count changed concurrently',
+      params.channelId,
+      params.threadTs,
+    )
+    return { summarized: false }
+  }
 
   return { summarized: true, usage: result.usage, newCount: plan.newCount }
 }

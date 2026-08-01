@@ -15,6 +15,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { createServerClient } from '@/shared/lib/supabase/serverClient'
 import { getUsageSummary } from '@features/usage-logs'
+import { countActivePersons } from '@features/persons'
 import { getErrorLogs, countUnresolvedErrors } from '@features/errors'
 import { StatusBadge } from '@/components/admin/StatusBadge'
 import { formatDateTime } from '@/components/admin/formatDate'
@@ -25,10 +26,11 @@ export const metadata: Metadata = { title: 'ダッシュボード' }
 export default async function AdminDashboardPage() {
   const db = createServerClient()
 
-  const [usage, unresolvedCount, { count: studentCount }, recentErrors] = await Promise.all([
+  const [usage, unresolvedCount, studentCount, recentErrors] = await Promise.all([
     getUsageSummary(db),
     countUnresolvedErrors(db),
-    db.from('persons').select('*', { count: 'exact', head: true }),
+    // H-6: 「無効にした生徒は集計から外れます」の説明どおり active のみ数える
+    countActivePersons(db),
     getErrorLogs(db, { limit: 5 }),
   ])
 
@@ -51,7 +53,9 @@ export default async function AdminDashboardPage() {
             />
           </CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-3xl font-bold tabular-nums">{usage.todayQuestionCount}</p>
+            <p className="text-3xl font-bold tabular-nums">
+              {usage.todayQuestionCount.toLocaleString('ja-JP')}
+            </p>
             <p className="text-xs text-muted-foreground">生徒からの質問（日本時間の当日分）</p>
           </CardContent>
         </Card>
@@ -106,7 +110,10 @@ export default async function AdminDashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground/70" aria-hidden="true" />
           </CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-3xl font-bold tabular-nums">{studentCount ?? 0}</p>
+            <p className="text-3xl font-bold tabular-nums">
+              {studentCount.toLocaleString('ja-JP')}
+            </p>
+            <p className="text-xs text-muted-foreground">ステータスが有効な生徒</p>
             <Link
               href="/admin/persons"
               className="inline-block text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"

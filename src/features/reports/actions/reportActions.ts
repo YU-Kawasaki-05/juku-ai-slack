@@ -120,11 +120,13 @@ export async function updateReportAction(
   // 本文が変わっていなければ Embedding 再生成は不要（無駄な埋め込み課金を避ける）。
   // RAG の可視条件（is_ai_reference / status）は検索時に RPC 側でフィルタされるため、
   // チャンクは本文の内容だけを反映していればよい。
-  const { data: existing } = await db
+  const { data: existing, error: readError } = await db
     .from('reports')
-    .select('body_markdown')
+    .select('body_markdown, embeddings_updated_at')
     .eq('id', parsed.data.id)
     .maybeSingle()
+  // 読めないと「本文が変わったか」を判定できず、embedding が黙って陳腐化する
+  if (readError) return { ok: false, error: '保存に失敗しました' }
 
   // 生徒・対象月は変更不可（reportUpdateSchema と対応）
   const { error } = await db
@@ -139,7 +141,18 @@ export async function updateReportAction(
   if (error) return { ok: false, error: '保存に失敗しました' }
 
   const bodyChanged = (existing?.body_markdown ?? null) !== parsed.data.bodyMarkdown
-  const embeddingWarning = bodyChanged ? await tryRebuildEmbeddings(db, parsed.data.id) : false
+  let embeddingWarning = false
+  if (bodyChanged) {
+    embeddingWarning = await tryRebuildEmbeddings(db, parsed.data.id)
+  } else if (existing?.embeddings_updated_at) {
+    // タイトルのみ編集でも updated_at は進むため、既存 embedding が最新でも
+    // 詳細ページに「再生成が必要」の誤警告が出続ける。時刻だけ追従させる（BR-16-03）。
+    // 未生成（NULL）のときは触らない — 生成済みと誤認させないため
+    await db
+      .from('reports')
+      .update({ embeddings_updated_at: new Date().toISOString() })
+      .eq('id', parsed.data.id)
+  }
 
   revalidatePath('/admin/reports')
   revalidatePath(`/admin/reports/${parsed.data.id}`)

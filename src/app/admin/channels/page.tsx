@@ -17,7 +17,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { StatusBadge } from '@/components/admin/StatusBadge'
-import { formatDate } from '@/components/admin/formatDate'
+import { formatDate, formatMonth } from '@/components/admin/formatDate'
 
 export const metadata: Metadata = { title: 'チャンネル紐付け' }
 
@@ -63,6 +63,7 @@ export default async function ChannelsPage() {
                 <TableHead>チャンネル</TableHead>
                 <TableHead>チャンネルID</TableHead>
                 <TableHead>生徒</TableHead>
+                <TableHead>既定レポート</TableHead>
                 <TableHead>ステータス</TableHead>
                 <TableHead>登録日</TableHead>
               </TableRow>
@@ -84,6 +85,14 @@ export default async function ChannelsPage() {
                     </code>
                   </TableCell>
                   <TableCell>{b.persons?.name ?? b.person_name_snapshot ?? '—'}</TableCell>
+                  <TableCell
+                    className="max-w-56 truncate text-muted-foreground"
+                    title={b.reports?.title ?? undefined}
+                  >
+                    {b.reports
+                      ? `${formatMonth(b.reports.report_month)} ${b.reports.title}`
+                      : '—'}
+                  </TableCell>
                   <TableCell>
                     <StatusBadge status={b.status} />
                   </TableCell>

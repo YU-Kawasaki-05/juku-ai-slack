@@ -81,8 +81,13 @@ describe('summarizeThread', () => {
     }),
   }
 
-  /** update().eq().eq().eq() を await できる最小 fake。update ペイロードと eq 条件を記録 */
-  function fakeDb(updateError: unknown = null) {
+  /**
+   * update().eq()...eq().select() を await できる最小 fake。
+   * A-6 の CAS は「更新された行数」で判定するので select() の戻りを差し替えられるようにする。
+   */
+  function fakeDb(
+    opts: { updateError?: unknown; updatedRows?: unknown[] } = {},
+  ) {
     const calls = { update: [] as unknown[], eq: [] as [string, unknown][] }
     const chain: Record<string, unknown> = {}
     chain.update = (v: unknown) => {
@@ -93,7 +98,9 @@ describe('summarizeThread', () => {
       calls.eq.push([col, val])
       return chain
     }
-    chain.then = (onF: (r: { error: unknown }) => unknown) => onF({ error: updateError })
+    chain.select = () => chain
+    chain.then = (onF: (r: { data: unknown; error: unknown }) => unknown) =>
+      onF({ data: opts.updatedRows ?? [{ thread_ts: '100.1' }], error: opts.updateError ?? null })
     return { db: { from: () => chain } as unknown as ServerDb, calls }
   }
 
@@ -137,6 +144,27 @@ describe('summarizeThread', () => {
     })
     // UPDATE が person_id 条件を含む（BR-05-11）
     expect(calls.eq).toContainEqual(['person_id', 'p1'])
+    // A-6: 読み取り時点の要約済み件数を CAS 条件にする
+    expect(calls.eq).toContainEqual(['summary_message_count', 0])
+  })
+
+  it('並行実行で先を越されたら（0行更新）要約を破棄する（A-6）', async () => {
+    vi.mocked(countThreadMessages).mockResolvedValue(20)
+    vi.mocked(loadMessageRange).mockResolvedValue([{ role: 'user', content: 'Q1' }])
+    const { db, calls } = fakeDb({ updatedRows: [] })
+    const r = await summarizeThread(db, llm, base)
+    // 後勝ちで上書きせず、summarized=false を返す（呼び出し側は usage を記録しない）
+    expect(r).toEqual({ summarized: false })
+    expect(calls.update).toHaveLength(1)
+  })
+
+  it('CAS 条件は「読み取り時点の summarizedCount」を使う（更新後の値ではない）', async () => {
+    vi.mocked(countThreadMessages).mockResolvedValue(30)
+    vi.mocked(loadMessageRange).mockResolvedValue([{ role: 'user', content: 'Q2' }])
+    const { db, calls } = fakeDb()
+    await summarizeThread(db, llm, { ...base, summarizedCount: 10 })
+    expect(calls.eq).toContainEqual(['summary_message_count', 10])
+    expect(calls.update[0]).toMatchObject({ summary_message_count: 20 })
   })
 
   it('既存要約があれば累積更新の入力に渡す（AC-20-02）', async () => {
@@ -164,7 +192,7 @@ describe('summarizeThread', () => {
   it('DB 更新エラーは throw する（呼び出し側が握りつぶす前提）', async () => {
     vi.mocked(countThreadMessages).mockResolvedValue(20)
     vi.mocked(loadMessageRange).mockResolvedValue([{ role: 'user', content: 'Q1' }])
-    const { db } = fakeDb({ message: 'update failed' })
+    const { db } = fakeDb({ updateError: { message: 'update failed' } })
     await expect(summarizeThread(db, llm, base)).rejects.toBeDefined()
   })
 })

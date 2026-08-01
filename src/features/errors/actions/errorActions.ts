@@ -36,11 +36,14 @@ export async function resolveErrorAction(
   }
 
   const db = createServerClient()
-  const { error } = await db
+  // H-10: .select('id') を付けないと 0 行マッチ（削除済み ID 等）でも成功扱いになる
+  const { data, error } = await db
     .from('ai_error_logs')
     .update({ resolved: parsed.data.resolved })
     .eq('id', parsed.data.id)
+    .select('id')
   if (error) return { ok: false, error: '更新に失敗しました' }
+  if (!data || data.length === 0) return { ok: false, error: '対象が見つかりません' }
 
   revalidatePath('/admin/errors')
   revalidatePath(`/admin/errors/${parsed.data.id}`)
@@ -67,11 +70,14 @@ export async function updateErrorNotesAction(
   }
 
   const db = createServerClient()
-  const { error } = await db
+  // H-10: .select('id') を付けないと 0 行マッチ（削除済み ID 等）でも成功扱いになる
+  const { data, error } = await db
     .from('ai_error_logs')
     .update({ notes: parsed.data.notes })
     .eq('id', parsed.data.id)
+    .select('id')
   if (error) return { ok: false, error: '保存に失敗しました' }
+  if (!data || data.length === 0) return { ok: false, error: '対象が見つかりません' }
 
   revalidatePath(`/admin/errors/${parsed.data.id}`)
   return { ok: true }

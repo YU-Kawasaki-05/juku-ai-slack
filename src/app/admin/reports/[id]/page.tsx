@@ -8,6 +8,7 @@ import { notFound } from 'next/navigation'
 import { AlertTriangle, Bot, Check, Pencil, TriangleAlert } from 'lucide-react'
 import { createServerClient } from '@shared/lib/supabase/serverClient'
 import { getReport } from '@features/reports'
+import { needsEmbeddingRebuild } from '@features/rag'
 import { MarkdownContent } from '@features/reports/components/MarkdownContent'
 import { RebuildEmbeddingsButton } from '@features/reports/components/RebuildEmbeddingsButton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -15,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { StatusBadge } from '@/components/admin/StatusBadge'
 import { formatDateTime, formatMonth } from '@/components/admin/formatDate'
+import { isUuid } from '../../searchParams'
 
 export const metadata: Metadata = { title: 'レポート詳細' }
 
@@ -24,12 +26,14 @@ export default async function ReportDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  // 不正な UUID をそのまま渡すと Postgres の 22P02 で 500 になるため事前に 404 化する
+  if (!isUuid(id)) notFound()
+
   const report = await getReport(createServerClient(), id)
   if (!report) notFound()
 
   // BR-16-03: 本文更新後に embedding が未再生成なら警告
-  const needsRebuild =
-    !report.embeddings_updated_at || report.embeddings_updated_at < report.updated_at
+  const needsRebuild = needsEmbeddingRebuild(report.embeddings_updated_at, report.updated_at)
 
   return (
     <div className="space-y-6">

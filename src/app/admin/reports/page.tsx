@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/table'
 import { StatusBadge } from '@/components/admin/StatusBadge'
 import { formatDate, formatMonth } from '@/components/admin/formatDate'
+import { parseMonthParam, parseUuidParam } from '../searchParams'
 
 export const metadata: Metadata = { title: 'レポート管理' }
 
@@ -29,10 +30,10 @@ export default async function ReportsPage({
   searchParams: Promise<{ person?: string; month?: string; status?: string }>
 }) {
   const sp = await searchParams
-  // 無効なクエリ値はフィルタなしとして扱う
+  // 無効なクエリ値はフィルタなしとして扱う（H-4: URL 手編集で 500 にしない）
   const filters = {
-    personId: sp.person && /^[0-9a-f-]{36}$/i.test(sp.person) ? sp.person : undefined,
-    month: sp.month && /^\d{4}-\d{2}$/.test(sp.month) ? sp.month : undefined,
+    personId: parseUuidParam(sp.person),
+    month: parseMonthParam(sp.month),
     status: sp.status && (REPORT_STATUSES as readonly string[]).includes(sp.status)
       ? sp.status
       : undefined,

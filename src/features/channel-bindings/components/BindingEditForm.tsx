@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from '@/components/ui/use-toast'
 import { StatusSelect } from '@/components/admin/StatusSelect'
+import { FieldError } from '@/components/admin/FieldError'
 import type { ActionResult } from '@shared/types/action'
 
 export function BindingEditForm({ binding }: { binding: BindingWithPerson }) {
@@ -32,6 +33,8 @@ export function BindingEditForm({ binding }: { binding: BindingWithPerson }) {
       router.push('/admin/channels')
     }
   }, [state, router])
+
+  const err = state && !state.ok ? state : undefined
 
   return (
     <Card className="max-w-xl">
@@ -61,6 +64,10 @@ export function BindingEditForm({ binding }: { binding: BindingWithPerson }) {
                 {binding.persons?.name ?? binding.person_name_snapshot ?? '—'}
               </dd>
             </div>
+            <div className="flex items-center justify-between gap-4">
+              <dt className="shrink-0 text-muted-foreground">既定レポート</dt>
+              <dd className="truncate">{binding.reports?.title ?? '—'}</dd>
+            </div>
           </dl>
           <p className="text-xs text-muted-foreground">
             チャンネルIDと生徒は変更できません。変更する場合は紐付けを作り直してください
@@ -72,7 +79,13 @@ export function BindingEditForm({ binding }: { binding: BindingWithPerson }) {
               id="slackChannelName"
               name="slackChannelName"
               defaultValue={binding.slack_channel_name ?? ''}
+              maxLength={200}
+              aria-invalid={err?.fieldErrors?.slackChannelName ? true : undefined}
+              aria-describedby={
+                err?.fieldErrors?.slackChannelName ? 'slackChannelName-error' : undefined
+              }
             />
+            <FieldError id="slackChannelName-error" message={err?.fieldErrors?.slackChannelName} />
           </div>
 
           <div className="space-y-2">
@@ -85,10 +98,12 @@ export function BindingEditForm({ binding }: { binding: BindingWithPerson }) {
             <p id="status-help" className="text-xs text-muted-foreground">
               無効にすると、このチャンネルでは Bot が反応しなくなります
             </p>
+            <FieldError id="status-error" message={err?.fieldErrors?.status} />
           </div>
 
           <div className="flex gap-2 pt-1">
-            <Button type="submit" disabled={pending}>
+            {/* H-9: 成功後も無効のままにして、遷移待ちの間の二重送信を防ぐ */}
+            <Button type="submit" disabled={pending || state?.ok}>
               {pending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
               {pending ? '保存中...' : '保存'}
             </Button>

@@ -3,5 +3,6 @@ export type { VerifySignatureResult, SignatureFailureReason } from './lib/verify
 export { shouldReact } from './lib/shouldReact'
 export { deriveEventFacts, containsMention, stripBotMention, extractSupportedImages } from './lib/eventFacts'
 export type { EventFacts } from './lib/eventFacts'
-export { recordEventReceipt, deleteReceipt } from './lib/eventReceipts'
+export { recordEventReceipt, deleteReceipt, markReceiptStatus } from './lib/eventReceipts'
+export type { ReceiptStatus } from './lib/eventReceipts'
 export * from './types'

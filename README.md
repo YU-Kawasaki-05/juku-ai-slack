@@ -29,7 +29,7 @@ Slack 連携型・**生徒別 AI 学習支援ボット**。学習塾の生徒ご
 
 - **Next.js 15** (App Router) / **React 19** / **TypeScript** (strict)
 - **Supabase** (PostgreSQL + pgvector + Auth + RLS)
-- **Anthropic Claude** (Tutor / Evaluator)
+- **LLM はプロバイダ非依存**（OpenAI 互換 API。OpenRouter / DeepSeek / OpenAI などを env の差し替えだけで切替）
 - **Slack Events API** (Bot)
 - **Tailwind CSS** + **shadcn/ui**
 - **Vitest** + **Playwright** + **MSW**（テスト）
@@ -46,25 +46,38 @@ Slack 連携型・**生徒別 AI 学習支援ボット**。学習塾の生徒ご
 
 ```bash
 pnpm install
-cp .env.example .env.local   # 各種キーを設定
+cp .env.example .env.local   # 各種キーを設定（必須項目は .env.example のコメント参照）
 
 # Supabase（ローカル or クラウド）にマイグレーション適用
 pnpm supabase:start          # ローカルの場合
 # または: supabase link --project-ref <ref> && supabase db push
 
-pnpm supabase:types          # DB 型を生成
+pnpm supabase:types          # DB 型を生成（ローカル Supabase）
+# クラウド（supabase link 済み）の場合: pnpm supabase:types:linked
+
 pnpm dev                     # http://localhost:3000
 ```
+
+**運用前に必要な設定（管理者ロール付与・Embedding・サインアップ無効化など）は
+[`docs/03_技術設計/04_セットアップ手順.md`](./docs/03_技術設計/04_セットアップ手順.md) に集約**している。
+手順の詳細はそちらを唯一の正本とし、この README では重複させない。
+（スクリーンショット付きの HTML セットアップガイドを別途追加予定）
 
 ## 開発状況
 
 | Sprint | 内容 | 状態 |
 |--------|------|------|
 | Sprint 0 | 認証・管理画面の土台・DB マイグレーション | ✅ 完了 |
-| Sprint 1 | Slack イベント受信・チャンネル紐付け | 🚧 進行中 |
-| Sprint 2〜 | AI 応答・RAG・BKT・エピソード記憶 | 📋 計画済み |
+| Sprint 1 | Slack イベント受信・署名検証・非同期ジョブ（FR-01〜04） | ✅ 完了 |
+| Sprint 2 | AI 回答生成（適応モード）・エラー分類/ログ（FR-05, FR-11, FR-12） | ✅ 完了 |
+| Sprint 3 | レポート・RAG（pgvector）・BKT 知識追跡（FR-10, FR-16, FR-23） | ✅ 完了 |
+| Sprint 4 | 画像添付処理（FR-06） | ✅ 完了 |
+| Sprint 5-6 | 管理画面（生徒・紐付け・レポート・エラー・利用状況・会話ログ / FR-13〜19） | ✅ 完了 |
+| Sprint 7 | 管理画面の仕上げ・E2E 基盤・スレッド長期要約（FR-20） | ✅ 完了 |
+| Phase 2 | エピソード記憶（FR-24）・FSRS リマインダー（FR-25）・AI 月次レポート（FR-08）・PDF 全文解析（FR-21） | 📋 計画中 |
 
-Sprint 計画の詳細は [`docs/03_技術設計/07_Sprint計画.md`](./docs/03_技術設計) を参照。
+機能単位の実装状況は [`docs/01_要件定義/_index.yml`](./docs/01_要件定義/_index.yml) の `status` が正本。
+Sprint 計画の詳細は [`docs/03_技術設計/07_Sprint計画.md`](./docs/03_技術設計/07_Sprint計画.md) を参照。
 
 ## テスト
 

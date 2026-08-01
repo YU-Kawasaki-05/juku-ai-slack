@@ -31,6 +31,9 @@ export async function searchChunks(
   embeddingClient: EmbeddingClient,
   params: SearchChunksParams,
 ): Promise<RagChunk[]> {
+  // 画像のみのメッセージ等でクエリが空になる。'' は Embedding API に 400 で拒否されるため呼ばない
+  if (!params.queryText.trim()) return []
+
   const [vector] = await embeddingClient.embed([params.queryText])
   if (!vector) return []
 

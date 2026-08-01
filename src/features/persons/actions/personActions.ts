@@ -74,7 +74,8 @@ export async function updatePersonAction(
   }
 
   const db = createServerClient()
-  const { error } = await db
+  // H-10: .select('id') を付けないと 0 行マッチ（削除済み ID 等）でも成功扱いになる
+  const { data, error } = await db
     .from('persons')
     .update({
       name: parsed.data.name,
@@ -84,7 +85,9 @@ export async function updatePersonAction(
       guardian_email: parsed.data.guardianEmail,
     })
     .eq('id', parsed.data.id)
+    .select('id')
   if (error) return { ok: false, error: '保存に失敗しました' }
+  if (!data || data.length === 0) return { ok: false, error: '対象が見つかりません' }
 
   revalidatePath('/admin/persons')
   revalidatePath(`/admin/persons/${parsed.data.id}`)

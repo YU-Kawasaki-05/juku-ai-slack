@@ -4,7 +4,7 @@
  * 出力: storagePath
  * 例外: Storage/DB 失敗は ImageProcessingFailedError（呼び出し側で握りつぶし継続）
  * 依存: Supabase Storage(attachments バケット), attachments テーブル
- * 副作用: Storage への put, attachments への insert
+ * 副作用: Storage への put, attachments への upsert（DB 失敗時は put を remove で巻き戻す）
  * セキュリティ: person_id で名前空間分離。Service Role のみアクセス（非公開バケット）
  * @implements FR-06, BR-06-05, BR-06-07, AC-06-01
  */
@@ -12,6 +12,8 @@ import type { ServerDb } from '@shared/types/db'
 import { ATTACHMENTS_BUCKET } from '@shared/lib/constants'
 import { ImageProcessingFailedError } from '@shared/lib/errors/AppError'
 import { extFromMimetype } from './validateAttachment'
+
+const JST_OFFSET_MS = 9 * 3600_000
 
 export interface StoreParams {
   personId: string
@@ -28,8 +30,10 @@ export interface StoreParams {
 export async function storeAttachment(db: ServerDb, params: StoreParams): Promise<string> {
   const now = params.now ?? new Date()
   const ext = extFromMimetype(params.mimetype)
-  const year = now.getUTCFullYear()
-  const month = String(now.getUTCMonth() + 1).padStart(2, '0')
+  // 年月フォルダは JST 基準（UTC だと JST 0〜9 時の画像が前日・前月フォルダに入る）
+  const jst = new Date(now.getTime() + JST_OFFSET_MS)
+  const year = jst.getUTCFullYear()
+  const month = String(jst.getUTCMonth() + 1).padStart(2, '0')
   const storagePath = `${params.personId}/${year}/${month}/${params.slackFileId}.${ext}`
 
   const { error: uploadError } = await db.storage
@@ -54,7 +58,23 @@ export async function storeAttachment(db: ServerDb, params: StoreParams): Promis
     },
     { onConflict: 'slack_file_id' },
   )
-  if (insertError) throw new ImageProcessingFailedError(insertError)
+  if (insertError) {
+    // DB に行が無いと掃除経路が無く Storage が孤児ファイルで溜まるため巻き戻す
+    await removeUploaded(db, storagePath)
+    throw new ImageProcessingFailedError(insertError)
+  }
 
   return storagePath
+}
+
+/** upload 済みファイルの巻き戻し。remove 自体の失敗は握りつぶす（元の insert 失敗を隠さない） */
+async function removeUploaded(db: ServerDb, storagePath: string): Promise<void> {
+  try {
+    const { error } = await db.storage.from(ATTACHMENTS_BUCKET).remove([storagePath])
+    if (error) {
+      console.warn('[storeAttachment] rollback remove failed:', storagePath, error.message)
+    }
+  } catch (err) {
+    console.warn('[storeAttachment] rollback remove threw:', storagePath, err)
+  }
 }

@@ -22,7 +22,8 @@ import { formatDate } from '@/components/admin/formatDate'
 export const metadata: Metadata = { title: '生徒管理' }
 
 export default async function PersonsPage() {
-  const persons = await getPersons(createServerClient())
+  // ステータス列で有効/無効が判別できるため、この画面だけは inactive も表示する（H-6）
+  const persons = await getPersons(createServerClient(), { includeInactive: true })
 
   return (
     <div className="space-y-6">

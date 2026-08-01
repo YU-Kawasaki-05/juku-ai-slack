@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from '@/components/ui/use-toast'
 import { StatusSelect } from '@/components/admin/StatusSelect'
+import { FieldError } from '@/components/admin/FieldError'
 import type { ActionResult } from '@shared/types/action'
 import type { Tables } from '@shared/types/db'
 
@@ -64,14 +65,11 @@ export function PersonForm({
               name="name"
               defaultValue={person?.name ?? ''}
               required
+              maxLength={100}
               aria-invalid={err?.fieldErrors?.name ? true : undefined}
               aria-describedby={err?.fieldErrors?.name ? 'name-error' : undefined}
             />
-            {err?.fieldErrors?.name && (
-              <p id="name-error" className="text-sm text-destructive">
-                {err.fieldErrors.name}
-              </p>
-            )}
+            <FieldError id="name-error" message={err?.fieldErrors?.name} />
           </div>
 
           <div className="space-y-2">
@@ -80,8 +78,15 @@ export function PersonForm({
               id="displayName"
               name="displayName"
               defaultValue={person?.display_name ?? ''}
-              aria-describedby="displayName-help"
+              maxLength={100}
+              aria-invalid={err?.fieldErrors?.displayName ? true : undefined}
+              aria-describedby={
+                err?.fieldErrors?.displayName
+                  ? 'displayName-error displayName-help'
+                  : 'displayName-help'
+              }
             />
+            <FieldError id="displayName-error" message={err?.fieldErrors?.displayName} />
             <p id="displayName-help" className="text-xs text-muted-foreground">
               Bot が呼びかけに使う名前です（例: 太郎くん）
             </p>
@@ -94,7 +99,11 @@ export function PersonForm({
               name="grade"
               defaultValue={person?.grade ?? ''}
               placeholder="例: 中学3年"
+              maxLength={50}
+              aria-invalid={err?.fieldErrors?.grade ? true : undefined}
+              aria-describedby={err?.fieldErrors?.grade ? 'grade-error' : undefined}
             />
+            <FieldError id="grade-error" message={err?.fieldErrors?.grade} />
           </div>
 
           <div className="space-y-2">
@@ -105,8 +114,9 @@ export function PersonForm({
               aria-describedby="status-help"
             />
             <p id="status-help" className="text-xs text-muted-foreground">
-              無効にした生徒は集計・レポートの対象から外れます
+              無効にした生徒は Bot の対象生徒プルダウン・集計から外れます（生徒一覧には残ります）
             </p>
+            <FieldError id="status-error" message={err?.fieldErrors?.status} />
           </div>
 
           <div className="space-y-2">
@@ -117,14 +127,11 @@ export function PersonForm({
               type="email"
               autoComplete="off"
               defaultValue={person?.guardian_email ?? ''}
+              maxLength={255}
               aria-invalid={err?.fieldErrors?.guardianEmail ? true : undefined}
               aria-describedby={err?.fieldErrors?.guardianEmail ? 'guardianEmail-error' : undefined}
             />
-            {err?.fieldErrors?.guardianEmail && (
-              <p id="guardianEmail-error" className="text-sm text-destructive">
-                {err.fieldErrors.guardianEmail}
-              </p>
-            )}
+            <FieldError id="guardianEmail-error" message={err?.fieldErrors?.guardianEmail} />
           </div>
 
           <p className="text-xs text-muted-foreground">
@@ -132,7 +139,8 @@ export function PersonForm({
           </p>
 
           <div className="flex gap-2 pt-1">
-            <Button type="submit" disabled={pending}>
+            {/* H-9: persons に UNIQUE が無いため、成功後の遷移待ちに再送信されると二重登録になる */}
+            <Button type="submit" disabled={pending || state?.ok}>
               {pending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
               {pending ? '保存中...' : '保存'}
             </Button>

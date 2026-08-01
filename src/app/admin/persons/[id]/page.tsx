@@ -7,6 +7,7 @@ import { notFound } from 'next/navigation'
 import { createServerClient } from '@shared/lib/supabase/serverClient'
 import { getPerson, updatePersonAction } from '@features/persons'
 import { PersonForm } from '@features/persons/components/PersonForm'
+import { isUuid } from '../../searchParams'
 
 export const metadata: Metadata = { title: '生徒の編集' }
 
@@ -16,6 +17,8 @@ export default async function PersonDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  // UUID でない ID をそのままクエリすると Postgres 22P02 で 500 になるため事前に 404 に倒す（H-5）
+  if (!isUuid(id)) notFound()
   const person = await getPerson(createServerClient(), id)
   if (!person) notFound()
 

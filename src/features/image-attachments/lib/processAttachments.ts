@@ -1,7 +1,8 @@
 /** @file
  * 機能: payload の添付画像を検証→DL→保存し、Vision 用 data URL を収集する
+ *   MIME は Slack 申告値ではなく実際の content-type で判定し、合計バイト上限を超えた分はスキップする
  * 入力: db, ProcessAttachmentsParams, deps（テスト用に download/store を注入可）
- * 出力: { dataUrls, errorCodes }
+ * 出力: { dataUrls, errorCodes, skippedForTotalSize }
  * 例外: なし（各画像の失敗はエラーコードとして収集し、処理は継続）
  * 依存: validateAttachment, downloadSlackFile, storeAttachment
  * 副作用: Slack GET, Storage put, attachments insert
@@ -9,6 +10,7 @@
  * @implements FR-06, AC-06-01, AC-06-03, AC-06-04, BR-06-02, BR-06-03
  */
 import type { ServerDb } from '@shared/types/db'
+import { MAX_TOTAL_IMAGE_BYTES, SUPPORTED_IMAGE_MIMETYPES } from '@shared/lib/constants'
 import { ImageTooLargeError } from '@shared/lib/errors/AppError'
 import { validateAttachment } from './validateAttachment'
 import { downloadSlackFile, toDataUrl, type DownloadedFile } from './downloadSlackFile'
@@ -34,8 +36,10 @@ export interface ProcessAttachmentsParams {
 export interface ProcessAttachmentsResult {
   /** Vision に渡す data URL（保存に成功したもののみ） */
   dataUrls: string[]
-  /** 発生したエラーコード（IMAGE_TOO_LARGE / SLACK_FILE_DOWNLOAD_FAILED / IMAGE_PROCESSING_FAILED） */
+  /** 発生したエラーコード（IMAGE_TOO_LARGE / UNSUPPORTED_FILE_TYPE / SLACK_FILE_DOWNLOAD_FAILED / IMAGE_PROCESSING_FAILED） */
   errorCodes: string[]
+  /** 合計バイト上限（MAX_TOTAL_IMAGE_BYTES）超過でスキップした枚数 */
+  skippedForTotalSize: number
 }
 
 export interface ProcessAttachmentsDeps {
@@ -53,6 +57,8 @@ export async function processAttachments(
 
   const dataUrls: string[] = []
   const errorCodes: string[] = []
+  let skippedForTotalSize = 0
+  let totalBytes = 0
 
   for (const file of params.files) {
     const valid = validateAttachment({ mimetype: file.mimetype, size: file.size ?? undefined })
@@ -71,6 +77,20 @@ export async function processAttachments(
       continue
     }
 
+    // Slack 申告の mimetype は信用せず、実際に返ってきた content-type で判定する
+    const actualMimetype = normalizeMimetype(downloaded.contentType)
+    if (!(SUPPORTED_IMAGE_MIMETYPES as readonly string[]).includes(actualMimetype)) {
+      errorCodes.push('UNSUPPORTED_FILE_TYPE')
+      continue
+    }
+
+    // 合計サイズ上限（枚数上限だけでは Vision API の受付上限を超える）。超過分はスキップ
+    if (totalBytes + downloaded.bytes.byteLength > MAX_TOTAL_IMAGE_BYTES) {
+      skippedForTotalSize += 1
+      errorCodes.push('IMAGE_TOO_LARGE')
+      continue
+    }
+
     try {
       await store(db, {
         personId: params.personId,
@@ -78,7 +98,7 @@ export async function processAttachments(
         threadTs: params.threadTs,
         messageTs: params.messageTs,
         slackFileId: file.id,
-        mimetype: file.mimetype,
+        mimetype: actualMimetype,
         originalName: file.name,
         bytes: downloaded.bytes,
       })
@@ -88,8 +108,14 @@ export async function processAttachments(
       continue
     }
 
-    dataUrls.push(toDataUrl(downloaded.bytes, file.mimetype))
+    totalBytes += downloaded.bytes.byteLength
+    dataUrls.push(toDataUrl(downloaded.bytes, actualMimetype))
   }
 
-  return { dataUrls, errorCodes }
+  return { dataUrls, errorCodes, skippedForTotalSize }
+}
+
+/** 'image/png; charset=binary' → 'image/png'（パラメータを落とし小文字化） */
+function normalizeMimetype(contentType: string): string {
+  return contentType.split(';')[0].trim().toLowerCase()
 }
