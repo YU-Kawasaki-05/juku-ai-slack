@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { alert } from './fixtures/ui'
 
 test.describe('ログイン画面（SCR-01）', () => {
   test.beforeEach(async ({ page }) => {
@@ -31,7 +32,7 @@ test.describe('ログイン画面（SCR-01）', () => {
     await page.getByLabel('パスワード').fill('definitely-wrong-password')
     await page.getByRole('button', { name: 'ログイン' }).click()
     // Supabase 認証失敗 → Alert（role="alert"）が表示される
-    await expect(page.getByRole('alert')).toBeVisible({ timeout: 15_000 })
+    await expect(alert(page)).toBeVisible({ timeout: 15_000 })
     await expect(page).toHaveURL(/\/login/)
   })
 })

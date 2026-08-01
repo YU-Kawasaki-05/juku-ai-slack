@@ -84,9 +84,29 @@ Sprint 計画の詳細は [`docs/03_技術設計/07_Sprint計画.md`](./docs/03_
 ```bash
 pnpm typecheck   # 型チェック
 pnpm test        # ユニットテスト（Vitest）
-pnpm test:e2e    # E2E（Playwright）
 pnpm lint        # ESLint
 ```
+
+### E2E（Playwright）
+
+E2E はローカル Supabase に対して回る。**`.env.local` は読まない**（`playwright.config.ts` の
+`webServer.env` で `.env.test` を明示注入する）ので、本番の接続情報が混ざることはない。
+
+```bash
+pnpm supabase:start          # ポートは 5434x 帯（他プロジェクトと衝突しないよう変更済み）
+pnpm supabase:reset          # migration + seed
+pnpm test:e2e                # next build → playwright test
+```
+
+- env は `.env.test` を読み、無ければ `.env.test.example`（ローカル Supabase の固定値）にフォールバックする。
+  値を変えたいときだけ `cp .env.test.example .env.test`。
+- テスト用の admin / staff ユーザーは `e2e/global-setup.ts` が Supabase Admin API で毎回冪等に作成する
+  （`app_metadata.role` を付与。seed.sql は本番想定なので触らない）。
+- `test:e2e` は毎回 `next build` する。`reuseExistingServer` は CI 外でも `false` にしてあるため、
+  古いビルドを配信中のサーバーを黙って使い回す事故は起きない（ポート 3200 が埋まっていれば起動失敗する）。
+  ビルドを省略して回したいときだけ `pnpm test:e2e:nobuild`。
+- `pnpm test:e2e` は `.next` を E2E 用の env でビルドし直すので、実行後に `pnpm start` すると
+  ローカル Supabase 向けのビルドが動く。通常の開発は `pnpm dev` を使うこと。
 
 ## ライセンス
 

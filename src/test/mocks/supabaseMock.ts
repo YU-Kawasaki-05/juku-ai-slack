@@ -34,6 +34,8 @@ export interface MockDbCalls {
   neq: Array<[string, unknown]>
   /** [column, value] の配列（.lt()） */
   lt: Array<[string, unknown]>
+  /** [column, value] の配列（.gt()） */
+  gt: Array<[string, unknown]>
   /** [column, ascending] の配列（.order()） */
   order: Array<[string, boolean | undefined]>
   /** [from, to] の配列（.range()） */
@@ -63,6 +65,7 @@ export function createMockDb(handlers: MockDbHandlers = {}) {
     eq: [],
     neq: [],
     lt: [],
+    gt: [],
     order: [],
     range: [],
     rpc: [],
@@ -93,6 +96,10 @@ export function createMockDb(handlers: MockDbHandlers = {}) {
     }),
     lt: vi.fn((column: string, value: unknown) => {
       calls.lt.push([column, value])
+      return builder
+    }),
+    gt: vi.fn((column: string, value: unknown) => {
+      calls.gt.push([column, value])
       return builder
     }),
     delete: vi.fn(() => {

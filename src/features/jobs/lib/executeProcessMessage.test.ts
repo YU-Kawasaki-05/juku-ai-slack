@@ -172,6 +172,43 @@ describe('executeProcessSlackMessage', () => {
     expect(mocks.generate.mock.calls[0][0].system).toContain('direct')
   })
 
+  // --- FR-09: 管理画面で保存したプロフィール/試験期間が実際に効くか（F-3 の書込経路の受け口） ---
+  it('AC-09-02: プロフィール要約が生成プロンプトの system に載る', async () => {
+    mocks.getStudentProfile.mockResolvedValue({
+      profileText: '要約: 文章題でつまずきやすい\n苦手: 割合',
+      examMode: false,
+    })
+    await executeProcessSlackMessage(db, payload)
+
+    const system = mocks.generate.mock.calls[0][0].system
+    expect(system).toContain('文章題でつまずきやすい')
+    expect(system).toContain('苦手: 割合')
+    // 他生徒に流用させない前置きつきで入る（BR-05-11）
+    expect(system).toContain('この生徒のメモ')
+    // person_id で引いている
+    expect(mocks.getStudentProfile).toHaveBeenCalledWith(db, payload.personId)
+  })
+
+  it('AC-09-03: プロフィール未登録でもエラーにせず回答する（BR-09-04）', async () => {
+    mocks.getStudentProfile.mockResolvedValue({ profileText: null, examMode: false })
+    await expect(executeProcessSlackMessage(db, payload)).resolves.toBeUndefined()
+    expect(mocks.generate.mock.calls[0][0].system).not.toContain('この生徒のメモ')
+    expect(mocks.postMessage).toHaveBeenCalledOnce()
+  })
+
+  it('AC-05-05: 試験期間中は確認質問なし（direct）で Evaluator も起動しない', async () => {
+    mocks.getStudentProfile.mockResolvedValue({ profileText: null, examMode: true })
+    mocks.getMastery.mockResolvedValue(0.9) // 通常なら confirmation → Evaluator 起動
+    mocks.loadPrecedingAssistantText.mockResolvedValue('前回の確認質問')
+    await executeProcessSlackMessage(db, payload)
+
+    const system = mocks.generate.mock.calls[0][0].system
+    expect(system).toContain('direct（直接指導）')
+    expect(system).not.toContain('confirmation（確認）')
+    // direct には確認質問が無いので採点対象も無い（A-8）
+    expect(mocks.evaluate).not.toHaveBeenCalled()
+  })
+
   it('履歴取得は person_id でも絞り、今回の質問自身は除外する（BR-05-11 / A-4）', async () => {
     await executeProcessSlackMessage(db, payload)
     // 要約が無いスレッド（summary_message_count=0）は従来どおり loadThreadHistory（直近）を使う

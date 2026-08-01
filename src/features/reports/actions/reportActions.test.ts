@@ -82,7 +82,7 @@ describe('updateReportAction', () => {
     vi.mocked(createServerClient).mockReturnValue(
       createMockDb({ maybeSingle: { data: { body_markdown: 'old' }, error: null }, thenable: { error: null } }),
     )
-    const r = await updateReportAction(undefined, fd({ id: REPORT_ID, title: 't', bodyMarkdown: 'new', status: 'approved' }))
+    const r = await updateReportAction(undefined, fd({ reportId: REPORT_ID, title: 't', bodyMarkdown: 'new', status: 'approved' }))
     expect(r).toEqual({ ok: true, data: { reportId: REPORT_ID, embeddingWarning: false } })
     expect(rebuildReportEmbeddings).toHaveBeenCalledOnce()
   })
@@ -92,7 +92,7 @@ describe('updateReportAction', () => {
     vi.mocked(createServerClient).mockReturnValue(
       createMockDb({ maybeSingle: { data: { body_markdown: 'same' }, error: null }, thenable: { error: null } }),
     )
-    const r = await updateReportAction(undefined, fd({ id: REPORT_ID, title: 't', bodyMarkdown: 'same', status: 'approved' }))
+    const r = await updateReportAction(undefined, fd({ reportId: REPORT_ID, title: 't', bodyMarkdown: 'same', status: 'approved' }))
     expect(r.ok).toBe(true)
     expect(rebuildReportEmbeddings).not.toHaveBeenCalled()
   })
@@ -107,7 +107,7 @@ describe('updateReportAction', () => {
       thenable: { error: null },
     })
     vi.mocked(createServerClient).mockReturnValue(db)
-    await updateReportAction(undefined, fd({ id: REPORT_ID, title: '新タイトル', bodyMarkdown: 'same', status: 'approved' }))
+    await updateReportAction(undefined, fd({ reportId: REPORT_ID, title: '新タイトル', bodyMarkdown: 'same', status: 'approved' }))
 
     const touch = db.__calls.update.at(-1) as { embeddings_updated_at?: string }
     expect(db.__calls.update).toHaveLength(2)
@@ -123,7 +123,7 @@ describe('updateReportAction', () => {
       thenable: { error: null },
     })
     vi.mocked(createServerClient).mockReturnValue(db)
-    await updateReportAction(undefined, fd({ id: REPORT_ID, title: '新タイトル', bodyMarkdown: 'same', status: 'approved' }))
+    await updateReportAction(undefined, fd({ reportId: REPORT_ID, title: '新タイトル', bodyMarkdown: 'same', status: 'approved' }))
 
     expect(db.__calls.update).toHaveLength(1)
   })
@@ -135,7 +135,7 @@ describe('updateReportAction', () => {
       thenable: { error: null },
     })
     vi.mocked(createServerClient).mockReturnValue(db)
-    const r = await updateReportAction(undefined, fd({ id: REPORT_ID, title: 't', bodyMarkdown: 'new', status: 'approved' }))
+    const r = await updateReportAction(undefined, fd({ reportId: REPORT_ID, title: 't', bodyMarkdown: 'new', status: 'approved' }))
 
     expect(r).toEqual({ ok: false, error: '保存に失敗しました' })
     expect(db.__calls.update).toHaveLength(0)

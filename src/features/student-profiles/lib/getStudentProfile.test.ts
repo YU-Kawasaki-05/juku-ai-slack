@@ -36,6 +36,30 @@ describe('getStudentProfile', () => {
     expect((await getStudentProfile(db, 'p1', NOW)).examMode).toBe(false)
   })
 
+  it('試験期間中は試験科目もプロンプトに載せる（DEC-18）', async () => {
+    const db = createMockDb({
+      maybeSingle: {
+        data: {
+          summary: 'x',
+          exam_mode_until: '2026-07-10T00:00:00Z',
+          exam_subjects: ['数学', '英語'],
+        },
+        error: null,
+      },
+    })
+    expect((await getStudentProfile(db, 'p1', NOW)).profileText).toContain('直近の試験科目: 数学、英語')
+  })
+
+  it('試験期間外なら試験科目は載せない（今この科目の試験があると誤解させない）', async () => {
+    const db = createMockDb({
+      maybeSingle: {
+        data: { summary: 'x', exam_mode_until: null, exam_subjects: ['数学'] },
+        error: null,
+      },
+    })
+    expect((await getStudentProfile(db, 'p1', NOW)).profileText).not.toContain('試験科目')
+  })
+
   it('プロフィール無しは profileText=null, examMode=false', async () => {
     const db = createMockDb({ maybeSingle: { data: null, error: null } })
     const r = await getStudentProfile(db, 'p1', NOW)

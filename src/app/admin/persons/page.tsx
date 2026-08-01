@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { Plus, Users } from 'lucide-react'
 import { createServerClient } from '@shared/lib/supabase/serverClient'
 import { getPersons } from '@features/persons'
+import { getExamModePersonIds } from '@features/student-profiles'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -22,8 +23,12 @@ import { formatDate } from '@/components/admin/formatDate'
 export const metadata: Metadata = { title: '生徒管理' }
 
 export default async function PersonsPage() {
+  const db = createServerClient()
   // ステータス列で有効/無効が判別できるため、この画面だけは inactive も表示する（H-6）
-  const persons = await getPersons(createServerClient(), { includeInactive: true })
+  const [persons, examModeIds] = await Promise.all([
+    getPersons(db, { includeInactive: true }),
+    getExamModePersonIds(db),
+  ])
 
   return (
     <div className="space-y-6">
@@ -84,7 +89,10 @@ export default async function PersonsPage() {
                   </TableCell>
                   <TableCell className="text-muted-foreground">{p.grade ?? '—'}</TableCell>
                   <TableCell>
-                    <StatusBadge status={p.status} />
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <StatusBadge status={p.status} />
+                      {examModeIds.has(p.id) && <StatusBadge status="exam_mode" />}
+                    </div>
                   </TableCell>
                   <TableCell className="tabular-nums text-muted-foreground">
                     {formatDate(p.created_at)}

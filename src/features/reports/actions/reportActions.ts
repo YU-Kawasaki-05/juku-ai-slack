@@ -107,9 +107,11 @@ export async function updateReportAction(
     return { ok: false, error: 'ログインが必要です' }
   }
 
+  // フィールド名が "id" だと form.id を覆い隠して submitter（status）が欠落する。
+  // 詳細は ReportForm.tsx のコメント参照
   const parsed = reportUpdateSchema.safeParse({
     ...readForm(formData),
-    id: String(formData.get('id') ?? ''),
+    id: String(formData.get('reportId') ?? ''),
   })
   if (!parsed.success) {
     return { ok: false, error: '入力内容を確認してください', fieldErrors: flatten(parsed.error) }

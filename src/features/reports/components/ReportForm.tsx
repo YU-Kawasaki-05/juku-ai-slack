@@ -78,7 +78,14 @@ export function ReportForm({
     <Card className="max-w-3xl">
       <CardContent className="pt-6">
         <form action={formAction} className="space-y-5">
-          {report && <input type="hidden" name="id" value={report.id} />}
+          {/*
+            name は "id" にしない。HTMLFormElement は [LegacyOverrideBuiltIns] なので
+            name="id" のコントロールが form.id を覆い隠す。React は submitter の name/value を
+            FormData に載せるとき `if (form.id) temp.setAttribute('form', form.id)` を通るため、
+            form.id が要素になると temp の form owner が存在しない ID に向き、
+            submitter（= status）が丸ごと欠落する。結果「承認して保存」が下書き保存になっていた。
+          */}
+          {report && <input type="hidden" name="reportId" value={report.id} />}
 
           {/*
             H-2: 暗黙の submit（テキスト入力での Enter）はフォーム内で最初に現れる submit を

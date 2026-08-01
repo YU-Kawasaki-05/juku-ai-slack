@@ -13,6 +13,8 @@ next-env.d.ts
 .env.*.local
 .env.development
 .env.production
+# E2E 用のローカル上書き（雛形の .env.test.example はコミット対象）
+.env.test
 
 # Supabase (local runtime + linked project ref)
 .supabase/
