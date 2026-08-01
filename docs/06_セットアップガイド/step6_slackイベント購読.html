@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STEP 6 Slack イベント購読 | じゅくAI セットアップガイド</title>
+<style>
+:root{--fg:#191c21;--muted:#5c6470;--line:#d9dee6;--bg:#fff;--soft:#f6f8fa;--soft2:#eef2f7;--accent:#1f5fa9;--code:#0f2b46;
+--warn:#7a4d00;--warnbg:#fff8e8;--warnline:#e6c579;--danger:#96262c;--dangerbg:#fdf1f2;--dangerline:#e3adb1;
+--ok:#1a6444;--okbg:#f0f8f4;--okline:#a5d5bd;--info:#144a73;--infobg:#eef6fc;--infoline:#9dc6e4;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);line-height:1.85;font-size:16px;
+font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,-apple-system,"Segoe UI",sans-serif;}
+.wrap{max-width:940px;margin:0 auto;padding:28px 20px 90px}
+.topbar{border-bottom:1px solid var(--line);background:var(--soft);}
+.topbar .inner{max-width:940px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
+.topbar a{color:var(--accent);text-decoration:none}
+.topbar a:hover{text-decoration:underline}
+.crumb{font-size:13px;color:var(--muted)}
+h1{font-size:27px;line-height:1.45;margin:26px 0 8px;letter-spacing:.01em}
+h2{font-size:21px;margin:44px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--line)}
+h3{font-size:17px;margin:30px 0 8px}
+h4{font-size:15px;margin:22px 0 6px;color:var(--muted)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:1.6em}
+li{margin:5px 0}
+code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13.5px;
+background:var(--soft2);padding:1px 5px;border-radius:3px;word-break:break-all}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:14px 14px;overflow-x:auto;
+font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13px;line-height:1.7;color:var(--code);margin:12px 0}
+pre code{background:none;padding:0;font-size:13px;word-break:normal}
+.codewrap{position:relative}
+.codewrap>pre{padding-right:82px}
+.copy{position:absolute;top:8px;right:8px;font:inherit;font-size:12px;padding:3px 10px;border:1px solid var(--line);
+background:#fff;color:var(--muted);border-radius:4px;cursor:pointer}
+.copy:hover{color:var(--fg);border-color:var(--muted)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--soft2);font-weight:600;white-space:nowrap}
+td code{font-size:12.8px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scroll table{min-width:640px}
+.scroll.wide table{min-width:880px}
+.note,.warnbox,.dangerbox,.okbox{border:1px solid;border-radius:6px;padding:12px 14px;margin:16px 0;font-size:15px}
+.note{border-color:var(--infoline);background:var(--infobg);color:var(--info)}
+.warnbox{border-color:var(--warnline);background:var(--warnbg);color:var(--warn)}
+.dangerbox{border-color:var(--dangerline);background:var(--dangerbg);color:var(--danger)}
+.okbox{border-color:var(--okline);background:var(--okbg);color:var(--ok)}
+.note b,.warnbox b,.dangerbox b,.okbox b{font-weight:700}
+.note p:first-child,.warnbox p:first-child,.dangerbox p:first-child,.okbox p:first-child{margin-top:0}
+.note p:last-child,.warnbox p:last-child,.dangerbox p:last-child,.okbox p:last-child{margin-bottom:0}
+.note code,.warnbox code,.dangerbox code,.okbox code{background:rgba(255,255,255,.7)}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 6px}
+.meta div{flex:1 1 240px;border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--soft)}
+.meta .k{font-size:12px;color:var(--muted);display:block;margin-bottom:2px}
+.meta .v{font-size:15px;font-weight:600;line-height:1.6}
+.meta .v ul{margin:2px 0 0;padding-left:1.3em;font-weight:400;font-size:14px}
+ul.check{list-style:none;padding-left:0}
+ul.check li{margin:6px 0;display:flex;gap:9px;align-items:flex-start}
+ul.check input{margin-top:7px;flex:0 0 auto;width:15px;height:15px}
+ul.check label{cursor:pointer}
+.steps{list-style:none;padding-left:0;margin:20px 0}
+.steps li{border:1px solid var(--line);border-radius:7px;margin:10px 0;padding:0}
+.steps a{display:block;padding:13px 16px;text-decoration:none;color:inherit}
+.steps a:hover{background:var(--soft)}
+.steps .n{display:inline-block;min-width:74px;font-size:12px;color:#fff;background:var(--accent);border-radius:11px;
+padding:1px 9px;text-align:center;margin-right:10px;vertical-align:2px}
+.steps .n.alt{background:#6b7280}
+.steps .t{font-weight:600;font-size:16.5px}
+.steps .d{display:block;color:var(--muted);font-size:14px;margin-top:3px;padding-left:0}
+.steps .tm{float:right;color:var(--muted);font-size:13px;font-weight:400}
+.nav{display:flex;justify-content:space-between;gap:14px;margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:15px}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+.nav span{color:#b6bcc6}
+.ph{background:#fff5d6;border-bottom:1px dotted #b08a19;padding:0 2px;font-weight:600}
+.diagram{font-size:12.5px;line-height:1.55;background:#fff;border:1px solid var(--line)}
+.small{font-size:13.5px;color:var(--muted)}
+.req{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap}
+.req.y{background:#fde8e8;color:#96262c;border:1px solid #e3adb1}
+.req.n{background:#eef2f7;color:#5c6470;border:1px solid #d9dee6}
+.req.r{background:#fff3d9;color:#7a4d00;border:1px solid #e6c579}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+a{color:var(--accent)}
+@media print{
+ .topbar,.nav,.copy{display:none}
+ body{font-size:11.5pt}
+ a{color:#000;text-decoration:none}
+ pre,table,.note,.warnbox,.dangerbox,.okbox{page-break-inside:avoid}
+ h2{page-break-after:avoid}
+}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="inner">
+<span class="crumb"><a href="index.html">目次</a> ／ STEP 6 / 9 — Slack イベント購読</span>
+<span class="crumb"><a href="step7_管理ユーザーと生徒登録.html">次へ →</a></span>
+</div></div>
+
+<div class="wrap">
+
+<h1>STEP 6 — Slack イベント購読の設定</h1>
+<p>STEP 4 で作った Slack アプリに、<b>「メッセージが来たらこの URL に投げてね」</b>を教えます。
+アプリがデプロイ済みで <code>SLACK_SIGNING_SECRET</code> が入っている今、はじめてこの設定が保存できます。</p>
+
+<div class="meta">
+<div><span class="k">所要時間</span><span class="v">約 10 分</span></div>
+<div><span class="k">前提</span><span class="v">STEP 5 完了（<code>/login</code> が表示される状態）</span></div>
+<div><span class="k">このステップで手に入るもの</span><span class="v">Slack → アプリのイベント配信経路<br><span class="small">（控える値はありません）</span></span></div>
+</div>
+
+<h2>6-1. Request URL を登録する</h2>
+
+<ol>
+<li><a href="https://api.slack.com/apps">https://api.slack.com/apps</a> → STEP 4 で作ったアプリを開く</li>
+<li>左メニュー <b>Event Subscriptions</b></li>
+<li><b>Enable Events</b> を <b>On</b> にする</li>
+<li><b>Request URL</b> に次を入力する</li>
+</ol>
+
+<pre><code>https://&lt;あなたのドメイン&gt;/api/slack/events</code></pre>
+
+<p class="small">例: <code>https://juku-ai-slack.vercel.app/api/slack/events</code>
+（<span class="ph">&lt;あなたのドメイン&gt;</span> は STEP 5-4 で控えた <b>Production</b> のドメイン。プレビュー URL は使わない）</p>
+
+<div class="okbox">
+<p>入力欄からフォーカスを外すと Slack が自動で検証し、数秒で
+<b>✓ Verified</b> の緑色バッジが出れば成功です。</p>
+</div>
+
+<h3>裏で何が起きているか</h3>
+<p>Slack はこの URL に <code>{"type":"url_verification","challenge":"..."}</code> という POST を投げ、
+<b>3 秒以内</b>に <code>challenge</code> の値をそのまま返すことを要求します。
+アプリ側は<b>署名検証を先に通してから</b>返しているため、
+<code>SLACK_SIGNING_SECRET</code> が正しく設定されていないと <b>401</b> になり Verified になりません。</p>
+
+<pre class="nocopy"><code>受信 → ① 署名検証（SLACK_SIGNING_SECRET）
+       ② JSON パース
+       ③ type === "url_verification" なら challenge を返す  ← ここ</code></pre>
+
+<p class="small">根拠: <code>src/app/api/slack/events/route.ts</code>。署名が合わなければ
+<code>return new NextResponse('invalid signature', { status: 401 })</code> で即座に返し、
+検証を通った場合だけ <code>NextResponse.json({ challenge })</code> を返します。</p>
+
+<h2 id="notverified">6-2. Verified にならないときの原因表</h2>
+
+<p>Slack の画面には <code>Your URL didn't respond with the value of the challenge parameter</code> のような
+そっけないメッセージしか出ません。原因は次のどれかです。<b>上から順に確認してください。</b></p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>#</th><th>確認すること</th><th>症状 / 見分け方</th><th>対処</th></tr></thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><b>URL のパスが正しいか</b></td>
+<td>末尾が <code>/api/slack/events</code> になっているか。<code>/api/slack/event</code>（s 抜け）や末尾スラッシュ付きは <b>404</b></td>
+<td>正確に <code>https://&lt;ドメイン&gt;/api/slack/events</code>。ブラウザで開いて
+<code>405</code> か <code>Method Not Allowed</code> が返れば<b>パスは正しい</b>（GET は未実装なので 404 でなければ OK）</td>
+</tr>
+<tr>
+<td>2</td>
+<td><b><code>SLACK_SIGNING_SECRET</code> が本番に入っているか</b></td>
+<td><b>最頻出。</b>Vercel の Runtime Logs に
+<code>[slack/events] signature verification failed:</code> が出ていれば確定</td>
+<td>Vercel → Settings → Environment Variables を確認。<b>Production</b> にチェックが入っているか、
+値の前後に空白・改行が混ざっていないか。修正後は<b>再デプロイが必要</b></td>
+</tr>
+<tr>
+<td>3</td>
+<td><b>Signing Secret の値が Slack 側と一致しているか</b></td>
+<td>同上のログが出るが、変数は設定済み</td>
+<td>Slack → Basic Information → App Credentials → Signing Secret を <b>Show</b> して再コピー。
+<b>Client Secret や Verification Token と取り違えていないか</b>（別物です）</td>
+</tr>
+<tr>
+<td>4</td>
+<td><b>他の環境変数の形式エラーでアプリ全体が 500 になっていないか</b></td>
+<td><code>/login</code> を開いても 500。Runtime Logs に
+<code>Missing or invalid env vars: ...</code></td>
+<td>env は起動時に一括検証されるため、<b>Slack と無関係な変数（例: <code>RESEND_FROM_EMAIL</code> の空文字）1 つで全滅します</b>。
+該当変数を修正するか<b>行ごと削除</b>（<a href="step5_vercelデプロイ.html#envtable">STEP 5-2</a>）</td>
+</tr>
+<tr>
+<td>5</td>
+<td><b>デプロイが成功しているか</b></td>
+<td>Vercel の Deployments が <code>Error</code> 表示</td>
+<td>直前のビルド失敗で古い版のまま、あるいは未デプロイ。ビルドログを確認して直す</td>
+</tr>
+<tr>
+<td>6</td>
+<td><b>Production ドメインを使っているか</b></td>
+<td>プレビュー URL（<code>xxx-git-...vercel.app</code>）を登録している</td>
+<td>プレビューには <b>Vercel Authentication（SSO 保護）</b>が掛かっていることがあり、
+Slack のリクエストがログイン画面（HTML）にリダイレクトされて失敗する。Production ドメインに変更</td>
+</tr>
+<tr>
+<td>7</td>
+<td><b>Deployment Protection が有効になっていないか</b></td>
+<td>Production でも <code>401</code> の HTML が返る</td>
+<td>Vercel → Settings → <b>Deployment Protection</b> を確認。Production に保護を掛けている場合は解除する
+（Slack はヘッダを付けられません）</td>
+</tr>
+<tr>
+<td>8</td>
+<td><b>サーバー時刻のズレ</b></td>
+<td>署名は合っているのに失敗が続く（極めて稀）</td>
+<td>署名検証はタイムスタンプの許容ずれを <b>300 秒</b>としています
+（<code>SLACK_TIMESTAMP_TOLERANCE_SEC</code>）。Vercel 側では通常起きません</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="note">
+<p><b>ログの見方</b>: Vercel → プロジェクト → <b>Logs</b>（または該当 Deployment の <b>Runtime Logs</b>）で
+<code>/api/slack/events</code> を絞り込みます。Slack の「Retry」ボタンを押すと再検証できるので、
+ログを開いたまま試すと原因が特定しやすいです。</p>
+</div>
+
+<h2>6-3. 購読するイベントを追加する</h2>
+
+<p>Verified になったら、同じ画面の <b>Subscribe to bot events</b> を開いて
+<b>Add Bot User Event</b> から追加します。</p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>イベント</th><th>入れるべきか</th><th>理由</th></tr></thead>
+<tbody>
+<tr>
+<td><code>message.channels</code></td>
+<td><span class="req y">必須</span></td>
+<td>公開チャンネルのメッセージ。<b>生徒チャンネルを公開で運用するなら必ず必要</b></td>
+</tr>
+<tr>
+<td><code>message.groups</code></td>
+<td><span class="req r">非公開なら必須</span></td>
+<td>非公開チャンネルのメッセージ。<a href="step1_事前準備.html">STEP 1-3</a> で非公開を選んだ場合に追加</td>
+</tr>
+<tr>
+<td><code>app_mention</code></td>
+<td><span class="req n">不要</span></td>
+<td><b>入れないでください。</b>受信ハンドラは <code>event.type !== 'message'</code> を即座に捨てるため、
+購読しても処理されません。メンション判定は <code>message</code> イベント本文に
+<code>&lt;@&lt;Bot User ID&gt;&gt;</code> が含まれるかを自前で見ています。
+入れると同じ発言で 2 イベント届き、Slack の配信量が無駄に倍増します</td>
+</tr>
+<tr>
+<td><code>message.im</code> / <code>message.mpim</code></td>
+<td><span class="req n">不要</span></td>
+<td>DM 運用はしません。紐付けは生徒専用チャンネル単位です</td>
+</tr>
+<tr>
+<td><code>file_shared</code></td>
+<td><span class="req n">不要</span></td>
+<td>画像は <code>message</code> イベントの <code>files</code> 配列（<code>subtype: file_share</code>）から取得します</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="okbox">
+<p><b>迷ったら <code>message.channels</code> と <code>message.groups</code> の両方</b>を入れてください。
+後から非公開チャンネルを足したくなったときの再設定が不要になります
+（対応する <code>channels:history</code> / <code>groups:history</code> スコープも両方入れておく）。</p>
+</div>
+
+<p>追加したら画面右下の <b>Save Changes</b> を必ず押します。</p>
+
+<h2>6-4. アプリを再インストールする</h2>
+
+<div class="warnbox">
+<p>イベントやスコープを変更すると、画面上部に
+<b>「You've changed the permission scopes... please reinstall your app」</b>
+の黄色いバナーが出ます。<b>再インストールしないと変更は反映されません。</b></p>
+</div>
+
+<ol>
+<li>バナーの <b>reinstall your app</b> リンク、または左メニュー <b>OAuth &amp; Permissions</b> → <b>Reinstall to <span class="ph">&lt;ワークスペース名&gt;</span></b></li>
+<li>権限確認画面 → <b>許可する</b></li>
+</ol>
+
+<div class="note">
+<p><b>Bot Token は変わるのか？</b> 同じワークスペースへの再インストールでは通常 <code>xoxb-</code> トークンは変わりません。
+ただし念のため <b>OAuth &amp; Permissions</b> の <b>Bot User OAuth Token</b> を確認し、
+STEP 5 で設定した <code>SLACK_BOT_TOKEN</code> と一致しているかを見てください。
+違っていたら Vercel の環境変数を更新して<b>再デプロイ</b>します。</p>
+</div>
+
+<h2>6-5. ここまでの確認</h2>
+
+<p>この時点ではまだ<b>生徒チャンネルが無く、Bot も招待されていない</b>ので、質問しても反応しません。
+確認できるのは「配線が通ったこと」までです。</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>確認項目</th><th>期待される状態</th></tr></thead>
+<tbody>
+<tr><td>Event Subscriptions</td><td><b>Enabled</b> / Request URL に <b>✓ Verified</b></td></tr>
+<tr><td>Subscribe to bot events</td><td><code>message.channels</code>（+ 非公開なら <code>message.groups</code>）</td></tr>
+<tr><td>Bot Token Scopes</td><td>STEP 4 の 5 スコープ</td></tr>
+<tr><td>再インストール</td><td>黄色い警告バナーが消えている</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>簡易的な疎通テスト（任意）</h3>
+<p>適当な公開チャンネル（例 <code>#general</code>）に Bot を招待して <code>@じゅくAI テスト</code> と書くと、
+<b>紐付けが無いチャンネル</b>なので次の案内が返ってくるはずです。</p>
+
+<pre class="nocopy"><code>このチャンネルにはまだBotの設定が完了していないみたい。管理者に確認してもらえると助かります！</code></pre>
+
+<p>これが返れば <b>Slack → Vercel → DB → Slack</b> の往復が全部つながっています。
+返らない場合は <a href="troubleshooting.html#noreply">トラブルシューティング「Bot が反応しない」</a> を確認してください。</p>
+
+<p class="small">テストが済んだら、そのチャンネルから Bot を退出させておきます（<code>/remove @じゅくAI</code> または
+チャンネル詳細 → インテグレーション → アプリを削除）。紐付けの無いチャンネルにメンションが飛ぶたびに
+<code>CHANNEL_NOT_BOUND</code> の警告ログが積まれるためです。</p>
+
+<h2>完了チェック</h2>
+<ul class="check">
+<li><input type="checkbox" id="s6-1"><label for="s6-1">Request URL を登録して <b>Verified</b> になった</label></li>
+<li><input type="checkbox" id="s6-2"><label for="s6-2"><code>message.channels</code> を購読に追加した</label></li>
+<li><input type="checkbox" id="s6-3"><label for="s6-3">（非公開運用なら）<code>message.groups</code> も追加した</label></li>
+<li><input type="checkbox" id="s6-4"><label for="s6-4"><code>app_mention</code> は<b>追加していない</b></label></li>
+<li><input type="checkbox" id="s6-5"><label for="s6-5"><b>Save Changes</b> を押した</label></li>
+<li><input type="checkbox" id="s6-6"><label for="s6-6">アプリを再インストールし、警告バナーが消えた</label></li>
+</ul>
+
+<div class="nav">
+<a href="step5_vercelデプロイ.html">← 前へ: STEP 5 Vercel デプロイ</a>
+<a href="step7_管理ユーザーと生徒登録.html">次へ: STEP 7 管理ユーザーと生徒登録 →</a>
+</div>
+
+</div>
+
+<script>
+(function(){
+  document.querySelectorAll('pre:not(.nocopy)').forEach(function(pre){
+    var w=document.createElement('div');w.className='codewrap';
+    pre.parentNode.insertBefore(w,pre);w.appendChild(pre);
+    var b=document.createElement('button');b.type='button';b.className='copy';b.textContent='コピー';
+    b.addEventListener('click',function(){
+      var el=pre.querySelector('code');var t=el?el.innerText:pre.innerText;
+      var done=function(ok){b.textContent=ok?'コピーしました':'手動でコピーしてください';
+        setTimeout(function(){b.textContent='コピー';},1600);};
+      if(navigator.clipboard&&window.isSecureContext){
+        navigator.clipboard.writeText(t).then(function(){done(true);},function(){done(false);});
+      }else{
+        try{var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';
+          document.body.appendChild(ta);ta.select();var ok=document.execCommand('copy');
+          document.body.removeChild(ta);done(ok);}catch(e){done(false);}
+      }
+    });
+    w.appendChild(b);
+  });
+  var key='jukuai-setup:'+location.pathname.split('/').pop();
+  document.querySelectorAll('ul.check input[type=checkbox]').forEach(function(cb){
+    var k=key+':'+cb.id;
+    try{if(localStorage.getItem(k)==='1')cb.checked=true;}catch(e){}
+    cb.addEventListener('change',function(){try{localStorage.setItem(k,cb.checked?'1':'0');}catch(e){}});
+  });
+})();
+</script>
+</body>
+</html>

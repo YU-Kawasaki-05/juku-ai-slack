@@ -15,6 +15,7 @@ import { after } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createServerClient } from '@shared/lib/supabase/serverClient'
 import { requireStaff } from '@shared/lib/auth/requireStaff'
+import { staffAuthFailure } from '@shared/lib/auth/authFailure'
 import { logError } from '@features/error-logs'
 import type { ServerDb } from '@shared/types/db'
 import type { ActionResult } from '@shared/types/action'
@@ -62,8 +63,8 @@ async function startProcessing(db: ServerDb, jobId: string): Promise<void> {
 export async function sweepJobsAction(): Promise<ActionResult<JobActionData>> {
   try {
     await requireStaff()
-  } catch {
-    return { ok: false, error: 'ログインが必要です' }
+  } catch (err) {
+    return staffAuthFailure(err)
   }
 
   try {
@@ -87,8 +88,8 @@ export async function retryJobAction(
 ): Promise<ActionResult<JobActionData>> {
   try {
     await requireStaff()
-  } catch {
-    return { ok: false, error: 'ログインが必要です' }
+  } catch (err) {
+    return staffAuthFailure(err)
   }
 
   const jobId = String(formData.get('id') ?? '')

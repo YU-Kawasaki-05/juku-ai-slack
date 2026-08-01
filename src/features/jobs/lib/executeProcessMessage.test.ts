@@ -57,9 +57,20 @@ vi.mock('@shared/lib/slack/client', () => ({ postMessage: mocks.postMessage }))
 
 import { executeProcessSlackMessage, TRUNCATED_ANSWER_NOTICE } from './executeProcessMessage'
 import { EmbeddingNotConfiguredError } from '@features/rag'
-import { getUserFacingMessage } from '@shared/lib/errors/userMessages'
+import { buildImageNotice, getUserFacingMessage } from '@shared/lib/errors/userMessages'
 import { __setLlmClientForTest } from '@features/ai-answer'
+import { env } from '@shared/lib/env'
 import type { ProcessSlackMessagePayload } from '../types'
+
+/** LLM_MODEL_COMPLEX 未設定（設定不備）を再現する。env は実行時に参照されるので実体を差し替える */
+function withoutVisionModel(): () => void {
+  const mutable = env as { LLM_MODEL_COMPLEX?: string }
+  const original = mutable.LLM_MODEL_COMPLEX
+  mutable.LLM_MODEL_COMPLEX = undefined
+  return () => {
+    mutable.LLM_MODEL_COMPLEX = original
+  }
+}
 
 const payload: ProcessSlackMessagePayload = {
   teamId: 'T1',
@@ -534,6 +545,140 @@ describe('executeProcessSlackMessage', () => {
     })
     await executeProcessSlackMessage(db, imageOnlyPayload)
     expect(mocks.postMessage.mock.calls[0][0].text).toBe(getUserFacingMessage('IMAGE_TOO_LARGE'))
+  })
+
+  // --- #5: 画像が読めなかったことをテキスト併用時にも生徒へ伝える ---
+  const imgPayload: ProcessSlackMessagePayload = {
+    ...payload,
+    files: [
+      { id: 'F1', name: 'q.png', mimetype: 'image/png', size: 100, urlPrivate: 'https://slack/F1' },
+    ],
+  }
+
+  it('テキストがあり画像が一部失敗しても、回答本体を返したうえで末尾に案内を添える（#5）', async () => {
+    mocks.processAttachments.mockResolvedValue({
+      dataUrls: ['data:image/png;base64,AAA'],
+      errorCodes: ['IMAGE_TOO_LARGE', 'SLACK_FILE_DOWNLOAD_FAILED'],
+      skippedForTotalSize: 1,
+    })
+    await executeProcessSlackMessage(db, imgPayload)
+
+    // 回答は止めない
+    expect(mocks.generate).toHaveBeenCalledOnce()
+    const text = mocks.postMessage.mock.calls[0][0].text as string
+    expect(text).toContain('一緒に整理しよう')
+    expect(text).toContain(
+      buildImageNotice({ unreadCount: 2, readCount: 1, visionModelMissing: false }).trim(),
+    )
+  })
+
+  it('合計サイズ超過でスキップした分も「読めなかった枚数」に数える（C-4 の無通知破棄を塞ぐ）', async () => {
+    mocks.processAttachments.mockResolvedValue({
+      dataUrls: [],
+      errorCodes: ['IMAGE_TOO_LARGE'],
+      skippedForTotalSize: 1,
+    })
+    await executeProcessSlackMessage(db, imgPayload)
+    expect(mocks.postMessage.mock.calls[0][0].text).toContain('1 枚は読み込めなかった')
+  })
+
+  it('受信時に枚数上限で捨てた画像も「読めなかった枚数」に合算する（#5）', async () => {
+    mocks.processAttachments.mockResolvedValue({
+      dataUrls: ['data:image/png;base64,AAA'],
+      errorCodes: ['UNSUPPORTED_FILE_TYPE'],
+      skippedForTotalSize: 0,
+    })
+    await executeProcessSlackMessage(db, { ...imgPayload, droppedImageCount: 2 })
+    expect(mocks.postMessage.mock.calls[0][0].text).toContain('3 枚は読み込めなかった')
+  })
+
+  it('画像がすべて読めたら余計な案内を添えない', async () => {
+    mocks.processAttachments.mockResolvedValue({
+      dataUrls: ['data:image/png;base64,AAA'],
+      errorCodes: [],
+      skippedForTotalSize: 0,
+    })
+    await executeProcessSlackMessage(db, imgPayload)
+    expect(mocks.postMessage.mock.calls[0][0].text).toBe('一緒に整理しよう')
+  })
+
+  it('案内は生成結果に含めて退避する（配信リトライでも案内が消えない, A-3）', async () => {
+    mocks.processAttachments.mockResolvedValue({
+      dataUrls: [],
+      errorCodes: ['SLACK_FILE_DOWNLOAD_FAILED'],
+      skippedForTotalSize: 0,
+    })
+    const ctx = { jobId: 'job1' as string | undefined, resultText: null as string | null }
+    await executeProcessSlackMessage(db, imgPayload, ctx)
+    expect(ctx.resultText).toContain('1 枚は読み込めなかった')
+    expect(jobUpdates[0]).toMatchObject({ result_text: ctx.resultText })
+  })
+
+  // --- #1: LLM_MODEL_COMPLEX 未設定（画像が事実上無視される設定不備）---
+  it('画像あり + LLM_MODEL_COMPLEX 未設定は IMAGE_MODEL_NOT_CONFIGURED を warning で記録する', async () => {
+    const restore = withoutVisionModel()
+    try {
+      mocks.processAttachments.mockResolvedValue({
+        dataUrls: ['data:image/png;base64,AAA'],
+        errorCodes: [],
+        skippedForTotalSize: 0,
+      })
+      await executeProcessSlackMessage(db, imgPayload)
+    } finally {
+      restore()
+    }
+
+    const call = mocks.logError.mock.calls.find(
+      (c) => c[1].code === 'IMAGE_MODEL_NOT_CONFIGURED',
+    )!
+    expect(call).toBeDefined()
+    expect(call[1]).toMatchObject({
+      severity: 'warning',
+      personId: payload.personId,
+      channelId: 'C1',
+      threadTs: '100.1',
+      // ログ洪水を避ける（同一設定ミスで延々積まない）
+      dedupeWhileUnresolved: true,
+    })
+    // 1行で原因と対処が分かること（この行だけ見れば復旧できる）
+    expect(call[1].internalMessage).toContain('LLM_MODEL_COMPLEX')
+    expect(call[1].internalMessage).toContain('test-default-model')
+    expect(call[1].internalMessage).toContain('再デプロイ')
+  })
+
+  it('LLM_MODEL_COMPLEX 未設定でも回答は止めず、画像を読めない旨を添えて返す（#1）', async () => {
+    const restore = withoutVisionModel()
+    try {
+      mocks.processAttachments.mockResolvedValue({
+        dataUrls: ['data:image/png;base64,AAA'],
+        errorCodes: [],
+        skippedForTotalSize: 0,
+      })
+      await executeProcessSlackMessage(db, imgPayload)
+    } finally {
+      restore()
+    }
+
+    expect(mocks.generate).toHaveBeenCalledOnce()
+    // DEFAULT モデルにフォールバックしたうえで回答は配信する
+    expect(mocks.generate.mock.calls[0][0].model).toBe('test-default-model')
+    const text = mocks.postMessage.mock.calls[0][0].text as string
+    expect(text).toContain('一緒に整理しよう')
+    expect(text).toContain('画像を読み取れない')
+  })
+
+  it('画像が無いメッセージでは LLM_MODEL_COMPLEX 未設定でも記録も案内もしない（誤検知防止）', async () => {
+    const restore = withoutVisionModel()
+    try {
+      await executeProcessSlackMessage(db, payload)
+    } finally {
+      restore()
+    }
+
+    expect(
+      mocks.logError.mock.calls.some((c) => c[1].code === 'IMAGE_MODEL_NOT_CONFIGURED'),
+    ).toBe(false)
+    expect(mocks.postMessage.mock.calls[0][0].text).toBe('一緒に整理しよう')
   })
 
   // --- A-4: 質問の保存タイミング ---

@@ -219,6 +219,8 @@ export async function seedUsageLogs(args: {
 export async function cleanupChannels(channelIds: string[]): Promise<void> {
   if (channelIds.length === 0) return
   const db = adminDb()
+  // jobs を残すと /admin/jobs の「積み残し」に受け入れテストのゴミが永続的に積み上がる
+  await db.from('jobs').delete().in('payload->>channelId', channelIds)
   await db.from('ai_usage_logs').delete().in('slack_channel_id', channelIds)
   await db.from('ai_error_logs').delete().in('slack_channel_id', channelIds)
   await db.from('slack_messages').delete().in('slack_channel_id', channelIds)
@@ -306,7 +308,7 @@ export async function restSelect(
   request: APIRequestContext,
   table: string,
   accessToken?: string,
-): Promise<{ status: number; rows: unknown[] }> {
+): Promise<{ status: number; rows: unknown[]; body: string }> {
   const res = await request.get(`${SUPABASE_URL}/rest/v1/${table}?select=*&limit=5`, {
     headers: {
       apikey: ANON_KEY,
@@ -321,7 +323,7 @@ export async function restSelect(
   } catch {
     rows = []
   }
-  return { status: res.status(), rows }
+  return { status: res.status(), rows, body: text }
 }
 
 /** anon key（+ 任意の JWT）で PostgREST の INSERT を試みる */
@@ -357,6 +359,23 @@ export async function selfSetUserMetadata(
     data: { data },
   })
   return res.status()
+}
+
+/**
+ * 判定ポイントの証拠を残す。Slack への返信は画面に出ないので、
+ * 対応する ai_error_logs の詳細画面（エラーコード + 生徒 + チャンネル + 内部詳細）を撮る。
+ */
+export async function shotErrorDetail(
+  page: Page,
+  args: { channelId: string; code: string; name: string },
+): Promise<void> {
+  const logs = await findErrorLogs(args.channelId)
+  const target = logs.find((l) => l.error_code === args.code)
+  expect(target, `AT: ${args.code} のエラーログが見つかりません（証拠を撮れません）`).toBeTruthy()
+
+  await page.goto(`/admin/errors/${String(target!.id)}`)
+  await expect(page.getByRole('heading', { name: args.code, level: 1 })).toBeVisible()
+  await shot(page, args.name)
 }
 
 export async function findErrorLogs(channelId: string): Promise<Array<Record<string, unknown>>> {

@@ -105,12 +105,6 @@ export class SlackPostFailedError extends AppError {
   }
 }
 
-export class JobTimeoutError extends AppError {
-  constructor(jobId: string) {
-    super('JOB_TIMEOUT', 'error', `Job ${jobId} timed out`, undefined, false)
-  }
-}
-
 export class LowConfidenceSkipError extends AppError {
   constructor() {
     super('LOW_CONFIDENCE_SKIP', 'info', 'BKT update skipped due to low confidence', undefined, false)

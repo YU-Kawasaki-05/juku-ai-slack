@@ -47,6 +47,13 @@ test('staff はチャンネル紐付けを作成できない', async ({ page }) 
   await expect(alert(page)).toContainText('この操作は管理者のみ実行できます')
 })
 
+/** ロールを持つ人が案内ページに迷い込んでも、そこで足止めされない（リダイレクトの往復も無い） */
+test('staff が /admin/no-access を開くと管理画面へ戻される', async ({ page }) => {
+  await page.goto('/admin/no-access')
+  await expect(page).toHaveURL(/\/admin$/)
+  await expect(page.getByRole('heading', { name: 'ダッシュボード', level: 1 })).toBeVisible()
+})
+
 test('staff でもダッシュボードと一覧は閲覧できる', async ({ page }) => {
   await page.goto('/admin')
   await expect(page.getByRole('heading', { name: 'ダッシュボード', level: 1 })).toBeVisible()

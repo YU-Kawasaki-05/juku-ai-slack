@@ -23,6 +23,12 @@ export interface LogErrorParams {
   messageTs?: string | null
   retryable?: boolean
   rawError?: unknown
+  /**
+   * 同じ code の「未解決」ログが既にあるなら記録しない（B-8 と同じログ洪水対策）。
+   * 設定不備のように「直すまで毎回起きる」事象向け。エラー一覧には常に1行だけ残り、
+   * 運用者が解決済みにしたのに直っていなければ次の発生で再び1行積まれる。
+   */
+  dedupeWhileUnresolved?: boolean
 }
 
 /** 生エラーから安全に記録するキー（provider の生エラーは request/headers に鍵を含み得るため限定） */
@@ -46,7 +52,22 @@ function serializeRawError(raw: unknown): Json {
   return { value: String(raw) }
 }
 
+/** 同一 code の未解決ログの有無。判定できなければ false（見落とすより重複を許す） */
+async function hasUnresolved(db: ServerDb, code: string): Promise<boolean> {
+  const { data, error } = await db
+    .from('ai_error_logs')
+    .select('id')
+    .eq('error_code', code)
+    .eq('resolved', false)
+    .limit(1)
+    .maybeSingle()
+  if (error) return false
+  return data !== null
+}
+
 export async function logError(db: ServerDb, params: LogErrorParams): Promise<void> {
+  if (params.dedupeWhileUnresolved && (await hasUnresolved(db, params.code))) return
+
   const { error } = await db.from('ai_error_logs').insert({
     error_code: params.code,
     severity: params.severity,

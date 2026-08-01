@@ -13,6 +13,7 @@
 import type { ServerDb } from '@shared/types/db'
 import { queryError } from '@shared/lib/supabase/queryError'
 import { jstDayStartIso } from './getUsageSummary'
+import { findUnpricedModels } from './unpricedModels'
 
 const JST_OFFSET_MS = 9 * 3600_000
 const DAY_MS = 86_400_000
@@ -59,6 +60,11 @@ export interface UsageAnalytics {
   /** 発生数の多い順 */
   errorsByCode: { code: string; count: number }[]
   rateLimitCount: number
+  /**
+   * 期間内に使われたモデルのうち MODEL_PRICING に単価が無いもの（#7）。
+   * 該当があるとコストが実額より小さく出る（cost=0 で記録される）ため、画面で警告する。
+   */
+  unpricedModels: string[]
 }
 
 /** UTC ISO → JST の日付キー（YYYY-MM-DD） */
@@ -104,6 +110,10 @@ export function buildAnalytics(
     .map((e) => ({ code: e.code, count: e.count }))
     .sort((a, b) => b.count - a.count)
 
+  const byModel = [...(raw.by_model ?? [])]
+    .map((m) => ({ model: m.model, count: m.count, costUsd: m.cost_usd }))
+    .sort((a, b) => b.count - a.count)
+
   return {
     rangeDays: days,
     totals: {
@@ -119,9 +129,7 @@ export function buildAnalytics(
       label: monthDayLabel(date),
       ...dailyMap.get(date)!,
     })),
-    byModel: [...(raw.by_model ?? [])]
-      .map((m) => ({ model: m.model, count: m.count, costUsd: m.cost_usd }))
-      .sort((a, b) => b.count - a.count),
+    byModel,
     byPerson: [...(raw.by_person ?? [])]
       .map((p) => ({
         personId: p.person_id,
@@ -132,6 +140,7 @@ export function buildAnalytics(
       .slice(0, 10),
     errorsByCode,
     rateLimitCount: errorsByCode.find((e) => e.code === 'AI_RATE_LIMITED')?.count ?? 0,
+    unpricedModels: findUnpricedModels(byModel.map((m) => m.model)),
   }
 }
 

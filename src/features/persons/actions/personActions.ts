@@ -5,7 +5,7 @@
  * 例外: 認証エラー・DB エラーは ActionResult.error に変換（throw しない）
  * 依存: requireStaff, createServerClient, personSchema
  * 副作用: persons への insert/update, 一覧の revalidate
- * セキュリティ: requireStaff で認証必須（FR-13）。Service Role はサーバー専用
+ * セキュリティ: requireStaff で staff/admin ロール必須（FR-13, EP-02〜06）。Service Role はサーバー専用
  * @implements FR-14, AC-14-02, BR-14-02
  */
 'use server'
@@ -13,6 +13,7 @@
 import { revalidatePath } from 'next/cache'
 import { createServerClient } from '@shared/lib/supabase/serverClient'
 import { requireStaff } from '@shared/lib/auth/requireStaff'
+import { staffAuthFailure } from '@shared/lib/auth/authFailure'
 import type { ActionResult } from '@shared/types/action'
 import { personCreateSchema, personUpdateSchema } from '../schemas/personSchema'
 
@@ -32,8 +33,8 @@ export async function createPersonAction(
 ): Promise<ActionResult> {
   try {
     await requireStaff()
-  } catch {
-    return { ok: false, error: 'ログインが必要です' }
+  } catch (e) {
+    return staffAuthFailure(e)
   }
 
   const parsed = personCreateSchema.safeParse(readForm(formData))
@@ -61,8 +62,8 @@ export async function updatePersonAction(
 ): Promise<ActionResult> {
   try {
     await requireStaff()
-  } catch {
-    return { ok: false, error: 'ログインが必要です' }
+  } catch (e) {
+    return staffAuthFailure(e)
   }
 
   const parsed = personUpdateSchema.safeParse({

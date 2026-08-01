@@ -8,6 +8,7 @@
 import { test, expect } from '@playwright/test'
 import { ADMIN_STATE } from '../fixtures/users'
 import { createPerson, deletePersons, uniqueSuffix } from '../fixtures/db'
+import { acquireSharedLock, KILL_SWITCH_LOCK } from '../fixtures/lock'
 import {
   buildEventCallback,
   cleanupChannels,
@@ -21,6 +22,7 @@ import {
   postedTexts,
   setPersonStatus,
   shot,
+  shotErrorDetail,
   waitForMockCalls,
   withMention,
 } from './fixtures'
@@ -30,10 +32,23 @@ test.use({ storageState: ADMIN_STATE })
 const personIds: string[] = []
 const channelIds: string[] = []
 
+/**
+ * ここは「kill_switch が稼働中」であることを前提に LLM が呼ばれることを確認する spec。
+ * kill_switch を停止するテスト（e2e/kill-switch.spec.ts / acceptance/kill-switch-rate-limit.spec.ts）と
+ * 同時に走ると AI_PAUSED が返って偽 FAIL になるため、共有ロックで書き手を締め出す。
+ * 共有なので slack-flow 同士は従来どおり並列に走る。
+ */
+let releaseLock: (() => void) | undefined
+
+test.beforeAll(async () => {
+  releaseLock = await acquireSharedLock(KILL_SWITCH_LOCK)
+})
+
 test.afterAll(async () => {
   await cleanupChannels(channelIds)
   await cleanupPersonData(personIds)
   await deletePersons(personIds)
+  releaseLock?.()
 })
 
 /** テストごとに衝突しないチャンネル ID（`^[CGD][A-Z0-9]+$`）を作る */
@@ -136,7 +151,7 @@ test('AT-31 同じ event_id の再送では LLM を二度呼ばない（重複�
   expect(logs.some((l) => l.error_code === 'SLACK_EVENT_DUPLICATE')).toBeTruthy()
 })
 
-test('AT-32 未紐付けチャンネルには案内文言だけを返し LLM を呼ばない', async ({ request }) => {
+test('AT-32 未紐付けチャンネルには案内文言だけを返し LLM を呼ばない', async ({ request, page }) => {
   const channelId = newChannelId('NOBIND')
   const marker = `AT32MARKER${uniqueSuffix()}`
 
@@ -158,6 +173,11 @@ test('AT-32 未紐付けチャンネルには案内文言だけを返し LLM を
 
   const logs = await findErrorLogs(channelId)
   expect(logs.some((l) => l.error_code === 'CHANNEL_NOT_BOUND')).toBeTruthy()
+  await shotErrorDetail(page, {
+    channelId,
+    code: 'CHANNEL_NOT_BOUND',
+    name: 'AT-32_未紐付けチャンネルの案内とエラー記録',
+  })
 })
 
 test('AT-33 チャンネル直下でメンションが無ければ完全に無反応', async ({ request }) => {
@@ -302,6 +322,7 @@ test('AT-38 Bot 自身のメッセージ（bot_id 付き）には反応しない
 
 test('AT-39 LLM 障害時は内部情報を出さないユーザー向け文言を返し、エラーを記録する', async ({
   request,
+  page,
 }) => {
   const { channelId } = await newBoundPerson('LLM障害', 'LLMERR')
   const marker = `AT39MARKER${uniqueSuffix()}`
@@ -332,6 +353,11 @@ test('AT-39 LLM 障害時は内部情報を出さないユーザー向け文言�
   expect(job?.status).toBe('failed')
   const logs = await findErrorLogs(channelId)
   expect(logs.some((l) => l.error_code === 'AI_RESPONSE_FAILED')).toBeTruthy()
+  await shotErrorDetail(page, {
+    channelId,
+    code: 'AI_RESPONSE_FAILED',
+    name: 'AT-39_LLM障害時のエラー記録',
+  })
 })
 
 test('AT-47 フルフロー後に利用量ログが記録される（FR-12）', async ({ request }) => {

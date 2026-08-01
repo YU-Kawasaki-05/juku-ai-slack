@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STEP 1 事前準備 | じゅくAI セットアップガイド</title>
+<style>
+:root{--fg:#191c21;--muted:#5c6470;--line:#d9dee6;--bg:#fff;--soft:#f6f8fa;--soft2:#eef2f7;--accent:#1f5fa9;--code:#0f2b46;
+--warn:#7a4d00;--warnbg:#fff8e8;--warnline:#e6c579;--danger:#96262c;--dangerbg:#fdf1f2;--dangerline:#e3adb1;
+--ok:#1a6444;--okbg:#f0f8f4;--okline:#a5d5bd;--info:#144a73;--infobg:#eef6fc;--infoline:#9dc6e4;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);line-height:1.85;font-size:16px;
+font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,-apple-system,"Segoe UI",sans-serif;}
+.wrap{max-width:940px;margin:0 auto;padding:28px 20px 90px}
+.topbar{border-bottom:1px solid var(--line);background:var(--soft);}
+.topbar .inner{max-width:940px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
+.topbar a{color:var(--accent);text-decoration:none}
+.topbar a:hover{text-decoration:underline}
+.crumb{font-size:13px;color:var(--muted)}
+h1{font-size:27px;line-height:1.45;margin:26px 0 8px;letter-spacing:.01em}
+h2{font-size:21px;margin:44px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--line)}
+h3{font-size:17px;margin:30px 0 8px}
+h4{font-size:15px;margin:22px 0 6px;color:var(--muted)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:1.6em}
+li{margin:5px 0}
+code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13.5px;
+background:var(--soft2);padding:1px 5px;border-radius:3px;word-break:break-all}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:14px 14px;overflow-x:auto;
+font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13px;line-height:1.7;color:var(--code);margin:12px 0}
+pre code{background:none;padding:0;font-size:13px;word-break:normal}
+.codewrap{position:relative}
+.codewrap>pre{padding-right:82px}
+.copy{position:absolute;top:8px;right:8px;font:inherit;font-size:12px;padding:3px 10px;border:1px solid var(--line);
+background:#fff;color:var(--muted);border-radius:4px;cursor:pointer}
+.copy:hover{color:var(--fg);border-color:var(--muted)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--soft2);font-weight:600;white-space:nowrap}
+td code{font-size:12.8px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scroll table{min-width:640px}
+.scroll.wide table{min-width:880px}
+.note,.warnbox,.dangerbox,.okbox{border:1px solid;border-radius:6px;padding:12px 14px;margin:16px 0;font-size:15px}
+.note{border-color:var(--infoline);background:var(--infobg);color:var(--info)}
+.warnbox{border-color:var(--warnline);background:var(--warnbg);color:var(--warn)}
+.dangerbox{border-color:var(--dangerline);background:var(--dangerbg);color:var(--danger)}
+.okbox{border-color:var(--okline);background:var(--okbg);color:var(--ok)}
+.note b,.warnbox b,.dangerbox b,.okbox b{font-weight:700}
+.note p:first-child,.warnbox p:first-child,.dangerbox p:first-child,.okbox p:first-child{margin-top:0}
+.note p:last-child,.warnbox p:last-child,.dangerbox p:last-child,.okbox p:last-child{margin-bottom:0}
+.note code,.warnbox code,.dangerbox code,.okbox code{background:rgba(255,255,255,.7)}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 6px}
+.meta div{flex:1 1 240px;border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--soft)}
+.meta .k{font-size:12px;color:var(--muted);display:block;margin-bottom:2px}
+.meta .v{font-size:15px;font-weight:600;line-height:1.6}
+.meta .v ul{margin:2px 0 0;padding-left:1.3em;font-weight:400;font-size:14px}
+ul.check{list-style:none;padding-left:0}
+ul.check li{margin:6px 0;display:flex;gap:9px;align-items:flex-start}
+ul.check input{margin-top:7px;flex:0 0 auto;width:15px;height:15px}
+ul.check label{cursor:pointer}
+.steps{list-style:none;padding-left:0;margin:20px 0}
+.steps li{border:1px solid var(--line);border-radius:7px;margin:10px 0;padding:0}
+.steps a{display:block;padding:13px 16px;text-decoration:none;color:inherit}
+.steps a:hover{background:var(--soft)}
+.steps .n{display:inline-block;min-width:74px;font-size:12px;color:#fff;background:var(--accent);border-radius:11px;
+padding:1px 9px;text-align:center;margin-right:10px;vertical-align:2px}
+.steps .n.alt{background:#6b7280}
+.steps .t{font-weight:600;font-size:16.5px}
+.steps .d{display:block;color:var(--muted);font-size:14px;margin-top:3px;padding-left:0}
+.steps .tm{float:right;color:var(--muted);font-size:13px;font-weight:400}
+.nav{display:flex;justify-content:space-between;gap:14px;margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:15px}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+.nav span{color:#b6bcc6}
+.ph{background:#fff5d6;border-bottom:1px dotted #b08a19;padding:0 2px;font-weight:600}
+.diagram{font-size:12.5px;line-height:1.55;background:#fff;border:1px solid var(--line)}
+.small{font-size:13.5px;color:var(--muted)}
+.req{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap}
+.req.y{background:#fde8e8;color:#96262c;border:1px solid #e3adb1}
+.req.n{background:#eef2f7;color:#5c6470;border:1px solid #d9dee6}
+.req.r{background:#fff3d9;color:#7a4d00;border:1px solid #e6c579}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+a{color:var(--accent)}
+@media print{
+ .topbar,.nav,.copy{display:none}
+ body{font-size:11.5pt}
+ a{color:#000;text-decoration:none}
+ pre,table,.note,.warnbox,.dangerbox,.okbox{page-break-inside:avoid}
+ h2{page-break-after:avoid}
+}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="inner">
+<span class="crumb"><a href="index.html">目次</a> ／ STEP 1 / 9 — 事前準備</span>
+<span class="crumb"><a href="step2_supabase作成.html">次へ →</a></span>
+</div></div>
+
+<div class="wrap">
+
+<h1>STEP 1 — 事前準備（決めること）</h1>
+<p>このステップでは<b>まだ何も作りません</b>。後で変えると作り直しになる項目を先に決めます。
+特に「Embedding の次元」と「チャンネルを公開／非公開のどちらにするか」は、あとから変えると DB とスコープをやり直すことになります。</p>
+
+<div class="meta">
+<div><span class="k">所要時間</span><span class="v">約 30 分</span></div>
+<div><span class="k">このステップで手に入るもの</span><span class="v">
+<ul>
+<li>LLM の API キー / Base URL / モデル名（2 種）</li>
+<li>Embedding の API キー / Base URL / モデル名</li>
+<li>チャンネル公開方針（→ Slack スコープが決まる）</li>
+<li>月額コストの見積り</li>
+</ul></span></div>
+</div>
+
+<h2>1-1. LLM プロバイダを決める</h2>
+
+<p>じゅくAI は<b>プロバイダ非依存</b>です。OpenAI 互換の <code>POST /chat/completions</code> を話せるサービスなら、環境変数の差し替えだけで切り替わります
+（実装: <code>src/features/ai-answer/lib/llm/openaiCompatibleClient.ts</code>、公式 <code>openai</code> SDK に <code>baseURL</code> を渡しているだけ）。</p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>候補</th><th><code>LLM_BASE_URL</code></th><th>モデル名の例</th><th>向いているケース</th></tr></thead>
+<tbody>
+<tr><td><b>OpenAI</b></td><td><code>https://api.openai.com/v1</code></td><td><code>gpt-4o-mini</code> / <code>gpt-4o</code></td><td>実績重視。Vision（画像）も同じキーで使える。Embedding も同居できる</td></tr>
+<tr><td><b>OpenRouter</b></td><td><code>https://openrouter.ai/api/v1</code></td><td><code>deepseek/deepseek-chat</code><br><code>openai/gpt-4o</code></td><td>1 つのキーで複数ベンダーを試せる。モデル名は <code>provider/model</code> 形式</td></tr>
+<tr><td><b>DeepSeek</b></td><td><code>https://api.deepseek.com</code></td><td><code>deepseek-chat</code></td><td>最安。ただし画像（Vision）非対応なので <code>LLM_MODEL_COMPLEX</code> は別プロバイダにする</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>モデルは 2 つ設定する</h3>
+<div class="scroll">
+<table>
+<thead><tr><th>環境変数</th><th>いつ使われるか</th><th>未設定だと</th></tr></thead>
+<tbody>
+<tr><td><code>LLM_MODEL_DEFAULT</code></td><td>通常の質問すべて。スレッド要約・生徒回答の評価（BKT）にもこれを使う</td><td><b>回答不可</b>。<code>ConfigurationError（LLM_MODEL_DEFAULT が未設定です）</code>でジョブが失敗する（リトライしても直らない）</td></tr>
+<tr><td><code>LLM_MODEL_COMPLEX</code></td><td><b>画像が添付された質問のみ</b></td><td><code>LLM_MODEL_DEFAULT</code> にフォールバックする。Vision 非対応モデルだと画像が黙って無視されるので、画像対応するなら必ず設定する</td></tr>
+</tbody>
+</table>
+</div>
+<p class="small">根拠: <code>src/features/jobs/lib/executeProcessMessage.ts</code>
+（<code>const useModel = imageDataUrls.length &gt; 0 ? (env.LLM_MODEL_COMPLEX ?? model) : model</code>）</p>
+
+<h3 id="pricing">重要: モデル名を MODEL_PRICING に登録しないとコストが 0 円表示になる</h3>
+
+<div class="dangerbox">
+<p><b>コストは「プロバイダの請求額」ではなく、アプリ内の単価表から計算しています。</b>
+<code>src/shared/lib/constants.ts</code> の <code>MODEL_PRICING</code> に載っていないモデル名を使うと、
+トークン数は記録されるのに <b>推定コストが 0 で記録され</b>、/admin の「今月のコスト」が 0 のまま増えません。</p>
+</div>
+
+<p>初期状態で登録済みのモデルは次のとおりです（USD / 100 万トークン）。</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>モデル名（キー）</th><th>入力</th><th>出力</th></tr></thead>
+<tbody>
+<tr><td><code>claude-haiku-4-5</code> / <code>anthropic/claude-haiku-4-5</code></td><td>$1.00</td><td>$5.00</td></tr>
+<tr><td><code>claude-sonnet-4-6</code> / <code>anthropic/claude-sonnet-4-6</code></td><td>$3.00</td><td>$15.00</td></tr>
+<tr><td><code>gpt-4o-mini</code> / <code>openai/gpt-4o-mini</code></td><td>$0.15</td><td>$0.60</td></tr>
+<tr><td><code>gpt-4o</code> / <code>openai/gpt-4o</code></td><td>$2.50</td><td>$10.00</td></tr>
+<tr><td><code>deepseek-chat</code> / <code>deepseek/deepseek-chat</code></td><td>$0.27</td><td>$1.10</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note">
+<p><b>照合ルール</b>（<code>findModelPrice</code>）: まず完全一致、次に <code>/</code> 以降のサフィックスで再照合します。
+つまり <code>deepseek-chat</code> さえ登録されていれば、<code>openrouter/deepseek-chat</code> のような未登録キーでもヒットします。
+逆に、素の名前もサフィックスも登録がなければ 0 円になります。</p>
+</div>
+
+<h4>登録されていないモデルを使う場合</h4>
+<p>使うモデル名と単価を <code>MODEL_PRICING</code> に追記してから STEP 5 のデプロイに進んでください（コード変更 → 再デプロイが必要）。</p>
+
+<pre><code>// src/shared/lib/constants.ts
+
+const PRICE_MY_MODEL: ModelPrice = { inputPerM: &lt;入力単価USD&gt;, outputPerM: &lt;出力単価USD&gt; }
+
+export const MODEL_PRICING: Record&lt;string, ModelPrice&gt; = {
+  // ...既存...
+  '&lt;素のモデル名&gt;': PRICE_MY_MODEL,
+  '&lt;provider&gt;/&lt;素のモデル名&gt;': PRICE_MY_MODEL,
+}</code></pre>
+
+<h2>1-2. Embedding プロバイダを決める</h2>
+
+<div class="dangerbox">
+<p><b>1536 次元のモデルしか使えません。</b>
+DB のカラムが <code>vector(1536)</code> 固定（migration <code>005</code> / <code>020</code>）で、
+コード側も <code>EMBEDDING_DIM = 1536</code> と突き合わせています。次元が違うと保存時に例外になります:</p>
+<pre class="nocopy"><code>embedding dimension mismatch: model "&lt;モデル名&gt;" returned 3072 dims,
+expected 1536. EMBEDDING_MODEL の設定を見直してください</code></pre>
+</div>
+
+<div class="scroll">
+<table>
+<thead><tr><th>モデル</th><th>次元</th><th>可否</th></tr></thead>
+<tbody>
+<tr><td><code>text-embedding-3-small</code>（OpenAI）</td><td>1536</td><td><span class="req y">推奨</span></td></tr>
+<tr><td><code>text-embedding-ada-002</code>（OpenAI・旧世代）</td><td>1536</td><td>使える</td></tr>
+<tr><td><code>text-embedding-3-large</code>（OpenAI）</td><td>3072</td><td><b>そのままでは不可</b>（<code>dimensions</code> パラメータ指定は未実装）</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note">
+<p><b>未設定でも動きます（RAG が無効になるだけ）。</b>
+<code>EMBEDDING_*</code> が未設定だと <code>EmbeddingNotConfiguredError</code>（severity=info）となり、
+Bot はレポートを参照せずに回答します。エラーログには積まれません（毎メッセージで洪水にならないよう意図的に抑制）。
+ただし<b>レポートを AI に読ませたいなら必須</b>です。</p>
+</div>
+
+<p class="small">LLM に OpenRouter や DeepSeek を選んでも、Embedding だけ OpenAI にする構成で問題ありません（<code>EMBEDDING_BASE_URL</code> は独立した設定です）。</p>
+
+<h2>1-3. 生徒チャンネルを公開／非公開のどちらにするか</h2>
+
+<p><b>この選択で Slack に必要なスコープと購読イベントが変わります。</b>後から変えるとアプリの再インストールが必要です。</p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>方式</th><th>チャンネル ID</th><th>必要な追加スコープ</th><th>購読する bot event</th><th>特徴</th></tr></thead>
+<tbody>
+<tr><td><b>公開チャンネル</b><br>（#taro-juku など）</td><td><code>C</code> で始まる</td><td><code>channels:history</code></td><td><code>message.channels</code></td><td>ワークスペースの他メンバーも中身を見られる。スタッフの巡回は楽</td></tr>
+<tr><td><b>非公開チャンネル</b><br>（🔒 付き）</td><td><code>G</code> または <code>C</code> で始まる<span class="small">（近年の Slack は非公開でも <code>C</code> のことがある）</span></td><td><code>groups:history</code><br><span class="small">（<code>channels:history</code> と併用可）</span></td><td><code>message.groups</code></td><td>招待した人しか見られない。生徒の相談内容が他生徒に見えない</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="okbox">
+<p><b>迷ったら「非公開チャンネル」を推奨します。</b>学習の相談は個人情報に近く、ワークスペース内の他生徒・他保護者に見えると事故になります。
+その場合、STEP 4 では <code>channels:history</code> と <code>groups:history</code> の<b>両方</b>、STEP 6 では <code>message.channels</code> と <code>message.groups</code> の<b>両方</b>を入れておくと、後から公開チャンネルを足しても再設定が不要です。</p>
+</div>
+
+<p class="small">紐付け登録のバリデーションは <code>/^[CGD][A-Z0-9]+$/</code> なので、公開・非公開のどちらでも登録できます（<code>src/features/channel-bindings/schemas/bindingSchema.ts</code>）。</p>
+
+<h2 id="plan">1-4. Supabase / Vercel のプランを決める</h2>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>サービス</th><th>推奨プラン</th><th>推奨理由（このアプリ固有）</th></tr></thead>
+<tbody>
+<tr>
+<td>Supabase</td><td><b>Pro（$25/月）</b></td>
+<td>
+<ul>
+<li><b>Free は 1 週間アクセスがないとプロジェクトが一時停止する。</b>止まると Slack 側の Bot が全生徒に対して無応答になる（休み明けに事故る）</li>
+<li>添付画像を <code>attachments</code> バケットに保存する。1 枚最大 20MB、1 メッセージ最大 3 枚。Free のストレージ枠（1GB）はすぐ埋まる</li>
+<li>自動バックアップ（日次・7 日保持）が付く。Free にはバックアップがない</li>
+</ul>
+</td>
+</tr>
+<tr>
+<td>Vercel</td><td><b>Pro（$20/月）</b></td>
+<td>
+<ul>
+<li><b>これが本命の理由。</b><code>/api/slack/events</code> は <code>maxDuration = 300</code>（5 分）を宣言している。Hobby プランの上限は 60 秒なので、LLM 生成が長引くと関数が途中で kill され、<b>🤔 が付いたまま回答が返らず、ジョブが <code>processing</code> のまま残る</b></li>
+<li>商用利用は Vercel の規約上 Pro 以上が必要</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<p class="small">根拠: <code>src/app/api/slack/events/route.ts</code> の <code>export const maxDuration = 300</code>。
+コメントにも「after() 内の AI 処理は既定の実行時間上限に収まらない。kill されると jobs が processing のまま残り、🤔 も消えず生徒には無応答になる」とあります。</p>
+
+<h2>1-5. 月額コストの見積り</h2>
+
+<h3>1 質問あたりに走る API 呼び出し</h3>
+<div class="scroll">
+<table>
+<thead><tr><th>#</th><th>呼び出し</th><th>いつ</th><th>コスト記録</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Embedding（質問文のベクトル化）</td><td>毎回（<code>EMBEDDING_*</code> 設定時）</td><td><b>記録されない</b></td></tr>
+<tr><td>2</td><td>LLM: Tutor（回答生成）</td><td>毎回</td><td><code>ai_usage_logs</code> に記録</td></tr>
+<tr><td>3</td><td>LLM: スレッド要約</td><td>未要約メッセージが <b>20 件</b>たまったとき（= 約 10 往復ごとに 1 回）</td><td><code>ai_usage_logs</code> に記録<br><span class="small">（<code>message_ts</code> が <code>-summary</code> で終わる行）</span></td></tr>
+<tr><td>4</td><td>LLM: Evaluator（生徒の返答を採点して習熟度を更新）</td><td><b>現状は起動しません</b><span class="small">（socratic / confirmation モード専用。現行の実装は常に direct モードで応答するため）</span></td><td>起動時のみ記録<br><span class="small">（<code>-eval</code> 行）</span></td></tr>
+</tbody>
+</table>
+</div>
+<p>つまり現状は <b>1 質問 = Embedding 1 回 + LLM 1 回</b>、これに<b>約 10 往復ごとに要約の LLM 1 回</b>が上乗せされます。
+要約は 400 トークン上限なので、質問 1 回ぶんより安く済みます。</p>
+
+<p class="small">要約とEvaluator の呼び出しは、生徒 1 人あたりのレート制限（後述の 10 回/時）には<b>カウントされません</b>
+（集計時に <code>-summary</code> / <code>-eval</code> の行を除外しているため）。</p>
+
+<div class="warnbox">
+<p><b>Embedding のコストは管理画面に出ません。</b><code>logUsage</code> は LLM 呼び出しでしか呼ばれていないためです。
+金額としては微小（<code>text-embedding-3-small</code> で 100 万トークン $0.02）ですが、
+実額の確認はプロバイダのダッシュボードで行ってください。</p>
+</div>
+
+<h3>概算（生徒 50 名 × 月 20 質問 = 月 1,000 質問）</h3>
+<p class="small">前提: 1 質問あたり入力 約 4,000 トークン（システムプロンプト + 生徒プロフィール + RAG チャンク最大 5 件 + 履歴 + 質問）、出力 約 500 トークン、
+スレッド要約のぶんを上乗せ。1 USD = 150 円。<b>あくまで桁感の目安です。</b></p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>使うモデル</th><th>1 質問あたり</th><th>月 1,000 質問</th><th>+ Supabase Pro + Vercel Pro</th><th>合計（円）</th></tr></thead>
+<tbody>
+<tr><td><code>gpt-4o-mini</code></td><td>約 $0.0011</td><td>約 $1.1</td><td>$45</td><td><b>約 7,000 円</b></td></tr>
+<tr><td><code>deepseek-chat</code></td><td>約 $0.0020</td><td>約 $2.0</td><td>$45</td><td><b>約 7,100 円</b></td></tr>
+<tr><td><code>claude-haiku-4-5</code></td><td>約 $0.0070</td><td>約 $7.0</td><td>$45</td><td><b>約 7,800 円</b></td></tr>
+<tr><td><code>gpt-4o</code></td><td>約 $0.0180</td><td>約 $18</td><td>$45</td><td><b>約 9,500 円</b></td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note">
+<p><b>読み取り方</b>: この規模だと <b>インフラ固定費（$45 ≒ 6,750 円）が支配的</b>で、LLM 代はモデルを変えても数百〜数千円の差です。
+「安いモデルにする」より「生徒数が増えたとき」に効いてきます。生徒 200 名・月 8,000 質問なら LLM 代は上表の 8 倍になります。</p>
+</div>
+
+<h3>コストが暴れないための歯止め（実装済み）</h3>
+<ul>
+<li><b>レート制限</b>: 生徒 1 人あたり <b>直近 1 時間で 10 質問</b>まで。超過分は LLM を呼ぶ前に定型文で返すので<b>課金されません</b>（<code>RATE_LIMIT_QUESTIONS_PER_HOUR</code>）</li>
+<li><b>質問文の上限</b>: 6,000 文字を超える質問は LLM 呼び出し前に打ち切り（<code>MAX_QUESTION_CHARS</code>）</li>
+<li><b>出力上限</b>: 回答 1,200 トークン / 要約 400 トークン</li>
+<li><b>画像の上限</b>: 1 枚 20MB・1 メッセージ 3 枚・合計 8MB まで</li>
+<li><b>緊急停止</b>: 管理画面から AI 応答を即停止できる（デプロイ不要 → <a href="step9_運用ガイド.html#kill">STEP 9</a>）</li>
+<li><b>再試行での二重課金なし</b>: 生成済みの回答本文は保存され、リトライ時は配信のみやり直す</li>
+</ul>
+
+<h3>画像付き質問は別枠で高い</h3>
+<p>画像は base64 化して <code>LLM_MODEL_COMPLEX</code> に送ります。1 枚あたり数百〜1,500 入力トークン相当が上乗せされ、さらに Vision 対応モデルは単価が高めです。
+画像利用が多い想定なら、テキストは安いモデル・画像は <code>gpt-4o</code> という組み合わせが現実的です。</p>
+
+<h2>完了チェック</h2>
+<ul class="check">
+<li><input type="checkbox" id="s1-1"><label for="s1-1">LLM プロバイダを決め、API キーを発行した</label></li>
+<li><input type="checkbox" id="s1-2"><label for="s1-2"><code>LLM_MODEL_DEFAULT</code> と <code>LLM_MODEL_COMPLEX</code> のモデル名を決めた</label></li>
+<li><input type="checkbox" id="s1-3"><label for="s1-3">そのモデル名が <code>MODEL_PRICING</code> にある（無ければ追記した）</label></li>
+<li><input type="checkbox" id="s1-4"><label for="s1-4">Embedding プロバイダを決め、<b>1536 次元</b>のモデルを選んだ</label></li>
+<li><input type="checkbox" id="s1-5"><label for="s1-5">生徒チャンネルを公開／非公開のどちらにするか決めた</label></li>
+<li><input type="checkbox" id="s1-6"><label for="s1-6">Supabase / Vercel のプランを決めた（Pro 推奨の理由を理解した）</label></li>
+<li><input type="checkbox" id="s1-7"><label for="s1-7">月額コストの目安を塾側に共有した</label></li>
+</ul>
+
+<div class="nav">
+<a href="index.html">← 前へ: 目次</a>
+<a href="step2_supabase作成.html">次へ: STEP 2 Supabase プロジェクト作成 →</a>
+</div>
+
+</div>
+
+<script>
+(function(){
+  document.querySelectorAll('pre:not(.nocopy)').forEach(function(pre){
+    var w=document.createElement('div');w.className='codewrap';
+    pre.parentNode.insertBefore(w,pre);w.appendChild(pre);
+    var b=document.createElement('button');b.type='button';b.className='copy';b.textContent='コピー';
+    b.addEventListener('click',function(){
+      var el=pre.querySelector('code');var t=el?el.innerText:pre.innerText;
+      var done=function(ok){b.textContent=ok?'コピーしました':'手動でコピーしてください';
+        setTimeout(function(){b.textContent='コピー';},1600);};
+      if(navigator.clipboard&&window.isSecureContext){
+        navigator.clipboard.writeText(t).then(function(){done(true);},function(){done(false);});
+      }else{
+        try{var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';
+          document.body.appendChild(ta);ta.select();var ok=document.execCommand('copy');
+          document.body.removeChild(ta);done(ok);}catch(e){done(false);}
+      }
+    });
+    w.appendChild(b);
+  });
+  var key='jukuai-setup:'+location.pathname.split('/').pop();
+  document.querySelectorAll('ul.check input[type=checkbox]').forEach(function(cb){
+    var k=key+':'+cb.id;
+    try{if(localStorage.getItem(k)==='1')cb.checked=true;}catch(e){}
+    cb.addEventListener('change',function(){try{localStorage.setItem(k,cb.checked?'1':'0');}catch(e){}});
+  });
+})();
+</script>
+</body>
+</html>

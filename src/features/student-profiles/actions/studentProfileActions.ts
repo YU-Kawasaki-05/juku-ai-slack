@@ -6,7 +6,7 @@
  * 例外: 認証エラー・DB エラーは ActionResult.error に変換（throw しない）
  * 依存: requireStaff, createServerClient, studentProfileSchema
  * 副作用: student_profiles への upsert, 生徒一覧/詳細の revalidate
- * セキュリティ: requireStaff で認証必須（FR-13）。Service Role はサーバー専用。
+ * セキュリティ: requireStaff で staff/admin ロール必須（FR-13, EP-04）。Service Role はサーバー専用。
  *   person_id はフォーム値を zod で検証しサーバーでのみ使用する
  * @implements FR-09, AC-09-01, BR-09-01, DEC-18
  */
@@ -15,6 +15,7 @@
 import { revalidatePath } from 'next/cache'
 import { createServerClient } from '@shared/lib/supabase/serverClient'
 import { requireStaff } from '@shared/lib/auth/requireStaff'
+import { staffAuthFailure } from '@shared/lib/auth/authFailure'
 import type { ActionResult } from '@shared/types/action'
 import { studentProfileSchema } from '../schemas/studentProfileSchema'
 
@@ -27,8 +28,8 @@ export async function upsertStudentProfileAction(
 ): Promise<ActionResult> {
   try {
     await requireStaff()
-  } catch {
-    return { ok: false, error: 'ログインが必要です' }
+  } catch (e) {
+    return staffAuthFailure(e)
   }
 
   const parsed = studentProfileSchema.safeParse({

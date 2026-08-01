@@ -7,7 +7,8 @@
  */
 import { test, expect } from '@playwright/test'
 import { STAFF_STATE, testUsers } from '../fixtures/users'
-import { createPerson, deletePersons, uniqueSuffix } from '../fixtures/db'
+import { createPerson, createReport, deletePersons, uniqueSuffix } from '../fixtures/db'
+import { alert, toast } from '../fixtures/ui'
 import {
   ANON_KEY,
   deleteAuthUser,
@@ -30,7 +31,14 @@ const PROTECTED_TABLES = [
   'ai_error_logs',
 ]
 
-const ROLELESS_EMAIL = 'e2e-noroles@example.test'
+/**
+ * ロールなしユーザーはこの spec 全体で共有する可変リソースなので、**ワーカーごとに分ける**。
+ * 単一アカウントにすると、fullyParallel で別ワーカーの afterAll が
+ * このアカウントを削除した瞬間に他ワーカーのログインが落ちる（AT-05 の偽 FAIL 原因）。
+ * TEST_PARALLEL_INDEX は同時実行されるワーカー間で必ず一意（Playwright が保証）。
+ */
+const WORKER_TAG = process.env.TEST_PARALLEL_INDEX ?? '0'
+const ROLELESS_EMAIL = `e2e-noroles-w${WORKER_TAG}@example.test`
 const ROLELESS_PASSWORD = 'e2e-noroles-Passw0rd!'
 
 const personIds: string[] = []
@@ -81,10 +89,23 @@ test('AT-10 ロールなしユーザーは persons を書き換えられない�
   expect([401, 403]).toContain(status)
 })
 
-test('AT-11 staff ロールの JWT なら persons を読める（ポリシーの正常系）', async ({ request }) => {
+/**
+ * AT-11: migration 026 は staff/admin に SELECT ポリシーを作っているが、
+ * migration 024 の GRANT 整理で `authenticated` にはテーブル権限自体が残っていない
+ * （SELECT/INSERT/UPDATE/DELETE なし。TRUNCATE/TRIGGER/REFERENCES のみ）。
+ * よってポリシー評価より前に GRANT で弾かれる = **設計より厳しい安全側**の挙動。
+ * アプリ本体は Service Role で動くため機能影響はなく、
+ * 「ブラウザから届く経路には PII が 1 行も出ない」ことがここで確定する。
+ * 詳細は docs/07_受け入れテスト/91_既知の制約.md（OBS-01）。
+ */
+test('AT-11 staff ロールの JWT でも PostgREST からは PII を読めない（GRANT による多層防御）', async ({
+  request,
+}) => {
   const token = await signInForToken(request, testUsers.staff.email, testUsers.staff.password)
-  const { rows } = await restSelect(request, 'persons', token)
-  expect(rows.length).toBeGreaterThan(0)
+  const { status, rows, body } = await restSelect(request, 'persons', token)
+  expect(status).toBe(403)
+  expect(body).toContain('permission denied')
+  expect(rows).toHaveLength(0)
 })
 
 test('AT-06 user_metadata に role を自称しても RLS は突破できない（権限昇格不能）', async ({
@@ -146,37 +167,48 @@ test.describe('管理画面の権限（証拠あり）', () => {
 })
 
 /**
- * AT-05: 「サインアップできただけ（ロールなし）」のユーザーが管理画面に入れるか。
+ * AT-05: 「サインアップできただけ（ロールなし）」のユーザーが管理画面に入れないこと。
  *
- * 03_権限設計 の EP-02〜EP-18 は "admin または staff" を要求しているが、
- * 実装の requireStaff / requireStaffPage は**ログイン済みか**しか見ていない。
- * migration 026 は PostgREST 直アクセスを塞いだだけで、
- * 管理画面は Service Role で RLS をバイパスするため別防御が要る。
+ * 03_権限設計 の EP-02〜EP-18 は "admin または staff" を要求している。
+ * migration 026 は PostgREST 直アクセスを塞ぐだけで、管理画面は Service Role で
+ * RLS をバイパスするため、アプリ側（requireStaff / requireStaffPage）でも
+ * app_metadata.role を検証しないと全生徒の PII が漏れる。
  *
- * ここでは現状の挙動を証拠付きで固定し（レポート側で公開ブロッカーとして扱う）、
- * 少なくとも **admin 限定操作までは昇格できない** ことを確認する。
+ * ログイン自体は成功する（Supabase Auth のアカウントは有効）ので、
+ * /login に戻すのではなく専用ページ /admin/no-access で理由と対処を出す。
  */
+const NO_ACCESS_HEADING = 'このアカウントには管理画面の利用権限が設定されていません'
+
 test.describe('ロールなしユーザー', () => {
-  test('AT-05 ロールなしでも管理画面が開けてしまう（既知のギャップ / 要サインアップ無効化）', async ({
+  test('AT-05 ロールなしユーザーは管理画面を利用できない（/admin/no-access に案内される）', async ({
     page,
   }) => {
     await page.goto('/login')
     await page.getByLabel('メールアドレス').fill(ROLELESS_EMAIL)
     await page.getByLabel('パスワード').fill(ROLELESS_PASSWORD)
     await page.getByRole('button', { name: 'ログイン' }).click()
-    await page.waitForURL('**/admin', { timeout: 15_000 })
 
+    // ログイン自体は通るが、管理画面ではなく権限なし画面に着地する
+    await page.waitForURL('**/admin/no-access', { timeout: 15_000 })
+
+    // URL を直接叩いても同じ（middleware だけでなくページ側でも弾いている）
     await page.goto('/admin/persons')
-    // 現状: 認証さえ通れば生徒一覧（PII）が見える
-    await expect(page.getByRole('heading', { name: '生徒管理', level: 1 })).toBeVisible()
-    await shot(page, 'AT-05_ロールなしユーザーが生徒一覧を閲覧できてしまう')
+    await expect(page).toHaveURL(/\/admin\/no-access$/)
+    await expect(page.getByRole('heading', { name: NO_ACCESS_HEADING, level: 1 })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '生徒管理', level: 1 })).toHaveCount(0)
+    // 誰でログインしているかと、別アカウントへの切り替え手段を出す
+    await expect(page.getByText(ROLELESS_EMAIL, { exact: true })).toBeVisible()
+    await expect(
+      page.getByRole('button', { name: 'ログアウトして別のアカウントでログイン' }),
+    ).toBeVisible()
+    await shot(page, 'AT-05_ロールなしユーザーは管理画面を利用できない')
   })
 
-  test('AT-05b ロールなしユーザーは admin 限定操作までは昇格できない', async ({ page, request }) => {
+  test('AT-05b user_metadata に role を自称しても管理画面には入れない', async ({ page, request }) => {
     const person = await createPerson(`AT ロールなし ${uniqueSuffix()}`)
     personIds.push(person.id)
 
-    // user_metadata に role=admin を自称した状態でログインする
+    // 本人が書き換えられるのは user_metadata のみ。ここに role=admin を入れて挑む
     const token = await signInForToken(request, ROLELESS_EMAIL, ROLELESS_PASSWORD)
     await selfSetUserMetadata(request, token, { role: 'admin' })
 
@@ -184,17 +216,13 @@ test.describe('ロールなしユーザー', () => {
     await page.getByLabel('メールアドレス').fill(ROLELESS_EMAIL)
     await page.getByLabel('パスワード').fill(ROLELESS_PASSWORD)
     await page.getByRole('button', { name: 'ログイン' }).click()
-    await page.waitForURL('**/admin', { timeout: 15_000 })
+    await page.waitForURL('**/admin/no-access', { timeout: 15_000 })
 
+    // admin 限定画面（EP-07〜09）も当然開けない。判定は app_metadata のみ
     await page.goto('/admin/channels/new')
-    await page.getByLabel('SlackチャンネルID').fill(`C${uniqueSuffix().toUpperCase().replace(/[^A-Z0-9]/g, '0')}`)
-    await page.getByLabel('ワークスペースID').fill('T0E2ETEAM')
-    await page.getByLabel('生徒').click()
-    await page.getByRole('option', { name: person.name }).click()
-    await page.getByRole('button', { name: '紐付ける' }).click()
-
-    // app_metadata.role を見ているので user_metadata の自称は効かない
-    await expect(alert(page)).toContainText('この操作は管理者のみ実行できます')
+    await expect(page).toHaveURL(/\/admin\/no-access$/)
+    await expect(page.getByRole('heading', { name: NO_ACCESS_HEADING, level: 1 })).toBeVisible()
+    await expect(page.getByLabel('SlackチャンネルID')).toHaveCount(0)
     await shot(page, 'AT-05b_user_metadata自称では管理者操作に昇格できない')
   })
 })

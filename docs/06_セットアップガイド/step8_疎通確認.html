@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STEP 8 本番疎通確認 | じゅくAI セットアップガイド</title>
+<style>
+:root{--fg:#191c21;--muted:#5c6470;--line:#d9dee6;--bg:#fff;--soft:#f6f8fa;--soft2:#eef2f7;--accent:#1f5fa9;--code:#0f2b46;
+--warn:#7a4d00;--warnbg:#fff8e8;--warnline:#e6c579;--danger:#96262c;--dangerbg:#fdf1f2;--dangerline:#e3adb1;
+--ok:#1a6444;--okbg:#f0f8f4;--okline:#a5d5bd;--info:#144a73;--infobg:#eef6fc;--infoline:#9dc6e4;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);line-height:1.85;font-size:16px;
+font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,-apple-system,"Segoe UI",sans-serif;}
+.wrap{max-width:940px;margin:0 auto;padding:28px 20px 90px}
+.topbar{border-bottom:1px solid var(--line);background:var(--soft);}
+.topbar .inner{max-width:940px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
+.topbar a{color:var(--accent);text-decoration:none}
+.topbar a:hover{text-decoration:underline}
+.crumb{font-size:13px;color:var(--muted)}
+h1{font-size:27px;line-height:1.45;margin:26px 0 8px;letter-spacing:.01em}
+h2{font-size:21px;margin:44px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--line)}
+h3{font-size:17px;margin:30px 0 8px}
+h4{font-size:15px;margin:22px 0 6px;color:var(--muted)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:1.6em}
+li{margin:5px 0}
+code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13.5px;
+background:var(--soft2);padding:1px 5px;border-radius:3px;word-break:break-all}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:14px 14px;overflow-x:auto;
+font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13px;line-height:1.7;color:var(--code);margin:12px 0}
+pre code{background:none;padding:0;font-size:13px;word-break:normal}
+.codewrap{position:relative}
+.codewrap>pre{padding-right:82px}
+.copy{position:absolute;top:8px;right:8px;font:inherit;font-size:12px;padding:3px 10px;border:1px solid var(--line);
+background:#fff;color:var(--muted);border-radius:4px;cursor:pointer}
+.copy:hover{color:var(--fg);border-color:var(--muted)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--soft2);font-weight:600;white-space:nowrap}
+td code{font-size:12.8px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scroll table{min-width:640px}
+.scroll.wide table{min-width:880px}
+.note,.warnbox,.dangerbox,.okbox{border:1px solid;border-radius:6px;padding:12px 14px;margin:16px 0;font-size:15px}
+.note{border-color:var(--infoline);background:var(--infobg);color:var(--info)}
+.warnbox{border-color:var(--warnline);background:var(--warnbg);color:var(--warn)}
+.dangerbox{border-color:var(--dangerline);background:var(--dangerbg);color:var(--danger)}
+.okbox{border-color:var(--okline);background:var(--okbg);color:var(--ok)}
+.note b,.warnbox b,.dangerbox b,.okbox b{font-weight:700}
+.note p:first-child,.warnbox p:first-child,.dangerbox p:first-child,.okbox p:first-child{margin-top:0}
+.note p:last-child,.warnbox p:last-child,.dangerbox p:last-child,.okbox p:last-child{margin-bottom:0}
+.note code,.warnbox code,.dangerbox code,.okbox code{background:rgba(255,255,255,.7)}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 6px}
+.meta div{flex:1 1 240px;border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--soft)}
+.meta .k{font-size:12px;color:var(--muted);display:block;margin-bottom:2px}
+.meta .v{font-size:15px;font-weight:600;line-height:1.6}
+.meta .v ul{margin:2px 0 0;padding-left:1.3em;font-weight:400;font-size:14px}
+ul.check{list-style:none;padding-left:0}
+ul.check li{margin:6px 0;display:flex;gap:9px;align-items:flex-start}
+ul.check input{margin-top:7px;flex:0 0 auto;width:15px;height:15px}
+ul.check label{cursor:pointer}
+.steps{list-style:none;padding-left:0;margin:20px 0}
+.steps li{border:1px solid var(--line);border-radius:7px;margin:10px 0;padding:0}
+.steps a{display:block;padding:13px 16px;text-decoration:none;color:inherit}
+.steps a:hover{background:var(--soft)}
+.steps .n{display:inline-block;min-width:74px;font-size:12px;color:#fff;background:var(--accent);border-radius:11px;
+padding:1px 9px;text-align:center;margin-right:10px;vertical-align:2px}
+.steps .n.alt{background:#6b7280}
+.steps .t{font-weight:600;font-size:16.5px}
+.steps .d{display:block;color:var(--muted);font-size:14px;margin-top:3px;padding-left:0}
+.steps .tm{float:right;color:var(--muted);font-size:13px;font-weight:400}
+.nav{display:flex;justify-content:space-between;gap:14px;margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:15px}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+.nav span{color:#b6bcc6}
+.ph{background:#fff5d6;border-bottom:1px dotted #b08a19;padding:0 2px;font-weight:600}
+.diagram{font-size:12.5px;line-height:1.55;background:#fff;border:1px solid var(--line)}
+.small{font-size:13.5px;color:var(--muted)}
+.req{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap}
+.req.y{background:#fde8e8;color:#96262c;border:1px solid #e3adb1}
+.req.n{background:#eef2f7;color:#5c6470;border:1px solid #d9dee6}
+.req.r{background:#fff3d9;color:#7a4d00;border:1px solid #e6c579}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+a{color:var(--accent)}
+@media print{
+ .topbar,.nav,.copy{display:none}
+ body{font-size:11.5pt}
+ a{color:#000;text-decoration:none}
+ pre,table,.note,.warnbox,.dangerbox,.okbox{page-break-inside:avoid}
+ h2{page-break-after:avoid}
+}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="inner">
+<span class="crumb"><a href="index.html">目次</a> ／ STEP 8 / 9 — 本番疎通確認</span>
+<span class="crumb"><a href="step9_運用ガイド.html">次へ →</a></span>
+</div></div>
+
+<div class="wrap">
+
+<h1>STEP 8 — 本番疎通確認</h1>
+<p>実際の Slack で動かして、生徒に渡せる状態かを確認します。<b>ここを飛ばさないでください。</b>
+これまでのステップは「設定した」だけで、通しで動くかは別問題です。</p>
+
+<div class="meta">
+<div><span class="k">所要時間</span><span class="v">約 20 分</span></div>
+<div><span class="k">前提</span><span class="v">STEP 7 完了（生徒 1 名 + チャンネル紐付け + Bot 招待済み）</span></div>
+<div><span class="k">用意するもの</span><span class="v">テスト用の画像 1 枚<br><span class="small">（数学の問題を撮った写真など。5MB 以下推奨）</span></span></div>
+</div>
+
+<div class="warnbox">
+<p><b>テストは「生徒本人のチャンネル」で行います。</b>生徒がすでに参加している場合、テストの発言が本人に見えます。
+気になる場合は、先にテスト専用の生徒とチャンネルを作って確認し、終わったらその生徒を<b>無効</b>にしてください。</p>
+</div>
+
+<h2>8-1. 基本の往復（メンション → 🤔 → 回答）</h2>
+
+<p>紐付け済みの生徒チャンネルで、Bot をメンションして質問します。</p>
+
+<pre class="nocopy"><code>@じゅくAI 二次方程式の解の公式を教えて</code></pre>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>#</th><th>期待される動き</th><th>目安時間</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>送信したメッセージに <b>🤔</b>（<code>:thinking_face:</code>）が付く</td><td>1〜3 秒</td></tr>
+<tr><td>2</td><td><b>スレッドの返信として</b>AI の回答が投稿される</td><td>5〜30 秒</td></tr>
+<tr><td>3</td><td>🤔 が<b>外れる</b></td><td>回答直後</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="okbox">
+<p><b>ここが通れば、Slack → Vercel → DB → LLM → Slack の全経路が生きています。</b>
+このアプリで一番大きな関門です。</p>
+</div>
+
+<div class="note">
+<p><b>回答はチャンネル直下ではなくスレッドに付きます。</b>これは仕様です
+（チャンネルを回答で埋めず、1 つの質問に 1 スレッドで会話を続けるため）。</p>
+</div>
+
+<p>反応が無い場合は <a href="troubleshooting.html#noreply">トラブルシューティング「Bot が反応しない」</a>へ。
+🤔 は付くのに回答が来ない場合は <a href="troubleshooting.html#slow">「🤔 のまま止まる」</a>へ。</p>
+
+<h2>8-2. スレッド追撃（メンション不要）</h2>
+
+<p>いま返ってきた<b>回答のスレッドの中で</b>、メンションを付けずに続けて質問します。</p>
+
+<pre class="nocopy"><code>もう少しやさしく説明して</code></pre>
+
+<p><b>メンション無しでも反応すれば正解です。</b>一度 AI が答えたスレッドは会話セッションとして記録されており、
+そのスレッド内の発言には（生徒が名指ししなくても）反応するようになっています。</p>
+
+<div class="note">
+<p><b>逆に、チャンネル直下でメンション無しに発言しても Bot は反応しません。</b>
+これも仕様です（講師どうしの雑談に割り込まないため）。
+テストとして、チャンネル直下に「テスト」とだけ書いて<b>無反応であること</b>も確認しておくと安心です。</p>
+</div>
+
+<h3>会話が続いているかの確認</h3>
+<p>前の回答を踏まえた返答になっているか（「さっきの公式を使うと…」のように文脈を保っているか）を見てください。
+文脈が切れている場合は、スレッドではなくチャンネル直下に書いていないか確認します。</p>
+
+<h2>8-3. 未紐付けチャンネルの案内</h2>
+
+<p>紐付けていないチャンネル（例 <code>#general</code>）に Bot を招待して、メンションします。</p>
+
+<pre class="nocopy"><code>@じゅくAI テスト</code></pre>
+
+<p>次の定型文が返れば正常です。</p>
+
+<pre class="nocopy"><code>このチャンネルにはまだBotの設定が完了していないみたい。管理者に確認してもらえると助かります！</code></pre>
+
+<p class="small">確認が済んだらそのチャンネルから Bot を退出させてください
+（放置すると <code>CHANNEL_NOT_BOUND</code> の警告ログが溜まります）。</p>
+
+<h2>8-4. 画像付きの質問</h2>
+
+<p>生徒チャンネルで、<b>画像を添付し、本文でメンションして</b>質問します。</p>
+
+<pre class="nocopy"><code>@じゅくAI この問題の解き方を教えて
+（画像を添付）</code></pre>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>確認すること</th><th>期待</th></tr></thead>
+<tbody>
+<tr><td>回答が画像の中身に触れているか</td><td><b>ここが本番。</b>画像を読めていれば問題文の内容に沿った回答になる</td></tr>
+<tr><td>回答が一般論に終始していないか</td><td>「問題を教えてください」のような返しなら<b>画像が読めていない</b></td></tr>
+<tr><td>/admin/conversations での表示</td><td>該当スレッドの「状態」に<b>画像添付あり</b>のアイコンが付く</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="dangerbox">
+<p><b>画像が無視されているときの最有力原因は <code>LLM_MODEL_COMPLEX</code> です。</b>
+未設定だと <code>LLM_MODEL_DEFAULT</code> にフォールバックし、そのモデルが Vision 非対応だと
+<b>エラーも出さずに画像だけ無視して</b>テキストで回答します。
+Vercel の Runtime Logs に
+<code>画像ありだが LLM_MODEL_COMPLEX 未設定</code> の警告が出ていないか確認してください。</p>
+</div>
+
+<h3>制限の確認（任意）</h3>
+<div class="scroll">
+<table>
+<thead><tr><th>制限</th><th>値</th><th>超えたとき</th></tr></thead>
+<tbody>
+<tr><td>1 メッセージの枚数</td><td><b>3 枚</b></td><td>4 枚目以降は<b>黙って捨てられる</b>（通知なし）</td></tr>
+<tr><td>1 枚のサイズ</td><td><b>20MB</b></td><td>画像のみの投稿なら「画像が少し大きすぎたみたい。…」と返る</td></tr>
+<tr><td>1 メッセージの合計</td><td><b>8MB</b></td><td>同上</td></tr>
+<tr><td>対応形式</td><td>JPEG / PNG / WebP</td><td>「そのファイル形式にはまだ対応してないんだ…」と返る</td></tr>
+</tbody>
+</table>
+</div>
+
+<p class="small"><b>本文がある質問では、画像の失敗は生徒に伝えられません</b>（テキストだけで回答してしまいます）。
+画像だけを送った質問のときにのみ、上記のエラー文言が返ります。</p>
+
+<h2>8-5. 管理画面でコストと記録を確認する</h2>
+
+<h3>利用状況（/admin/usage）</h3>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>見るところ</th><th>期待</th><th>異常なら</th></tr></thead>
+<tbody>
+<tr><td><b>質問数</b></td><td>テストした回数ぶん増えている</td><td>0 なら記録されていない。<code>/admin/jobs</code> を確認</td></tr>
+<tr><td><b>コスト</b></td><td><b>$0.00 より大きい</b></td><td><span class="req y">下記の警告を参照</span></td></tr>
+<tr><td><b>総トークン</b></td><td>入力・出力とも 0 でない</td><td>0 なら LLM が呼ばれていない</td></tr>
+<tr><td><b>画像付き質問</b></td><td>8-4 のぶんが 1 件以上</td><td>0 なら画像が処理されていない</td></tr>
+<tr><td><b>モデル別 利用回数</b></td><td>設定したモデル名が並ぶ</td><td>想定と違うモデル名なら env の設定ミス</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="dangerbox">
+<p><b>質問数とトークンは増えているのに、コストが $0.00 のまま → <code>MODEL_PRICING</code> にモデル名が未登録です。</b></p>
+<p>コストはプロバイダの請求額ではなく、アプリ内の単価表から計算しています。
+<code>src/shared/lib/constants.ts</code> の <code>MODEL_PRICING</code> に無いモデル名を使うと、
+トークン数は記録されるのに<b>推定コストだけが 0</b> になります（エラーにはなりません）。</p>
+<p>対処: <a href="step1_事前準備.html#pricing">STEP 1 の手順</a>でモデル名と単価を追記 → 再デプロイ。
+<b>既に記録済みのログは 0 のままです</b>（さかのぼって計算し直されません）。
+モデルを切り替えたときも同じ落とし穴があるので、運用手順書に書いておいてください。</p>
+</div>
+
+<p class="small">グラフが読みにくい場合は、各グラフの <b>グラフ / 表</b> 切替で数値の表に変えられます。
+なお <b>Embedding のコストは記録されません</b>（LLM 呼び出しのみ記録対象）。実額はプロバイダのダッシュボードで確認してください。</p>
+
+<h3>エラーログ（/admin/errors）</h3>
+
+<p>既定では <b>エラー・警告</b> だけが表示されます。<b>何も無いのが理想</b>です。</p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>出ていたコード</th><th>意味</th><th>対応</th></tr></thead>
+<tbody>
+<tr><td><code>CHANNEL_NOT_BOUND</code></td><td>8-3 のテストぶん</td><td>想定内。<b>対応済みにする</b> で閉じる</td></tr>
+<tr><td><code>AI_RESPONSE_FAILED</code></td><td>LLM 呼び出しの失敗</td><td>詳細ページの「内部エラー詳細」を見る。API キー・モデル名・残高を確認</td></tr>
+<tr><td><code>SLACK_FILE_DOWNLOAD_FAILED</code></td><td>画像のダウンロード失敗</td><td><code>files:read</code> スコープの付与漏れ、または再インストール漏れ</td></tr>
+<tr><td><code>SLACK_POST_FAILED</code></td><td>Slack への投稿失敗</td><td><code>chat:write</code> の漏れ、または Bot がチャンネル未参加</td></tr>
+<tr><td><code>THREAD_SUMMARY_FAILED</code></td><td>スレッド要約の失敗</td><td>回答自体は届いている。続くようならモデル名を確認</td></tr>
+</tbody>
+</table>
+</div>
+
+<p class="small">深刻度フィルタを <b>すべて</b> にすると <code>情報</code> レベルも見えます
+（重複イベントや退塾生の沈黙など、正常動作の記録が含まれます）。</p>
+
+<h3>ジョブ（/admin/jobs）</h3>
+
+<div class="scroll">
+<table>
+<thead><tr><th>KPI</th><th>期待</th><th>異常なら</th></tr></thead>
+<tbody>
+<tr><td><b>待機中</b></td><td><code>滞留なし</code></td><td>残っている = 処理が始まっていない</td></tr>
+<tr><td><b>処理中</b></td><td><code>滞留なし</code></td><td>残っている = 途中で止まった（関数のタイムアウトを疑う）</td></tr>
+<tr><td><b>失敗</b></td><td><code>滞留なし</code></td><td>1 件でもあれば行を開いてエラーコードを確認</td></tr>
+</tbody>
+</table>
+</div>
+
+<p class="small">状態フィルタを <b>完了のみ</b> にすると、テストしたぶんのジョブが <code>完了</code> で並んでいるはずです。
+この画面を開くだけで滞留ジョブの自動回収も走ります。</p>
+
+<h3>会話ログ（/admin/conversations）</h3>
+<p>テストした会話がスレッド単位で並び、件数・画像の有無が記録されていることを確認します。
+生徒名で絞り込めるので、引き渡し時に「ここで生徒の質問内容を確認できます」と説明してください。</p>
+
+<h2>8-6. 緊急停止のテスト</h2>
+
+<p>本番運用前に、<b>止められることを確認しておきます</b>（止め方を知らないまま運用を始めるのが一番危険です）。</p>
+
+<ol>
+<li><code>/admin</code> 最上部の <b>AI応答</b> カード → <b>AI応答を停止</b></li>
+<li>理由に <code>疎通確認のテスト</code> と入力して <b>停止する</b></li>
+<li>Slack で質問 → 🤔 が<b>付かず</b>、次の定型文だけが返る:</li>
+</ol>
+
+<pre class="nocopy"><code>いまメンテナンス中でお返事ができないんだ :bow: しばらく経ってからもう一度質問してね。</code></pre>
+
+<ol start="4">
+<li>#alerts を設定していれば、通知が届いていることを確認</li>
+<li><b>AI応答を再開</b> に戻し、再び質問して回答が返ることを確認</li>
+</ol>
+
+<div class="dangerbox">
+<p><b>再開を忘れないでください。</b>停止したまま引き渡すと、全生徒が「メンテナンス中」の返答しか受け取れません。
+ダッシュボードのカードが <b>稼働中</b>（緑）になっていることを最後に必ず確認します。</p>
+</div>
+
+<h2>8-7. 詳細な確認項目</h2>
+
+<div class="note">
+<p>ここで扱ったのは<b>最低限の疎通</b>です。レート制限・退塾生の沈黙・ジョブ再実行の二重返信ガードなど、
+本番でしか確認できない項目を網羅したチェックリストを別途用意しています。</p>
+<p><b><code>docs/07_受け入れテスト/90_本番疎通チェックリスト.md</code></b><br>
+引き渡し前に、こちらも上から順に消化してください。
+自動テストで検証済みの範囲は <code>docs/07_受け入れテスト/00_index.md</code>、
+既知の制約は <code>docs/07_受け入れテスト/91_既知の制約.md</code> にまとまっています。</p>
+</div>
+
+<h2>完了チェック</h2>
+<ul class="check">
+<li><input type="checkbox" id="s8-1"><label for="s8-1">メンション → 🤔 → スレッドに回答 → 🤔 解除 を確認した</label></li>
+<li><input type="checkbox" id="s8-2"><label for="s8-2">スレッド内でメンション無しでも反応した</label></li>
+<li><input type="checkbox" id="s8-3"><label for="s8-3">チャンネル直下のメンション無し発言には反応しなかった</label></li>
+<li><input type="checkbox" id="s8-4"><label for="s8-4">未紐付けチャンネルで案内文が返った</label></li>
+<li><input type="checkbox" id="s8-5"><label for="s8-5">画像付き質問で、画像の内容に沿った回答が返った</label></li>
+<li><input type="checkbox" id="s8-6"><label for="s8-6">/admin/usage のコストが <b>$0.00 ではない</b></label></li>
+<li><input type="checkbox" id="s8-7"><label for="s8-7">/admin/errors に想定外のエラーが無い</label></li>
+<li><input type="checkbox" id="s8-8"><label for="s8-8">/admin/jobs の 3 つの KPI がすべて <code>滞留なし</code></label></li>
+<li><input type="checkbox" id="s8-9"><label for="s8-9">緊急停止 → 再開をテストし、<b>稼働中に戻した</b></label></li>
+<li><input type="checkbox" id="s8-10"><label for="s8-10">テスト用に招待した無関係なチャンネルから Bot を外した</label></li>
+</ul>
+
+<div class="nav">
+<a href="step7_管理ユーザーと生徒登録.html">← 前へ: STEP 7 管理ユーザーと生徒登録</a>
+<a href="step9_運用ガイド.html">次へ: STEP 9 運用ガイド →</a>
+</div>
+
+</div>
+
+<script>
+(function(){
+  document.querySelectorAll('pre:not(.nocopy)').forEach(function(pre){
+    var w=document.createElement('div');w.className='codewrap';
+    pre.parentNode.insertBefore(w,pre);w.appendChild(pre);
+    var b=document.createElement('button');b.type='button';b.className='copy';b.textContent='コピー';
+    b.addEventListener('click',function(){
+      var el=pre.querySelector('code');var t=el?el.innerText:pre.innerText;
+      var done=function(ok){b.textContent=ok?'コピーしました':'手動でコピーしてください';
+        setTimeout(function(){b.textContent='コピー';},1600);};
+      if(navigator.clipboard&&window.isSecureContext){
+        navigator.clipboard.writeText(t).then(function(){done(true);},function(){done(false);});
+      }else{
+        try{var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';
+          document.body.appendChild(ta);ta.select();var ok=document.execCommand('copy');
+          document.body.removeChild(ta);done(ok);}catch(e){done(false);}
+      }
+    });
+    w.appendChild(b);
+  });
+  var key='jukuai-setup:'+location.pathname.split('/').pop();
+  document.querySelectorAll('ul.check input[type=checkbox]').forEach(function(cb){
+    var k=key+':'+cb.id;
+    try{if(localStorage.getItem(k)==='1')cb.checked=true;}catch(e){}
+    cb.addEventListener('change',function(){try{localStorage.setItem(k,cb.checked?'1':'0');}catch(e){}});
+  });
+})();
+</script>
+</body>
+</html>

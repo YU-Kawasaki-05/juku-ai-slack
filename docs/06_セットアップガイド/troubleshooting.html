@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>トラブルシューティング | じゅくAI セットアップガイド</title>
+<style>
+:root{--fg:#191c21;--muted:#5c6470;--line:#d9dee6;--bg:#fff;--soft:#f6f8fa;--soft2:#eef2f7;--accent:#1f5fa9;--code:#0f2b46;
+--warn:#7a4d00;--warnbg:#fff8e8;--warnline:#e6c579;--danger:#96262c;--dangerbg:#fdf1f2;--dangerline:#e3adb1;
+--ok:#1a6444;--okbg:#f0f8f4;--okline:#a5d5bd;--info:#144a73;--infobg:#eef6fc;--infoline:#9dc6e4;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);line-height:1.85;font-size:16px;
+font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,-apple-system,"Segoe UI",sans-serif;}
+.wrap{max-width:940px;margin:0 auto;padding:28px 20px 90px}
+.topbar{border-bottom:1px solid var(--line);background:var(--soft);}
+.topbar .inner{max-width:940px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
+.topbar a{color:var(--accent);text-decoration:none}
+.topbar a:hover{text-decoration:underline}
+.crumb{font-size:13px;color:var(--muted)}
+h1{font-size:27px;line-height:1.45;margin:26px 0 8px;letter-spacing:.01em}
+h2{font-size:21px;margin:44px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--line)}
+h3{font-size:17px;margin:30px 0 8px}
+h4{font-size:15px;margin:22px 0 6px;color:var(--muted)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:1.6em}
+li{margin:5px 0}
+code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13.5px;
+background:var(--soft2);padding:1px 5px;border-radius:3px;word-break:break-all}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:14px 14px;overflow-x:auto;
+font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13px;line-height:1.7;color:var(--code);margin:12px 0}
+pre code{background:none;padding:0;font-size:13px;word-break:normal}
+.codewrap{position:relative}
+.codewrap>pre{padding-right:82px}
+.copy{position:absolute;top:8px;right:8px;font:inherit;font-size:12px;padding:3px 10px;border:1px solid var(--line);
+background:#fff;color:var(--muted);border-radius:4px;cursor:pointer}
+.copy:hover{color:var(--fg);border-color:var(--muted)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--soft2);font-weight:600;white-space:nowrap}
+td code{font-size:12.8px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scroll table{min-width:640px}
+.scroll.wide table{min-width:880px}
+.note,.warnbox,.dangerbox,.okbox{border:1px solid;border-radius:6px;padding:12px 14px;margin:16px 0;font-size:15px}
+.note{border-color:var(--infoline);background:var(--infobg);color:var(--info)}
+.warnbox{border-color:var(--warnline);background:var(--warnbg);color:var(--warn)}
+.dangerbox{border-color:var(--dangerline);background:var(--dangerbg);color:var(--danger)}
+.okbox{border-color:var(--okline);background:var(--okbg);color:var(--ok)}
+.note b,.warnbox b,.dangerbox b,.okbox b{font-weight:700}
+.note p:first-child,.warnbox p:first-child,.dangerbox p:first-child,.okbox p:first-child{margin-top:0}
+.note p:last-child,.warnbox p:last-child,.dangerbox p:last-child,.okbox p:last-child{margin-bottom:0}
+.note code,.warnbox code,.dangerbox code,.okbox code{background:rgba(255,255,255,.7)}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 6px}
+.meta div{flex:1 1 240px;border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--soft)}
+.meta .k{font-size:12px;color:var(--muted);display:block;margin-bottom:2px}
+.meta .v{font-size:15px;font-weight:600;line-height:1.6}
+.meta .v ul{margin:2px 0 0;padding-left:1.3em;font-weight:400;font-size:14px}
+ul.check{list-style:none;padding-left:0}
+ul.check li{margin:6px 0;display:flex;gap:9px;align-items:flex-start}
+ul.check input{margin-top:7px;flex:0 0 auto;width:15px;height:15px}
+ul.check label{cursor:pointer}
+.steps{list-style:none;padding-left:0;margin:20px 0}
+.steps li{border:1px solid var(--line);border-radius:7px;margin:10px 0;padding:0}
+.steps a{display:block;padding:13px 16px;text-decoration:none;color:inherit}
+.steps a:hover{background:var(--soft)}
+.steps .n{display:inline-block;min-width:74px;font-size:12px;color:#fff;background:var(--accent);border-radius:11px;
+padding:1px 9px;text-align:center;margin-right:10px;vertical-align:2px}
+.steps .n.alt{background:#6b7280}
+.steps .t{font-weight:600;font-size:16.5px}
+.steps .d{display:block;color:var(--muted);font-size:14px;margin-top:3px;padding-left:0}
+.steps .tm{float:right;color:var(--muted);font-size:13px;font-weight:400}
+.nav{display:flex;justify-content:space-between;gap:14px;margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:15px}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+.nav span{color:#b6bcc6}
+.ph{background:#fff5d6;border-bottom:1px dotted #b08a19;padding:0 2px;font-weight:600}
+.diagram{font-size:12.5px;line-height:1.55;background:#fff;border:1px solid var(--line)}
+.small{font-size:13.5px;color:var(--muted)}
+.req{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap}
+.req.y{background:#fde8e8;color:#96262c;border:1px solid #e3adb1}
+.req.n{background:#eef2f7;color:#5c6470;border:1px solid #d9dee6}
+.req.r{background:#fff3d9;color:#7a4d00;border:1px solid #e6c579}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+a{color:var(--accent)}
+@media print{
+ .topbar,.nav,.copy{display:none}
+ body{font-size:11.5pt}
+ a{color:#000;text-decoration:none}
+ pre,table,.note,.warnbox,.dangerbox,.okbox{page-break-inside:avoid}
+ h2{page-break-after:avoid}
+}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="inner">
+<span class="crumb"><a href="index.html">目次</a> ／ 別冊 — トラブルシューティング</span>
+<span class="crumb"><a href="index.html">目次へ戻る</a></span>
+</div></div>
+
+<div class="wrap">
+
+<h1>トラブルシューティング</h1>
+<p>症状から原因を引くための早見表です。<b>まず下の「切り分けの順番」を上から確認</b>すると、たいていの問題は 5 分で場所が特定できます。</p>
+
+<h2>切り分けの順番</h2>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>#</th><th>確認</th><th>OK なら</th><th>NG なら</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><code>/admin</code> が開けるか</td><td>アプリは生きている → 2 へ</td><td><a href="#500">アプリが 500 / 開けない</a></td></tr>
+<tr><td>2</td><td>ダッシュボードの <b>AI応答</b> カードが <b>稼働中</b>（緑）か</td><td>→ 3 へ</td><td><b>停止中</b>なら再開するだけ（<a href="step9_運用ガイド.html#kill">STEP 9-1</a>）</td></tr>
+<tr><td>3</td><td>質問すると <b>🤔</b> が付くか</td><td>イベントは届いている → <a href="#slow">🤔 のまま止まる</a></td><td><a href="#noreply">Bot が反応しない</a></td></tr>
+<tr><td>4</td><td><code>/admin/jobs</code> の KPI が <code>滞留なし</code> か</td><td>処理は流れている → 4 の下へ</td><td>滞留の種類で切り分け（<a href="step9_運用ガイド.html#jobs">STEP 9-3</a>）</td></tr>
+<tr><td>5</td><td><code>/admin/errors</code>（深刻度<b>すべて</b>）に該当時刻のログがあるか</td><td>エラーコードで下表を引く</td><td>ログすら無い = イベントが届いていない → <a href="#noreply">こちら</a></td></tr>
+</tbody>
+</table>
+</div>
+
+<hr>
+
+<h2 id="notverified">Slack の Request URL が Verified にならない</h2>
+
+<p>詳細な原因表は <a href="step6_slackイベント購読.html#notverified">STEP 6-2</a> にあります。要点だけ再掲します。</p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>原因</th><th>見分け方</th><th>対処</th></tr></thead>
+<tbody>
+<tr><td><b><code>SLACK_SIGNING_SECRET</code> の未設定・不一致</b><br><span class="small">最頻出</span></td>
+<td>Vercel の Runtime Logs に <code>[slack/events] signature verification failed:</code></td>
+<td>値を再コピーして Vercel に設定 → <b>再デプロイ</b>。Client Secret や Verification Token と取り違えていないか確認</td></tr>
+<tr><td>URL の綴り誤り</td><td>ブラウザで開くと <code>404</code></td><td><code>https://&lt;ドメイン&gt;/api/slack/events</code>（末尾スラッシュなし）。GET で <code>405</code> が返ればパスは正しい</td></tr>
+<tr><td>別の環境変数の形式エラー</td><td><code>/login</code> も 500。ログに <code>Missing or invalid env vars:</code></td><td>env は一括検証されるため無関係な 1 個で全滅する。空文字で登録した任意変数は<b>行ごと削除</b></td></tr>
+<tr><td>プレビュー URL を登録した</td><td>URL に <code>-git-</code> が入っている</td><td>Production ドメインに変更</td></tr>
+<tr><td>Deployment Protection</td><td>本番でも <code>401</code> の HTML が返る</td><td>Vercel → Settings → Deployment Protection を解除</td></tr>
+</tbody>
+</table>
+</div>
+
+<hr>
+
+<h2 id="noreply">Bot が反応しない（🤔 も付かない）</h2>
+
+<p><b>頻度順</b>に並べています。上から潰してください。</p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>#</th><th>原因</th><th>見分け方</th><th>対処</th></tr></thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><b>Bot がチャンネルに招待されていない</b><br><span class="req y">最頻出</span></td>
+<td>チャンネル詳細 → <b>インテグレーション</b> にアプリが無い。
+<b>エラーログには何も出ない</b>（Slack がイベントを送っていないため）</td>
+<td>チャンネルで <code>/invite @じゅくAI</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><b>メンションしていない</b></td>
+<td>チャンネル直下でメンション無しに発言している</td>
+<td>チャンネル直下では <code>@じゅくAI</code> が必須。<b>ただし Bot が一度答えたスレッドの中ではメンション不要</b></td>
+</tr>
+<tr>
+<td>3</td>
+<td><b><code>SLACK_BOT_USER_ID</code> が間違っている</b></td>
+<td><code>B</code> で始まる値を入れている。エラーは一切出ず、完全な無反応になる</td>
+<td><code>curl -H "Authorization: Bearer xoxb-..." https://slack.com/api/auth.test</code> の
+<code>user_id</code>（<code>U</code> 始まり）に修正 → 再デプロイ</td>
+</tr>
+<tr>
+<td>4</td>
+<td><b>チャンネルが紐付けされていない</b></td>
+<td>メンションすると <code>このチャンネルにはまだBotの設定が完了していないみたい。…</code> と返る</td>
+<td><a href="step7_管理ユーザーと生徒登録.html">STEP 7-8</a> で紐付けを登録。<b>この案内が返るならイベント経路は正常</b></td>
+</tr>
+<tr>
+<td>5</td>
+<td><b>生徒が「無効」になっている</b></td>
+<td><b>完全に沈黙する</b>（案内文すら出ない）。<code>/admin/errors</code> を<b>深刻度すべて</b>にすると
+<code>PERSON_INACTIVE</code>（情報）がある</td>
+<td>生徒管理 → ステータスを <b>有効</b> に</td>
+</tr>
+<tr>
+<td>6</td>
+<td><b>チャンネル紐付けが「無効」</b></td>
+<td>案内文（<code>CHANNEL_NOT_BOUND</code>）が返る</td>
+<td>チャンネル設定 → ステータスを <b>有効</b> に</td>
+</tr>
+<tr>
+<td>7</td>
+<td><b>AI 応答が緊急停止中</b></td>
+<td><code>いまメンテナンス中でお返事ができないんだ…</code> が返る。<code>/admin</code> のカードが赤</td>
+<td><b>AI応答を再開</b></td>
+</tr>
+<tr>
+<td>8</td>
+<td><b>レート制限に到達</b></td>
+<td><code>今日はたくさん質問してくれてありがとう！…</code> が返る</td>
+<td>1 時間待つ。仕様（<a href="step9_運用ガイド.html">STEP 9-2</a>）</td>
+</tr>
+<tr>
+<td>9</td>
+<td><b>イベント購読の設定漏れ</b></td>
+<td>Slack アプリの Event Subscriptions に <code>message.channels</code> が無い。
+<b>非公開チャンネルなのに <code>message.groups</code> が無い</b>のもよくある</td>
+<td>購読を追加 → <b>Save Changes</b> → <b>アプリを再インストール</b></td>
+</tr>
+<tr>
+<td>10</td>
+<td><b>スコープ変更後に再インストールしていない</b></td>
+<td>Slack アプリ画面上部に黄色い警告バナーが残っている</td>
+<td>OAuth &amp; Permissions → <b>Reinstall to workspace</b></td>
+</tr>
+<tr>
+<td>11</td>
+<td>Bot 自身の投稿・システムメッセージに反応させようとしている</td>
+<td>参加通知やピン留めなどに反応しない</td>
+<td>仕様。Bot の発言と、ファイル共有以外の subtype 付きメッセージは無視されます</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="note">
+<p><b>Slack 側が届けているかを確かめる決定打</b>: Slack アプリ管理画面 → <b>Event Subscriptions</b> の
+Request URL 横にある <b>Retry</b>（または再度 URL を保存）で <code>Verified</code> を取り直しつつ、
+Vercel の Logs に <code>/api/slack/events</code> のリクエストが記録されるかを見ます。
+<b>ログに何も出ない = Slack が送っていない</b>（＝ 招待漏れか購読漏れ）。
+<b>ログに出ているのに無反応 = アプリ側の判定で無視されている</b>（＝ 紐付け・無効・メンション）。</p>
+</div>
+
+<hr>
+
+<h2 id="slow">🤔 は付くが回答が返らない / 遅い</h2>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>症状</th><th>原因</th><th>対処</th></tr></thead>
+<tbody>
+<tr>
+<td><b>🤔 が付いたまま数分〜永久に返らない</b></td>
+<td>関数が実行時間の上限で強制終了された。<code>/admin/jobs</code> で <b>処理中</b> が滞留しているのが特徴</td>
+<td><b>Vercel のプランを確認</b>（Hobby は 60 秒上限、このアプリは 300 秒を宣言）。
+Pro でも起きるなら軽いモデルに変更。滞留ジョブは <b>スイープ実行</b> で回収し、<b>再実行</b> で救済</td>
+</tr>
+<tr>
+<td>30 秒以上かかる</td>
+<td>モデルが重い / RAG のチャンクが多い / プロバイダが混雑</td>
+<td>まずは <code>/admin/usage</code> の <b>モデル別</b> で使用モデルを確認。
+<code>gpt-4o</code> のような重量級を常用モデルにしていないか</td>
+</tr>
+<tr>
+<td>ときどき失敗して数十秒後に返る</td>
+<td>プロバイダの 429。5 秒 → 15 秒 → 45 秒でリトライしている</td>
+<td><code>/admin/errors</code> に <code>AI_RATE_LIMITED</code>。頻発するならプラン引き上げ</td>
+</tr>
+<tr>
+<td><code>回答の生成に時間がかかりすぎてしまった。…</code> が返る</td>
+<td><code>AI_TIMEOUT</code></td>
+<td>質問が長すぎるか、モデルが遅い。6,000 文字を超える質問は別途 <code>TOKEN_BUDGET_EXCEEDED</code> で弾かれる</td>
+</tr>
+<tr>
+<td><code>うまく処理できなかったみたい…</code> が返る</td>
+<td><code>AI_RESPONSE_FAILED</code>。LLM 呼び出しの失敗</td>
+<td>詳細ページの「内部エラー詳細」を確認。<b>API キー失効・残高切れ・モデル名の誤り・<code>LLM_MODEL_DEFAULT</code> 未設定</b>が典型</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="warnbox">
+<p><b><code>LLM_MODEL_DEFAULT</code> が未設定だとリトライしても直りません</b>（設定不備は再試行不能な失敗として扱われます）。
+<code>ConfigurationError: LLM_MODEL_DEFAULT が未設定です</code> が内部詳細に出ていたら、環境変数を設定して再デプロイしてください。</p>
+</div>
+
+<hr>
+
+<h2 id="cost0">コストが 0 円のまま増えない</h2>
+
+<div class="dangerbox">
+<p><b>ほぼ確実に <code>MODEL_PRICING</code> にモデル名が登録されていません。</b></p>
+</div>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>確認</th><th>判定</th></tr></thead>
+<tbody>
+<tr><td><code>/admin/usage</code> の <b>質問数</b> と <b>総トークン</b></td>
+<td>増えているのに<b>コストだけ 0</b> → 単価未登録で確定</td></tr>
+<tr><td>すべて 0</td><td>そもそも LLM が呼ばれていない。<a href="#noreply">Bot が反応しない</a>を参照</td></tr>
+<tr><td><code>/admin/usage</code> の <b>モデル別 利用回数</b></td>
+<td>そこに出ているモデル名が、<code>MODEL_PRICING</code> に登録済みかを確認する</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>対処</h3>
+<ol>
+<li><code>src/shared/lib/constants.ts</code> の <code>MODEL_PRICING</code> に、使っているモデル名と単価を追記する</li>
+<li>コミットして<b>再デプロイ</b></li>
+</ol>
+
+<pre><code>const PRICE_MY_MODEL: ModelPrice = { inputPerM: &lt;入力単価USD&gt;, outputPerM: &lt;出力単価USD&gt; }
+
+export const MODEL_PRICING: Record&lt;string, ModelPrice&gt; = {
+  // ...既存...
+  '&lt;素のモデル名&gt;': PRICE_MY_MODEL,
+  '&lt;provider&gt;/&lt;素のモデル名&gt;': PRICE_MY_MODEL,
+}</code></pre>
+
+<div class="note">
+<p><b>照合は「完全一致 → <code>/</code> 以降のサフィックス」の順</b>です。<code>deepseek-chat</code> さえ登録してあれば
+<code>openrouter/deepseek-chat</code> でもヒットします。</p>
+<p><b>すでに記録済みのログは 0 のままです。</b>さかのぼって再計算されないため、
+単価表の修正は<b>気づいた時点ですぐ</b>行ってください。</p>
+</div>
+
+<p class="small">なお <b>Embedding のコストは元から記録対象外</b>です（LLM 呼び出しのみ記録）。
+金額は微小ですが、実額はプロバイダのダッシュボードで確認してください。</p>
+
+<hr>
+
+<h2 id="embedding">レポートに Embedding の警告が出る</h2>
+
+<p>症状: レポート詳細ページに <code>Embedding 再生成が必要です</code> のバナー、
+または保存時に <code>保存しました（AI 参照データは未更新）</code> のトースト。
+<b>レポートの保存自体は成功しています</b>が、AI はその内容を参照できません。</p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>原因</th><th>見分け方</th><th>対処</th></tr></thead>
+<tbody>
+<tr><td><b><code>EMBEDDING_*</code> の設定漏れ</b></td>
+<td>3 つ（<code>EMBEDDING_API_KEY</code> / <code>EMBEDDING_BASE_URL</code> / <code>EMBEDDING_MODEL</code>）のうち<b>1 つでも欠けている</b></td>
+<td>3 つセットで設定 → 再デプロイ。1 つでも欠けると RAG ごと無効になります</td></tr>
+<tr><td><b>次元が 1536 でない</b></td>
+<td>内部エラーに <code>embedding dimension mismatch: … returned 3072 dims, expected 1536</code></td>
+<td><code>text-embedding-3-small</code> など<b>1536 次元</b>のモデルに変更。
+<code>text-embedding-3-large</code>（3072 次元）は使えません</td></tr>
+<tr><td>API キーの残高切れ・権限不足</td><td>内部エラーに 401 / 429</td><td>プロバイダ側で確認</td></tr>
+<tr><td><b>本文を編集しただけで再生成していない</b></td>
+<td>過去に生成できていたのにバナーが出た</td>
+<td>本文を変更して保存すれば自動で再生成されます。失敗が続く場合のみ手動再生成</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>直したあと</h3>
+<p>レポート詳細ページの <b>Embedding 再生成</b> ボタン（<b>管理者のみ</b>）で作り直します。
+<code>Embedding 再生成は管理者のみ実行できます</code> と出る場合は、
+<a href="step7_管理ユーザーと生徒登録.html#role">role を <code>admin</code> にして再ログイン</a>してください。</p>
+
+<div class="note">
+<p><b>Embedding が無くても Bot は動きます。</b>レポートを参照せず、プロフィールと会話履歴だけで回答します。
+エラーログにも残りません（毎メッセージで洪水にならないよう意図的に抑制しています）。
+「レポートの内容を反映してくれない」という相談は、まずここを疑ってください。</p>
+</div>
+
+<hr>
+
+<h2 id="image">画像が無視される / 画像の質問に答えてくれない</h2>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>原因</th><th>見分け方</th><th>対処</th></tr></thead>
+<tbody>
+<tr>
+<td><b><code>LLM_MODEL_COMPLEX</code> が未設定</b><br><span class="req y">最頻出</span></td>
+<td>回答が画像に触れず一般論になる。<b>エラーは一切出ない</b>。
+Vercel の Logs に <code>画像ありだが LLM_MODEL_COMPLEX 未設定</code> の警告</td>
+<td>Vision 対応モデル（例 <code>gpt-4o</code>）を <code>LLM_MODEL_COMPLEX</code> に設定 → 再デプロイ</td>
+</tr>
+<tr>
+<td><b>指定モデルが Vision 非対応</b></td>
+<td>設定はしてあるが、そのモデルが画像を扱えない（<code>deepseek-chat</code> など）</td>
+<td>Vision 対応モデルに変更。テキストは安いモデル・画像だけ高性能モデル、という使い分けが可能です</td>
+</tr>
+<tr>
+<td><code>files:read</code> スコープが無い</td>
+<td><code>/admin/errors</code> に <code>SLACK_FILE_DOWNLOAD_FAILED</code></td>
+<td>スコープを追加 → <b>アプリを再インストール</b></td>
+</tr>
+<tr>
+<td>4 枚目以降を送っている</td>
+<td>1 メッセージ 3 枚まで。<b>4 枚目以降は黙って捨てられる</b>（通知なし）</td>
+<td>3 枚以内に分けて送る</td>
+</tr>
+<tr>
+<td>サイズ超過</td>
+<td>1 枚 20MB / 合計 8MB を超えている</td>
+<td>圧縮して送り直す。画像のみの投稿なら
+<code>画像が少し大きすぎたみたい。…</code> が返る</td>
+</tr>
+<tr>
+<td>対応外の形式</td>
+<td>HEIC・PDF・GIF など</td>
+<td><b>JPEG / PNG / WebP</b> のみ対応。iPhone の HEIC は設定で JPEG 保存に変えるか、変換して送る</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="warnbox">
+<p><b>本文がある質問では、画像の失敗は生徒に伝わりません</b>（テキストだけで回答してしまいます）。
+「画像を見てくれない」という相談があったら、生徒の体感より <code>/admin/errors</code> と Vercel のログを見てください。</p>
+</div>
+
+<hr>
+
+<h2 id="500">管理画面が 500 になる / 開けない</h2>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>原因</th><th>見分け方</th><th>対処</th></tr></thead>
+<tbody>
+<tr>
+<td><b>環境変数の形式エラー</b><br><span class="req y">最頻出</span></td>
+<td>Vercel の Runtime Logs に <code>Missing or invalid env vars: &lt;変数名&gt;</code></td>
+<td>該当変数を修正。<b>使わない任意変数を空文字で登録している</b>のが典型なので、その場合は<b>行ごと削除</b>する。
+<code>*_BASE_URL</code> と <code>NEXT_PUBLIC_SUPABASE_URL</code> は URL 形式、<code>RESEND_FROM_EMAIL</code> はメール形式が必須</td>
+</tr>
+<tr>
+<td>Supabase プロジェクトの一時停止</td>
+<td>Free プランで 1 週間アクセスが無かった</td>
+<td>Supabase ダッシュボードから復帰。<b>本番は Pro プラン推奨</b></td>
+</tr>
+<tr>
+<td>Service Role キーのローテート漏れ</td>
+<td>Supabase でキーを再生成したのに Vercel が古いまま</td>
+<td><code>SUPABASE_SERVICE_ROLE_KEY</code> を更新 → 再デプロイ</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<hr>
+
+<h2 id="login">ログインできない</h2>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>メッセージ</th><th>原因</th><th>対処</th></tr></thead>
+<tbody>
+<tr><td><code>メールアドレスまたはパスワードが正しくありません。</code></td>
+<td>認証情報の誤り、または<b>メール未確認</b></td>
+<td>Supabase → Authentication → Users で <b>Confirmed</b> を確認。
+ユーザー作成時に <b>Auto Confirm User</b> を入れ忘れているケースが多い。パスワードは <b>Reset password</b> で再設定</td></tr>
+<tr><td><code>ログイン処理でエラーが発生しました。時間をおいて再度お試しください。</code></td>
+<td>レート制限・ネットワーク・サーバー側エラー</td><td>少し待つ。続くなら Runtime Logs を確認</td></tr>
+<tr><td><b>ログインできるのに管理画面が使えない</b><br>
+<span class="small">「このアカウントには管理画面の利用権限が設定されていません」<br>
+（<code>/admin/no-access</code>）が表示される</span></td>
+<td><code>app_metadata.role</code> が<b>未設定</b>（<code>staff</code> / <code>admin</code> のどちらでもない）</td>
+<td>ログイン自体は成功しているので、パスワードの再設定では直りません。SQL Editor で付与し、<b>ログアウト → 再ログイン</b>します。
+<pre><code>update auth.users
+set raw_app_meta_data = raw_app_meta_data || '{"role":"staff"}'::jsonb
+where email = '&lt;対象のメールアドレス&gt;';</code></pre>
+自分自身は <code>admin</code> にしてください（<a href="step7_管理ユーザーと生徒登録.html#role">7-2</a>）。
+ログアウトはその画面のボタンからできます</td></tr>
+<tr><td>ログインできるが一部の操作だけ拒否される</td>
+<td><code>app_metadata.role</code> が <code>staff</code></td>
+<td>チャンネル紐付け・Embedding 再生成・緊急停止は <b><code>admin</code> のみ</b>。
+<a href="step7_管理ユーザーと生徒登録.html#role">role を <code>admin</code> にして再ログイン</a></td></tr>
+<tr><td>ロールを付けたのに反映されない</td><td>JWT が古い</td><td><b>ログアウト → 再ログイン</b>（必須）</td></tr>
+<tr><td>そもそもアカウントが作れない</td><td>サインアップを無効化してある（正しい設定）</td>
+<td>Supabase → Authentication → Users → <b>Add user</b> で個別に作成する</td></tr>
+</tbody>
+</table>
+</div>
+
+<hr>
+
+<h2 id="wrongstudent">別の生徒として回答されている</h2>
+
+<div class="dangerbox">
+<p><b>個人情報の観点で最も重大な不具合です。見つけたらすぐ緊急停止してください。</b></p>
+</div>
+
+<p>原因は<b>チャンネル紐付けの登録ミス</b>（チャンネル ID と生徒の対応が違う）です。
+「誰の質問か」はチャンネル ID だけで決まるため、紐付けが間違っていれば他の生徒のプロフィールとレポートを使って回答してしまいます。</p>
+
+<ol>
+<li><a href="step9_運用ガイド.html#kill">AI 応答を緊急停止</a></li>
+<li><code>/admin/channels</code> で、チャンネル ID と生徒の対応を全件確認する</li>
+<li>誤っている紐付けは<b>作り直す</b>（チャンネル ID と生徒は編集できません。既存を無効化して新規登録）</li>
+<li><code>/admin/conversations</code> で影響範囲（誤って参照された会話）を確認する</li>
+<li>再開して、該当チャンネルで正しい生徒として応答することを確認する</li>
+</ol>
+
+<hr>
+
+<h2 id="deploy">環境変数を変えたのに反映されない</h2>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>変数</th><th>反映のされ方</th><th>必要な操作</th></tr></thead>
+<tbody>
+<tr><td><code>NEXT_PUBLIC_SUPABASE_URL</code><br><code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code></td>
+<td><b>ビルド時にバンドルへ埋め込まれる</b></td>
+<td><b>再デプロイ必須。</b>「Use existing Build Cache」のチェックを<b>外して</b> Redeploy</td></tr>
+<tr><td>それ以外すべて</td><td>起動時に読まれる</td><td>再デプロイ（新しい関数インスタンスが必要）</td></tr>
+</tbody>
+</table>
+</div>
+
+<p class="small">Vercel のダッシュボードで値を書き換えただけでは、<b>動いている関数には反映されません</b>。
+必ず Deployments → 最新 → <b>Redeploy</b> を実行してください。</p>
+
+<hr>
+
+<h2>それでも解決しないとき</h2>
+
+<ol>
+<li><b>Vercel の Runtime Logs</b> を <code>/api/slack/events</code> で絞り込み、該当時刻の記録を探す</li>
+<li><code>/admin/errors</code> を<b>深刻度すべて</b>にして、同じ時刻のログを探す</li>
+<li><code>/admin/jobs</code> を<b>すべて</b>にして、該当ジョブの状態と試行回数を見る</li>
+<li>それでも不明なら、<b>Slack のイベントが届いているかどうか</b>で問題を二分する
+（届いていない = Slack 側の設定 / 届いている = アプリ側の判定）</li>
+</ol>
+
+<div class="note">
+<p><b>関連ドキュメント</b></p>
+<ul>
+<li><code>docs/07_受け入れテスト/91_既知の制約.md</code> — 仕様として現時点でできないこと</li>
+<li><code>docs/07_受け入れテスト/90_本番疎通チェックリスト.md</code> — 本番でしか確認できない項目</li>
+<li><code>docs/03_技術設計/03_外部サービス.md</code> — 環境変数とスコープの一次情報（コード実装が正本）</li>
+<li><code>docs/02_外部設計/07_エラー文言設計.md</code> — エラーコードと文言の対応</li>
+</ul>
+</div>
+
+<div class="nav">
+<a href="step9_運用ガイド.html">← 前へ: STEP 9 運用ガイド</a>
+<span>&nbsp;</span>
+</div>
+
+</div>
+
+<script>
+(function(){
+  document.querySelectorAll('pre:not(.nocopy)').forEach(function(pre){
+    var w=document.createElement('div');w.className='codewrap';
+    pre.parentNode.insertBefore(w,pre);w.appendChild(pre);
+    var b=document.createElement('button');b.type='button';b.className='copy';b.textContent='コピー';
+    b.addEventListener('click',function(){
+      var el=pre.querySelector('code');var t=el?el.innerText:pre.innerText;
+      var done=function(ok){b.textContent=ok?'コピーしました':'手動でコピーしてください';
+        setTimeout(function(){b.textContent='コピー';},1600);};
+      if(navigator.clipboard&&window.isSecureContext){
+        navigator.clipboard.writeText(t).then(function(){done(true);},function(){done(false);});
+      }else{
+        try{var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';
+          document.body.appendChild(ta);ta.select();var ok=document.execCommand('copy');
+          document.body.removeChild(ta);done(ok);}catch(e){done(false);}
+      }
+    });
+    w.appendChild(b);
+  });
+  var key='jukuai-setup:'+location.pathname.split('/').pop();
+  document.querySelectorAll('ul.check input[type=checkbox]').forEach(function(cb){
+    var k=key+':'+cb.id;
+    try{if(localStorage.getItem(k)==='1')cb.checked=true;}catch(e){}
+    cb.addEventListener('change',function(){try{localStorage.setItem(k,cb.checked?'1':'0');}catch(e){}});
+  });
+})();
+</script>
+</body>
+</html>

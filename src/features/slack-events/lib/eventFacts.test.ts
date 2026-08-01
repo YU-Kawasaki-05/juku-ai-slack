@@ -142,11 +142,29 @@ describe('deriveEventFacts', () => {
     const f = deriveEventFacts(event, BOT)
     expect(f.hasImage).toBe(true)
     expect(f.images.map((i) => i.id)).toEqual(['F1', 'F3', 'F4']) // 対応MIMEのみ・最大3枚
+    // 枚数上限で捨てた分は無通知にせず数える（#5: 4枚目以降のサイレント破棄を防ぐ）
+    expect(f.droppedImageCount).toBe(1)
+  })
+
+  it('上限以内なら droppedImageCount は 0（対応外 MIME は切り捨て扱いにしない）', () => {
+    const event: SlackMessageEvent = {
+      type: 'message',
+      channel: 'C1',
+      ts: '1',
+      text: '<@U_BOT> これ教えて',
+      files: [
+        { id: 'F1', mimetype: 'image/png', url_private: 'https://x/1' },
+        { id: 'F2', mimetype: 'application/pdf', url_private: 'https://x/2' },
+      ],
+    }
+    expect(deriveEventFacts(event, BOT).droppedImageCount).toBe(0)
   })
 
   it('画像なしは hasImage=false', () => {
     const event: SlackMessageEvent = { type: 'message', channel: 'C1', ts: '1', text: 'hi' }
-    expect(deriveEventFacts(event, BOT).hasImage).toBe(false)
+    const f = deriveEventFacts(event, BOT)
+    expect(f.hasImage).toBe(false)
+    expect(f.droppedImageCount).toBe(0)
   })
 
   it('bot_id / subtype / mention を正しく反映', () => {

@@ -264,6 +264,30 @@ describe('POST /api/slack/events', () => {
     expect(payload.files).toEqual([
       { id: 'F1', name: 'q.png', mimetype: 'image/png', size: 1234, urlPrivate: 'https://slack/F1' },
     ])
+    expect(payload.droppedImageCount).toBe(0)
+  })
+
+  it('枚数上限で捨てた画像の枚数を payload に載せる（無通知の破棄防止, #5）', async () => {
+    const img = (id: string) => ({
+      id,
+      mimetype: 'image/png',
+      url_private: `https://slack/${id}`,
+      name: `${id}.png`,
+      size: 100,
+    })
+    const res = await POST(
+      signedRequest(
+        messageEvent({
+          subtype: 'file_share',
+          text: '<@U_BOT> この問題教えて',
+          files: [img('F1'), img('F2'), img('F3'), img('F4'), img('F5')],
+        }),
+      ),
+    )
+    expect(res.status).toBe(200)
+    const payload = mocks.enqueueJob.mock.calls[0][1]
+    expect(payload.files).toHaveLength(3)
+    expect(payload.droppedImageCount).toBe(2)
   })
 
   // --- A-1 ---

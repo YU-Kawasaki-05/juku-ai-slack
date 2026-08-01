@@ -92,6 +92,29 @@ describe('buildAnalytics', () => {
     expect(r.byModel[1]).toEqual({ model: 'gpt-4o', count: 1, costUsd: 0.01 })
   })
 
+  it('単価未登録のモデルを unpricedModels に列挙する（0円表示の原因表示用, #7）', () => {
+    const r = buildAnalytics(
+      raw({
+        by_model: [
+          { model: 'gpt-4o', count: 5, cost_usd: 0.5 },
+          { model: 'unregistered-model', count: 3, cost_usd: 0 },
+        ],
+      }),
+      30,
+      now,
+    )
+    expect(r.unpricedModels).toEqual(['unregistered-model'])
+  })
+
+  it('全モデルの単価が登録済みなら unpricedModels は空（警告を出さない）', () => {
+    const r = buildAnalytics(
+      raw({ by_model: [{ model: 'claude-haiku-4-5', count: 1, cost_usd: 0.01 }] }),
+      30,
+      now,
+    )
+    expect(r.unpricedModels).toEqual([])
+  })
+
   it('G-7: 同姓同名でも person_id が違えば別行のまま合算されない', () => {
     const r = buildAnalytics(
       raw({

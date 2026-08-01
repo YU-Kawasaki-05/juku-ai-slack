@@ -5,7 +5,7 @@
  * 例外: 認証・DB エラーは ActionResult に変換
  * 依存: requireStaff, createServerClient, errorLogSchema
  * 副作用: ai_error_logs の update、一覧/詳細の revalidate
- * セキュリティ: requireStaff 必須（FR-13, EP-17 は staff/admin とも可）。
+ * セキュリティ: requireStaff で staff/admin ロール必須（FR-13, EP-17 は staff/admin とも可）。
  *   resolved は手動でのみ変更（BR-17-03）。Service Role はサーバー専用
  * @implements FR-17, AC-17-02, AC-17-03, BR-17-03
  */
@@ -14,6 +14,7 @@
 import { revalidatePath } from 'next/cache'
 import { createServerClient } from '@shared/lib/supabase/serverClient'
 import { requireStaff } from '@shared/lib/auth/requireStaff'
+import { staffAuthFailure } from '@shared/lib/auth/authFailure'
 import type { ActionResult } from '@shared/types/action'
 import { errorNotesSchema, resolveErrorSchema } from '../schemas/errorLogSchema'
 
@@ -23,8 +24,8 @@ export async function resolveErrorAction(
 ): Promise<ActionResult> {
   try {
     await requireStaff()
-  } catch {
-    return { ok: false, error: 'ログインが必要です' }
+  } catch (e) {
+    return staffAuthFailure(e)
   }
 
   const parsed = resolveErrorSchema.safeParse({
@@ -57,8 +58,8 @@ export async function updateErrorNotesAction(
 ): Promise<ActionResult> {
   try {
     await requireStaff()
-  } catch {
-    return { ok: false, error: 'ログインが必要です' }
+  } catch (e) {
+    return staffAuthFailure(e)
   }
 
   const parsed = errorNotesSchema.safeParse({

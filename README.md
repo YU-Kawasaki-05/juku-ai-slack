@@ -39,7 +39,7 @@ Slack 連携型・**生徒別 AI 学習支援ボット**。学習塾の生徒ご
 
 - `features/` ベースの高凝集ディレクトリ構成
 - 全ソースに `@implements` タグを付与し、設計ドキュメントとの drift を検出可能に
-- ジョブ処理は `waitUntil + jobs テーブル`（Cron 非依存）
+- ジョブ処理は `after() + jobs テーブル`（DEC-13。Vercel Cron 非依存）
 - Slack の `channel_id` を信頼の基点にした権限設計、全テーブル RLS 有効
 
 ## セットアップ
@@ -58,10 +58,12 @@ pnpm supabase:types          # DB 型を生成（ローカル Supabase）
 pnpm dev                     # http://localhost:3000
 ```
 
-**運用前に必要な設定（管理者ロール付与・Embedding・サインアップ無効化など）は
-[`docs/03_技術設計/04_セットアップ手順.md`](./docs/03_技術設計/04_セットアップ手順.md) に集約**している。
-手順の詳細はそちらを唯一の正本とし、この README では重複させない。
-（スクリーンショット付きの HTML セットアップガイドを別途追加予定）
+**0 からの新規セットアップ（Supabase / Slack App / Vercel / 環境変数 / 初期データ）は
+[`docs/06_セットアップガイド/index.html`](./docs/06_セットアップガイド/index.html) が正本**（ステップ分割の HTML ガイド。ブラウザで開く）。
+
+運用前に必要な設定（管理者ロール付与・Embedding・サインアップ無効化など）の詳細は
+[`docs/03_技術設計/04_セットアップ手順.md`](./docs/03_技術設計/04_セットアップ手順.md) に集約している。
+手順は上記 2 つを正本とし、この README では重複させない。
 
 ## 開発状況
 
@@ -78,6 +80,7 @@ pnpm dev                     # http://localhost:3000
 
 機能単位の実装状況は [`docs/01_要件定義/_index.yml`](./docs/01_要件定義/_index.yml) の `status` が正本。
 Sprint 計画の詳細は [`docs/03_技術設計/07_Sprint計画.md`](./docs/03_技術設計/07_Sprint計画.md) を参照。
+Phase 2 に送った項目とその理由は [`docs/05_その他/2026-08-02_Phase2提案.md`](./docs/05_その他/2026-08-02_Phase2提案.md)。
 
 ## テスト
 

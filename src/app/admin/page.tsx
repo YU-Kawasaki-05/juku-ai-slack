@@ -14,7 +14,8 @@ import {
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { createServerClient } from '@/shared/lib/supabase/serverClient'
-import { getUsageSummary } from '@features/usage-logs'
+import { getUsageSummary, getUnpricedModels } from '@features/usage-logs'
+import { UnpricedModelsAlert } from '@features/usage-logs/components/UnpricedModelsAlert'
 import { countActivePersons } from '@features/persons'
 import { getErrorLogs, countUnresolvedErrors } from '@features/errors'
 import { getAIKillSwitch } from '@features/kill-switch'
@@ -28,14 +29,17 @@ export const metadata: Metadata = { title: 'ダッシュボード' }
 export default async function AdminDashboardPage() {
   const db = createServerClient()
 
-  const [usage, unresolvedCount, studentCount, recentErrors, killSwitch] = await Promise.all([
-    getUsageSummary(db),
-    countUnresolvedErrors(db),
-    // H-6: 「無効にした生徒は集計から外れます」の説明どおり active のみ数える
-    countActivePersons(db),
-    getErrorLogs(db, { limit: 5 }),
-    getAIKillSwitch(db),
-  ])
+  const [usage, unresolvedCount, studentCount, recentErrors, killSwitch, unpricedModels] =
+    await Promise.all([
+      getUsageSummary(db),
+      countUnresolvedErrors(db),
+      // H-6: 「無効にした生徒は集計から外れます」の説明どおり active のみ数える
+      countActivePersons(db),
+      getErrorLogs(db, { limit: 5 }),
+      getAIKillSwitch(db),
+      // #7: コストカードが 0 円のまま放置されるのを防ぐ
+      getUnpricedModels(db),
+    ])
 
   return (
     <div className="space-y-6">
@@ -45,6 +49,8 @@ export default async function AdminDashboardPage() {
       </div>
 
       <KillSwitchCard state={killSwitch} />
+
+      <UnpricedModelsAlert models={unpricedModels} scope="これまで" />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>

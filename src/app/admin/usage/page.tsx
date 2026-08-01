@@ -7,6 +7,7 @@ import { CircleDollarSign, ImageIcon, MessageCircleQuestion, Coins } from 'lucid
 import { createServerClient } from '@shared/lib/supabase/serverClient'
 import { getUsageAnalytics, USAGE_RANGES, type UsageRangeDays } from '@features/usage-logs'
 import { UsageCharts } from '@features/usage-logs/components/UsageCharts'
+import { UnpricedModelsAlert } from '@features/usage-logs/components/UnpricedModelsAlert'
 import { UsageRangeFilter } from '@features/usage-logs/components/UsageRangeFilter'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -71,6 +72,9 @@ export default async function UsagePage({
         </div>
         <UsageRangeFilter value={days} />
       </div>
+
+      {/* #7: 0円表示の原因が画面から分かるようにする。コストカードの直前に置く */}
+      <UnpricedModelsAlert models={analytics.unpricedModels} scope={`直近${days}日`} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {tiles.map((t) => (

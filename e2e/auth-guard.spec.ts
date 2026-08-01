@@ -16,6 +16,8 @@ const PROTECTED_PATHS = [
   '/admin/jobs',
   '/admin/usage',
   '/admin/conversations',
+  // ロールなしユーザー向けの案内ページ。ログインしていない人には見せない
+  '/admin/no-access',
 ]
 
 test.describe('認証ガード（未認証アクセス）', () => {

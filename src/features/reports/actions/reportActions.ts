@@ -5,7 +5,7 @@
  * 例外: 認証・DB エラーは ActionResult に変換。重複（生徒×月）は専用メッセージ
  * 依存: requireStaff, requireAdmin, createServerClient, reportSchema, rebuildReportEmbeddings
  * 副作用: reports への insert/update、report_chunks の再生成（DEC-14）、一覧の revalidate
- * セキュリティ: requireStaff 必須（FR-13）。Embedding 再生成（手動）は admin のみ（BR-16-02, EP-14）。
+ * セキュリティ: requireStaff で staff/admin ロール必須（FR-13）。Embedding 再生成（手動）は admin のみ（BR-16-02, EP-14）。
  *   person_id はフォーム値を zod で検証しサーバーでのみ使用。Service Role はサーバー専用
  * @implements FR-16, AC-16-01, AC-16-02, BR-16-01, BR-16-02
  */
@@ -14,6 +14,7 @@
 import { revalidatePath } from 'next/cache'
 import { createServerClient } from '@shared/lib/supabase/serverClient'
 import { requireStaff } from '@shared/lib/auth/requireStaff'
+import { staffAuthFailure } from '@shared/lib/auth/authFailure'
 import { requireAdmin } from '@shared/lib/auth/requireAdmin'
 import type { ActionResult } from '@shared/types/action'
 import type { ServerDb } from '@shared/types/db'
@@ -56,8 +57,8 @@ export async function createReportAction(
   let staffId: string
   try {
     staffId = (await requireStaff()).userId
-  } catch {
-    return { ok: false, error: 'ログインが必要です' }
+  } catch (e) {
+    return staffAuthFailure(e)
   }
 
   const parsed = reportCreateSchema.safeParse({
@@ -103,8 +104,8 @@ export async function updateReportAction(
 ): Promise<ActionResult<ReportSaveResult>> {
   try {
     await requireStaff()
-  } catch {
-    return { ok: false, error: 'ログインが必要です' }
+  } catch (e) {
+    return staffAuthFailure(e)
   }
 
   // フィールド名が "id" だと form.id を覆い隠して submitter（status）が欠落する。

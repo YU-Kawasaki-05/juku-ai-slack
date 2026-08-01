@@ -270,6 +270,8 @@ export async function POST(req: Request): Promise<NextResponse> {
           size: f.size ?? null,
           urlPrivate: f.url_private as string,
         })),
+      // 枚数上限で捨てた分。ジョブ側で「n枚は読めなかった」と生徒に伝えるために持ち回す
+      droppedImageCount: facts.droppedImageCount,
     }
 
     // A-5: セッション作成をジョブ内から受信ハンドラに前倒しする。

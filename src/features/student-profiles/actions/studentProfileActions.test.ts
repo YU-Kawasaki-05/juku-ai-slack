@@ -41,6 +41,14 @@ describe('upsertStudentProfileAction', () => {
     expect(createServerClient).not.toHaveBeenCalled()
   })
 
+  // ロール未設定は「ログインし直せ」では解決しないので文言を分ける（AT-05）
+  it('ロール未設定は権限がない旨を返す（DB に触れない）', async () => {
+    vi.mocked(requireStaff).mockRejectedValue(new Error('forbidden'))
+    const r = await upsertStudentProfileAction(undefined, fd({ personId: PERSON_ID }))
+    expect(r).toEqual({ ok: false, error: 'このアカウントには管理画面の利用権限がありません' })
+    expect(createServerClient).not.toHaveBeenCalled()
+  })
+
   it('AC-09-01: person_id をキーに UPSERT する（1人1レコード, BR-09-01）', async () => {
     staffOk()
     const db = okDb()

@@ -21,7 +21,7 @@ import {
   ConfigurationError,
   TokenBudgetExceededError,
 } from '@shared/lib/errors/AppError'
-import { getUserFacingMessage } from '@shared/lib/errors/userMessages'
+import { buildImageNotice, getUserFacingMessage } from '@shared/lib/errors/userMessages'
 import { getOrCreateSession, summarizeThread } from '@features/thread-sessions'
 import { processAttachments } from '@features/image-attachments'
 import { postMessage } from '@shared/lib/slack/client'
@@ -162,6 +162,9 @@ export async function executeProcessSlackMessage(
   // 画像添付処理（FR-06）: DL→保存→Vision 用 data URL
   const files = payload.files ?? []
   let imageDataUrls: string[] = []
+  // 生徒に届かなかった画像の枚数。受信時に枚数上限で捨てた分を起点に、処理段の失敗を足す。
+  // テキストが一緒にあると回答は返せてしまうので、この数を回答末尾で必ず伝える（#5）
+  let unreadImageCount = payload.droppedImageCount ?? 0
   if (files.length > 0) {
     const { dataUrls, errorCodes } = await processAttachments(db, {
       personId: payload.personId,
@@ -172,6 +175,8 @@ export async function executeProcessSlackMessage(
       files,
     })
     imageDataUrls = dataUrls
+    // errorCodes は失敗した画像1枚につき1件（合計サイズ超過のスキップも含む）
+    unreadImageCount += errorCodes.length
     for (const code of errorCodes) {
       await logError(db, {
         code,
@@ -202,11 +207,27 @@ export async function executeProcessSlackMessage(
   }
 
   // 画像がある質問は Vision 対応モデルを使う（BR-05-15）。未設定ならデフォルトにフォールバック
+  const visionModelMissing = imageDataUrls.length > 0 && !env.LLM_MODEL_COMPLEX
   const useModel = imageDataUrls.length > 0 ? (env.LLM_MODEL_COMPLEX ?? model) : model
-  if (imageDataUrls.length > 0 && !env.LLM_MODEL_COMPLEX) {
-    console.warn(
-      '[executeProcessMessage] 画像ありだが LLM_MODEL_COMPLEX 未設定。Vision 非対応モデルだと画像が無視され得る',
-    )
+  if (visionModelMissing) {
+    // この状態では画像が事実上無視される。console.warn だけだと運用者に届かず
+    // 「画像を送っても読んでくれない」の原因に到達できないので DB にも痕跡を残す。
+    // ただし設定を直すまで画像付き質問のたびに起きるため、未解決の同一ログがある間は積まない
+    // （B-8 と同じログ洪水対策。解決済みにしても直っていなければ次の発生で再び1行積まれる）
+    await logError(db, {
+      code: 'IMAGE_MODEL_NOT_CONFIGURED',
+      severity: 'warning',
+      personId: payload.personId,
+      channelId: payload.channelId,
+      threadTs: payload.threadTs,
+      messageTs: payload.messageTs,
+      internalMessage:
+        `LLM_MODEL_COMPLEX が未設定のため、画像付きの質問を ${model}（LLM_MODEL_DEFAULT）で処理しました。` +
+        'Vision 非対応モデルでは画像が無視され、生徒には「画像を読み取れない」旨を添えて回答しています。' +
+        '対処: 環境変数 LLM_MODEL_COMPLEX に Vision 対応モデルを設定して再デプロイしてください。' +
+        'このログは未解決の同一ログがある間は再記録しません（解決済みにすると再発時に再び記録されます）。',
+      dedupeWhileUnresolved: true,
+    })
   }
 
   // FR-20: 要約カバレッジの利用。person 不一致（チャンネル再割当て）時は別生徒の要約を使わない（BR-05-11）
@@ -285,7 +306,15 @@ export async function executeProcessSlackMessage(
 
   // A-15 / G-3: 出力トークン上限での打ち切りを検知したら、切れたことを生徒に伝える。
   // 黙って途中で終わる回答が履歴・要約にも混入するのを避ける
-  const answerText = result.truncated ? result.text + TRUNCATED_ANSWER_NOTICE : result.text
+  const truncationNotice = result.truncated ? TRUNCATED_ANSWER_NOTICE : ''
+  // #5: 読めなかった画像があること（または画像自体を読めない設定であること）を回答に添える。
+  // 回答本体は止めない。別メッセージにしないのは 1ジョブ1配信（A-3）を崩さないため
+  const imageNotice = buildImageNotice({
+    unreadCount: unreadImageCount,
+    readCount: imageDataUrls.length,
+    visionModelMissing,
+  })
+  const answerText = result.text + truncationNotice + imageNotice
 
   // A-3: 投稿の前に生成結果を退避する。以降の失敗でリトライされても再生成しない
   ctx.resultText = answerText

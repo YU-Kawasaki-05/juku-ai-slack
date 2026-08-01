@@ -44,6 +44,14 @@ describe('createReportAction', () => {
     expect(createServerClient).not.toHaveBeenCalled()
   })
 
+  // ロール未設定は「ログインし直せ」では解決しないので文言を分ける（AT-05）
+  it('ロール未設定は権限がない旨を返す（DB に触れない）', async () => {
+    vi.mocked(requireStaff).mockRejectedValue(new Error('forbidden'))
+    const r = await createReportAction(undefined, fd({ personId: PERSON_ID, reportMonth: '2026-06', title: 't', status: 'draft' }))
+    expect(r).toEqual({ ok: false, error: 'このアカウントには管理画面の利用権限がありません' })
+    expect(createServerClient).not.toHaveBeenCalled()
+  })
+
   it('入力不正は fieldErrors を返す', async () => {
     staffOk()
     const r = await createReportAction(undefined, fd({ personId: PERSON_ID, reportMonth: '2026-06', title: '', status: 'draft' }))

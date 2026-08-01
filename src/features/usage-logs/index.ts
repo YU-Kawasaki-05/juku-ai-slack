@@ -13,3 +13,4 @@ export type {
   UsageAnalyticsRaw,
   UsageRangeDays,
 } from './lib/getUsageAnalytics'
+export { findUnpricedModels, getUnpricedModels } from './lib/unpricedModels'

@@ -1,11 +1,18 @@
 import { test, expect } from '@playwright/test'
 import { ADMIN_STATE } from './fixtures/users'
+import { createPerson, deletePersons, uniqueSuffix } from './fixtures/db'
 
 /**
  * 認証後の基本フロー: ダッシュボード表示・全ナビゲーション巡回・404・ログアウト。
  * テストユーザーと storageState は global-setup が用意する。
  */
 test.use({ storageState: ADMIN_STATE })
+
+const createdPersonIds: string[] = []
+
+test.afterAll(async () => {
+  await deletePersons(createdPersonIds)
+})
 
 test.describe('ダッシュボード（SCR-02）', () => {
   test('見出し・KPI カード・kill_switch カードが表示される', async ({ page }) => {
@@ -78,10 +85,12 @@ test.describe('不正な URL（H-5）', () => {
 })
 
 test.describe('会話ログ', () => {
-  test('一覧が開けて空状態が出る', async ({ page }) => {
+  test('一覧が開けて件数サマリーが出る', async ({ page }) => {
     await page.goto('/admin/conversations')
     await expect(page.getByRole('heading', { name: '会話ログ', level: 1 })).toBeVisible()
-    await expect(page.getByText('会話がまだありません')).toBeVisible()
+    // 会話 0 件を前提にすると、Slack フルフローの受け入れテストと並走した瞬間に落ちる。
+    // 件数サマリーは会話の有無によらず必ず出る
+    await expect(page.getByText(/全 [\d,]+ 件中 \d+ 件を表示/)).toBeVisible()
   })
 
   test('フィルタが URL に反映される', async ({ page }) => {
@@ -89,9 +98,21 @@ test.describe('会話ログ', () => {
     await page.getByLabel('期間').click()
     await page.getByRole('option', { name: '直近7日' }).click()
     await expect(page).toHaveURL(/range=7/)
-    await expect(page.getByText('条件に一致する会話がありません')).toBeVisible()
     await page.getByRole('button', { name: 'クリア' }).click()
     await expect(page).toHaveURL(/\/admin\/conversations$/)
+  })
+
+  test('該当のない生徒で絞り込むと空状態が出る', async ({ page }) => {
+    // 生徒フィルタなら「この生徒には会話が 1 件も無い」を確実に作れるので、
+    // 他テストが会話を作っていても空状態を決定的に検証できる
+    const person = await createPerson(`E2E 会話ログ空 ${uniqueSuffix()}`)
+    createdPersonIds.push(person.id)
+
+    await page.goto('/admin/conversations')
+    await page.getByLabel('生徒').click()
+    await page.getByRole('option', { name: person.name }).click()
+    await expect(page).toHaveURL(new RegExp(`person=${person.id}`))
+    await expect(page.getByText('条件に一致する会話がありません')).toBeVisible()
   })
 })
 
@@ -108,8 +129,14 @@ test.describe('エラー管理', () => {
     await page.getByRole('option', { name: '未対応のみ' }).click()
     await expect(page).toHaveURL(/resolved=false/)
 
+    // 件数は他 spec（AT-39 など）が作るエラー行に左右されるため、
+    // 「空状態」か「絞り込まれた一覧」のどちらかが描画されることだけを確かめる。
+    // このテストの目的はフィルタが URL と表示に反映されることであって、DB が空であることではない。
     await expect(
-      page.getByText(/エラーはありません|条件に一致するエラーがありません/),
+      page
+        .getByText(/エラーはありません|条件に一致するエラーがありません/)
+        .or(page.getByRole('table'))
+        .first(),
     ).toBeVisible()
   })
 })

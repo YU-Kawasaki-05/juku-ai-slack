@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STEP 7 管理ユーザーと生徒登録 | じゅくAI セットアップガイド</title>
+<style>
+:root{--fg:#191c21;--muted:#5c6470;--line:#d9dee6;--bg:#fff;--soft:#f6f8fa;--soft2:#eef2f7;--accent:#1f5fa9;--code:#0f2b46;
+--warn:#7a4d00;--warnbg:#fff8e8;--warnline:#e6c579;--danger:#96262c;--dangerbg:#fdf1f2;--dangerline:#e3adb1;
+--ok:#1a6444;--okbg:#f0f8f4;--okline:#a5d5bd;--info:#144a73;--infobg:#eef6fc;--infoline:#9dc6e4;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);line-height:1.85;font-size:16px;
+font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,-apple-system,"Segoe UI",sans-serif;}
+.wrap{max-width:940px;margin:0 auto;padding:28px 20px 90px}
+.topbar{border-bottom:1px solid var(--line);background:var(--soft);}
+.topbar .inner{max-width:940px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
+.topbar a{color:var(--accent);text-decoration:none}
+.topbar a:hover{text-decoration:underline}
+.crumb{font-size:13px;color:var(--muted)}
+h1{font-size:27px;line-height:1.45;margin:26px 0 8px;letter-spacing:.01em}
+h2{font-size:21px;margin:44px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--line)}
+h3{font-size:17px;margin:30px 0 8px}
+h4{font-size:15px;margin:22px 0 6px;color:var(--muted)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:1.6em}
+li{margin:5px 0}
+code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13.5px;
+background:var(--soft2);padding:1px 5px;border-radius:3px;word-break:break-all}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:14px 14px;overflow-x:auto;
+font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13px;line-height:1.7;color:var(--code);margin:12px 0}
+pre code{background:none;padding:0;font-size:13px;word-break:normal}
+.codewrap{position:relative}
+.codewrap>pre{padding-right:82px}
+.copy{position:absolute;top:8px;right:8px;font:inherit;font-size:12px;padding:3px 10px;border:1px solid var(--line);
+background:#fff;color:var(--muted);border-radius:4px;cursor:pointer}
+.copy:hover{color:var(--fg);border-color:var(--muted)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--soft2);font-weight:600;white-space:nowrap}
+td code{font-size:12.8px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scroll table{min-width:640px}
+.scroll.wide table{min-width:880px}
+.note,.warnbox,.dangerbox,.okbox{border:1px solid;border-radius:6px;padding:12px 14px;margin:16px 0;font-size:15px}
+.note{border-color:var(--infoline);background:var(--infobg);color:var(--info)}
+.warnbox{border-color:var(--warnline);background:var(--warnbg);color:var(--warn)}
+.dangerbox{border-color:var(--dangerline);background:var(--dangerbg);color:var(--danger)}
+.okbox{border-color:var(--okline);background:var(--okbg);color:var(--ok)}
+.note b,.warnbox b,.dangerbox b,.okbox b{font-weight:700}
+.note p:first-child,.warnbox p:first-child,.dangerbox p:first-child,.okbox p:first-child{margin-top:0}
+.note p:last-child,.warnbox p:last-child,.dangerbox p:last-child,.okbox p:last-child{margin-bottom:0}
+.note code,.warnbox code,.dangerbox code,.okbox code{background:rgba(255,255,255,.7)}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 6px}
+.meta div{flex:1 1 240px;border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--soft)}
+.meta .k{font-size:12px;color:var(--muted);display:block;margin-bottom:2px}
+.meta .v{font-size:15px;font-weight:600;line-height:1.6}
+.meta .v ul{margin:2px 0 0;padding-left:1.3em;font-weight:400;font-size:14px}
+ul.check{list-style:none;padding-left:0}
+ul.check li{margin:6px 0;display:flex;gap:9px;align-items:flex-start}
+ul.check input{margin-top:7px;flex:0 0 auto;width:15px;height:15px}
+ul.check label{cursor:pointer}
+.steps{list-style:none;padding-left:0;margin:20px 0}
+.steps li{border:1px solid var(--line);border-radius:7px;margin:10px 0;padding:0}
+.steps a{display:block;padding:13px 16px;text-decoration:none;color:inherit}
+.steps a:hover{background:var(--soft)}
+.steps .n{display:inline-block;min-width:74px;font-size:12px;color:#fff;background:var(--accent);border-radius:11px;
+padding:1px 9px;text-align:center;margin-right:10px;vertical-align:2px}
+.steps .n.alt{background:#6b7280}
+.steps .t{font-weight:600;font-size:16.5px}
+.steps .d{display:block;color:var(--muted);font-size:14px;margin-top:3px;padding-left:0}
+.steps .tm{float:right;color:var(--muted);font-size:13px;font-weight:400}
+.nav{display:flex;justify-content:space-between;gap:14px;margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:15px}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+.nav span{color:#b6bcc6}
+.ph{background:#fff5d6;border-bottom:1px dotted #b08a19;padding:0 2px;font-weight:600}
+.diagram{font-size:12.5px;line-height:1.55;background:#fff;border:1px solid var(--line)}
+.small{font-size:13.5px;color:var(--muted)}
+.req{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap}
+.req.y{background:#fde8e8;color:#96262c;border:1px solid #e3adb1}
+.req.n{background:#eef2f7;color:#5c6470;border:1px solid #d9dee6}
+.req.r{background:#fff3d9;color:#7a4d00;border:1px solid #e6c579}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+a{color:var(--accent)}
+@media print{
+ .topbar,.nav,.copy{display:none}
+ body{font-size:11.5pt}
+ a{color:#000;text-decoration:none}
+ pre,table,.note,.warnbox,.dangerbox,.okbox{page-break-inside:avoid}
+ h2{page-break-after:avoid}
+}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="inner">
+<span class="crumb"><a href="index.html">目次</a> ／ STEP 7 / 9 — 管理ユーザーと生徒登録</span>
+<span class="crumb"><a href="step8_疎通確認.html">次へ →</a></span>
+</div></div>
+
+<div class="wrap">
+
+<h1>STEP 7 — 管理ユーザーと生徒の登録</h1>
+<p>ここから実データを入れていきます。<b>「管理画面に入れるようにする」→「生徒を作る」→「Slack チャンネルと結びつける」</b>の順です。
+生徒 1 人ぶんを通しでやってみて、うまくいったら残りを流し込むのが安全です。</p>
+
+<div class="meta">
+<div><span class="k">所要時間</span><span class="v">約 30 分<span class="small">（生徒 1 人ぶん。2 人目以降は 5 分程度）</span></span></div>
+<div><span class="k">前提</span><span class="v">STEP 6 完了（Request URL が Verified）</span></div>
+<div><span class="k">このステップで手に入るもの（控える）</span><span class="v">
+<ul>
+<li>管理画面のログイン情報（メール / パスワード）</li>
+<li>生徒チャンネルの ID（<code>C...</code>）</li>
+<li>（任意）#alerts チャンネルの ID</li>
+</ul></span></div>
+</div>
+
+<h2>7-1. 管理ユーザーを Supabase で作成する</h2>
+
+<p>STEP 2-3 でサインアップを無効化したので、ユーザーは<b>ダッシュボードから手動で作ります</b>。</p>
+
+<ol>
+<li>Supabase → <b>Authentication</b> → <b>Users</b> → <b>Add user</b> → <b>Create new user</b></li>
+<li>入力:</li>
+</ol>
+
+<div class="scroll">
+<table>
+<thead><tr><th>項目</th><th>値</th></tr></thead>
+<tbody>
+<tr><td>Email</td><td>塾の担当者のメールアドレス（例 <code>owner@example.com</code>）</td></tr>
+<tr><td>Password</td><td>強固なものを生成して控える。初回ログイン後に本人に変更してもらう</td></tr>
+<tr><td><b>Auto Confirm User</b></td><td><b>必ずチェックを入れる</b><br><span class="small">入れないとメール確認が終わるまでログインできません。このアプリには確認メールの再送 UI がありません</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<p>スタッフが複数いる場合は、この時点で全員ぶん作っておくと後が楽です。</p>
+
+<h2 id="role">7-2. 【必須】ロールを付与する</h2>
+
+<div class="dangerbox">
+<p><b>ユーザーを作っただけでは管理画面を開けません。</b>
+<code>app_metadata.role</code> に <code>admin</code> か <code>staff</code> を必ず設定してください。
+ロールが無いアカウントは<b>ログインには成功しますが</b>、生徒情報などは一切表示されず
+<code>/admin/no-access</code>（「このアカウントには管理画面の利用権限が設定されていません」）に案内されます。</p>
+<p><b><code>user_metadata</code> ではありません</b> — そちらはログイン中の本人が書き換えられるため、権限判定に使うと権限昇格の穴になります。</p>
+</div>
+
+<p>Supabase → <b>SQL Editor</b> で実行します（メールアドレスは対象ユーザーのものに置き換え）。</p>
+
+<pre><code>-- 管理者
+update auth.users
+set raw_app_meta_data = raw_app_meta_data || '{"role":"admin"}'::jsonb
+where email = 'owner@example.com';
+
+-- スタッフ（管理者以外の運用担当）
+update auth.users
+set raw_app_meta_data = raw_app_meta_data || '{"role":"staff"}'::jsonb
+where email = 'staff@example.com';</code></pre>
+
+<h3>admin と staff の違い</h3>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>操作</th><th><code>staff</code></th><th><code>admin</code></th><th>備考</th></tr></thead>
+<tbody>
+<tr><td>管理画面へのログイン、一覧・詳細の閲覧</td><td>○</td><td>○</td><td></td></tr>
+<tr><td>生徒の登録・編集、AI プロフィール編集</td><td>○</td><td>○</td><td></td></tr>
+<tr><td>レポートの作成・編集・承認</td><td>○</td><td>○</td><td></td></tr>
+<tr><td>エラーの対応済み切替・メモ記入</td><td>○</td><td>○</td><td></td></tr>
+<tr><td>ジョブのスイープ・再実行</td><td>○</td><td>○</td><td></td></tr>
+<tr><td><b>チャンネル紐付けの登録・編集</b></td><td><b>×</b></td><td>○</td><td><code>channel_id</code> は「誰の質問か」を決める信頼の基点なので管理者限定</td></tr>
+<tr><td><b>Embedding の手動再生成</b></td><td><b>×</b></td><td>○</td><td>API 課金が発生するため</td></tr>
+<tr><td><b>AI 応答の緊急停止・再開</b></td><td><b>×</b></td><td>○</td><td>カードの閲覧はできるが操作は拒否される</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="warnbox">
+<p><b>セットアップ作業をするあなた自身は必ず <code>admin</code> にしてください。</b>
+このあとの 7-8（チャンネル紐付け）が <code>staff</code> では実行できず、
+<code>この操作は管理者のみ実行できます</code> で弾かれます。</p>
+</div>
+
+<h3>反映には再ログインが必要</h3>
+<p>ロールは JWT に埋め込まれるため、<b>付与前に発行されたセッションには反映されません</b>。
+対象ユーザーは一度<b>ログアウト → 再ログイン</b>してください。</p>
+
+<h4>確認</h4>
+<pre><code>select email, raw_app_meta_data -&gt; 'role' as role
+from auth.users
+order by created_at;</code></pre>
+<p><code>"admin"</code> / <code>"staff"</code> が入っていれば OK です。</p>
+
+<h2>7-3. 管理画面にログインする</h2>
+
+<ol>
+<li><code>https://<span class="ph">&lt;あなたのドメイン&gt;</span>/login</code> を開く</li>
+<li>7-1 のメールとパスワードでログイン</li>
+<li><code>/admin</code> のダッシュボードが表示されれば成功</li>
+</ol>
+
+<div class="warnbox">
+<p><b>「このアカウントには管理画面の利用権限が設定されていません」と出たら</b>、
+7-2 のロール付与が漏れているか、付与前のセッションのままです。
+その画面の<b>ログアウト</b>ボタンから抜けて、ロールを付与してから再ログインしてください。</p>
+</div>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>出たメッセージ</th><th>意味</th><th>対処</th></tr></thead>
+<tbody>
+<tr><td><code>メールアドレスまたはパスワードが正しくありません。</code></td><td>認証情報の誤り、または <b>Auto Confirm User 未チェック</b>でメール未確認</td><td>Supabase → Authentication → Users で該当ユーザーの <b>Confirmed</b> 状態を確認。パスワードは <b>Reset password</b> で再設定できる</td></tr>
+<tr><td><code>ログイン処理でエラーが発生しました。時間をおいて再度お試しください。</code></td><td>ネットワーク・レート制限・サーバー側エラー</td><td>少し待って再試行。続くなら Vercel の Runtime Logs を確認</td></tr>
+<tr><td>ログイン画面に戻され続ける</td><td>Cookie が保存できていない</td><td>URL が <code>https://</code> か、ブラウザが Cookie をブロックしていないか確認</td></tr>
+</tbody>
+</table>
+</div>
+
+<p class="small">ダッシュボード最上部に <b>AI応答 / 稼働中</b> のカードが見えていれば、DB の <code>kill_switches</code> も正しく読めています。</p>
+
+<h2>7-4. 生徒を登録する</h2>
+
+<p>左メニュー <b>生徒管理</b> → <b>新規生徒</b>。</p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>項目</th><th>必須</th><th>入れ方</th></tr></thead>
+<tbody>
+<tr><td><b>名前</b></td><td><span class="req y">必須</span></td><td>本名（例 <code>山田 太郎</code>）。100 文字まで。管理画面の一覧や集計に出る</td></tr>
+<tr><td><b>表示名（任意）</b></td><td><span class="req n">任意</span></td><td><b>Bot が呼びかけに使う名前</b>（例 <code>太郎くん</code>）。未設定なら名前が使われる</td></tr>
+<tr><td><b>学年（任意）</b></td><td><span class="req n">任意</span></td><td>例 <code>中学3年</code>。AI の回答レベル調整の材料になる</td></tr>
+<tr><td><b>ステータス</b></td><td><span class="req y">必須</span></td><td><b>有効</b>のまま。<b>無効</b>にすると Bot が完全に沈黙し、集計や選択肢からも外れる（退塾時に使う → <a href="step9_運用ガイド.html#taijuku">STEP 9</a>）</td></tr>
+<tr><td><b>保護者メール（任意）</b></td><td><span class="req n">任意</span></td><td>現時点でメール送信機能は未実装。記録用</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><b>保存</b> を押すと一覧に戻ります。</p>
+
+<div class="warnbox">
+<p><b>「保存」の二度押しに注意。</b>生徒テーブルには重複を防ぐ一意制約がないため、
+連打すると同姓同名の生徒が 2 件できます。保存後はボタンが自動で無効化されますが、
+一覧に戻ったら 1 件だけになっているか確認してください。</p>
+</div>
+
+<h2 id="profile">7-5. AI 用プロフィールを入力する</h2>
+
+<p>登録した生徒の名前をクリック → 詳細ページの下半分に <b>AI 用プロフィール</b> カードがあります。
+ここに書いた内容は<b>その生徒の全質問の回答に毎回使われます</b>（他の生徒には使われません）。</p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>項目</th><th>上限</th><th>何を書くか</th></tr></thead>
+<tbody>
+<tr>
+<td><b>全体要約</b></td><td>2000 字</td>
+<td>現在の学習状況と直近の重点課題。<b>200〜800 字が目安</b>。<br>
+<span class="small">例:「中学3年。数学は基礎計算は安定してきたが、文章題で条件を式に落とすところでつまずきやすい。」</span></td>
+</tr>
+<tr>
+<td><b>学習スタイル・説明トーン</b></td><td>500 字</td>
+<td>どう説明すると入りやすいか。<br><span class="small">例:「図を使った説明が入りやすい。長文の説明は読み飛ばしがち。」</span></td>
+</tr>
+<tr><td><b>得意分野</b></td><td>500 字</td><td>例:「計算問題、暗記系」</td></tr>
+<tr><td><b>苦手分野</b></td><td>500 字</td><td>例:「文章題、証明」</td></tr>
+<tr>
+<td><b>指導上の注意</b></td><td>1000 字</td>
+<td>やってほしくない教え方。<br><span class="small">例:「答えをすぐ出すと写して終わりになりやすいので、まず考え方から。」</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="note">
+<p><b>全部埋めなくても動きます</b>（すべて任意項目）。ただし空だと「どの生徒にも同じ回答」になり、
+このアプリの一番の価値である個別化が効きません。<b>最低でも「全体要約」だけは書いてください。</b></p>
+</div>
+
+<h3>試験期間の設定</h3>
+
+<p>同じカードの下部に <b>試験期間</b> があります。</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>項目</th><th>説明</th></tr></thead>
+<tbody>
+<tr><td><b>試験期間中にする</b></td><td>チェックすると試験モードになる</td></tr>
+<tr><td><b>最終日</b></td><td>今日以降の日付。<b>その日いっぱい（日本時間 24:00）まで</b>試験期間として扱われ、過ぎると自動で通常に戻る</td></tr>
+<tr><td><b>試験科目（任意）</b></td><td>カンマ区切り（例 <code>数学, 英語</code>）。20 件まで、1 件 50 字まで</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="okbox">
+<p><b>試験期間中は AI の答え方が変わります。</b>
+通常は理解度に応じて確認の質問を挟むことがありますが、試験期間中は
+<b>確認質問をはさまず、要点と解き方の例をすばやく提示する</b>モード（direct）に固定されます。
+試験直前に「まず自分で考えてみよう」と返されると困る、という現場の要求への対応です。
+設定した科目名も AI に伝わります。</p>
+</div>
+
+<p><b>プロフィールを保存</b> を押すと、ボタンの横に <code>保存しました</code> と出ます（ページは移動しません）。
+生徒一覧では試験期間中の生徒に <b>試験期間中</b> のバッジが付きます。</p>
+
+<h2>7-6. Slack に生徒チャンネルを作り、Bot を招待する</h2>
+
+<h3>チャンネルを作る</h3>
+<ol>
+<li>Slack で <b>+ → チャンネルを作成</b></li>
+<li>名前は分かりやすく（例 <code>study-taro</code> / <code>質問-山田太郎</code>）</li>
+<li><a href="step1_事前準備.html">STEP 1-3</a> で決めた方針どおり<b>公開／非公開</b>を選ぶ</li>
+<li>生徒本人を招待する（保護者や担当講師も必要に応じて）</li>
+</ol>
+
+<h3 id="invite">Bot を招待する（必須）</h3>
+
+<div class="dangerbox">
+<p><b>これを忘れると Bot は永久に無反応です。</b>Slack はアプリが参加していないチャンネルのメッセージイベントを配信しません。
+エラーログにも何も残らないため（そもそもイベントが届かない）、原因究明が一番やっかいなミスです。</p>
+</div>
+
+<p>チャンネルで次を実行します。</p>
+
+<pre><code>/invite @じゅくAI</code></pre>
+
+<p>「じゅくAI がチャンネルに参加しました」と表示されれば OK です。
+チャンネル詳細 → <b>インテグレーション</b> タブにアプリが並んでいることでも確認できます。</p>
+
+<p class="small">生徒を追加するたびに<b>チャンネル作成 → 招待</b>がセットで必要です。運用手順書に必ず書いておいてください。</p>
+
+<h2 id="channelid">7-7. チャンネル ID とワークスペース ID を調べる</h2>
+
+<div class="note">
+<p><b>チャンネル「名」ではなく「ID」が必要です。</b>チャンネル名は後から変更できてしまうため、
+このアプリは <code>channel_id</code>（変わらない値）を「誰の質問か」の判定に使っています。
+管理画面に入力するチャンネル名は<b>一覧での表示用</b>にすぎません。</p>
+</div>
+
+<h3>チャンネル ID（<code>C</code> で始まる）</h3>
+<ol>
+<li>Slack でチャンネル名をクリック → チャンネル詳細を開く</li>
+<li>ダイアログを一番下までスクロール</li>
+<li><b>チャンネル ID: C01ABCDEFGH</b> と表示されている → コピーボタンで取得</li>
+</ol>
+
+<p class="small">ブラウザ版 Slack なら URL の末尾（<code>.../messages/<span class="ph">C01ABCDEFGH</span></code>）でも確認できます。
+非公開チャンネルでは <code>G</code> で始まることもありますが、どちらも登録できます。</p>
+
+<h3>ワークスペース ID（<code>T</code> で始まる）</h3>
+<p><a href="step4_slackアプリ作成.html#botid">STEP 4-6</a> の <code>auth.test</code> で取得した <code>team_id</code> です。
+ワークスペース内で共通なので、生徒ごとに調べ直す必要はありません。</p>
+<p class="small">ブラウザ版 Slack の URL <code>https://app.slack.com/client/<span class="ph">T01ABCDEFGH</span>/C01...</code> の最初の ID でも確認できます。</p>
+
+<h2>7-8. チャンネルと生徒を紐付ける</h2>
+
+<p>管理画面 → <b>チャンネル設定</b> → <b>新規チャンネル紐付け</b>。<b>この操作は <code>admin</code> のみ</b>です。</p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>項目</th><th>必須</th><th>入れる値</th><th>形式チェック</th></tr></thead>
+<tbody>
+<tr>
+<td><b>SlackチャンネルID</b></td><td><span class="req y">必須</span></td><td>7-7 で調べた <code>C01ABCDEFGH</code></td>
+<td><code>C</code> / <code>G</code> / <code>D</code> で始まり、以降は<b>大文字英数字のみ</b>。
+小文字が混ざると <code>チャンネルIDの形式が正しくありません（例: C01ABCDEFGH）</code></td>
+</tr>
+<tr>
+<td><b>ワークスペースID</b></td><td><span class="req y">必須</span></td><td><code>T01ABCDEFGH</code></td>
+<td><code>T</code> で始まり以降は大文字英数字。誤ると <code>ワークスペースIDの形式が正しくありません（例: T01ABCDEFGH）</code></td>
+</tr>
+<tr>
+<td><b>チャンネル名（任意）</b></td><td><span class="req n">任意</span></td><td><code>study-taro</code>（<code>#</code> は不要）</td><td>200 字まで。<b>表示用のみ</b></td>
+</tr>
+<tr>
+<td><b>生徒</b></td><td><span class="req y">必須</span></td><td>7-4 で作った生徒を選ぶ</td><td>有効な生徒のみが選択肢に出る</td>
+</tr>
+<tr>
+<td><b>既定レポート（任意）</b></td><td><span class="req n">任意</span></td><td>まだレポートが無いので <b>指定しない</b> のままで OK</td>
+<td>生徒を選ぶまで操作できない。<b>承認済み・送信済み</b>のレポートだけが候補</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<p><b>紐付ける</b> を押して <code>チャンネルを紐付けました</code> が出れば完了です。</p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>出たエラー</th><th>意味</th><th>対処</th></tr></thead>
+<tbody>
+<tr><td><code>この操作は管理者のみ実行できます</code></td><td>ログイン中のユーザーが <code>staff</code></td><td><a href="#role">7-2</a> で <code>admin</code> を付与 → <b>再ログイン</b></td></tr>
+<tr><td><code>このチャンネルはすでに紐付けされています</code></td><td>同じチャンネル ID の登録が既にある</td><td>一覧から既存の紐付けを開いて内容を確認・修正する（1 チャンネル = 1 生徒）</td></tr>
+<tr><td><code>チャンネルIDの形式が正しくありません</code></td><td>小文字混じり・<code>#</code> 付き・チャンネル名を入れている</td><td>7-7 の手順で ID を取り直す</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note">
+<p><b>あとから変更できるのは「チャンネル名」と「ステータス」だけ</b>です。
+チャンネル ID と生徒の対応を間違えた場合は、紐付けを<b>作り直して</b>ください
+（間違ったまま運用すると、別の生徒のプロフィールとレポートを使って回答してしまいます）。</p>
+</div>
+
+<h2>7-9. レポートを登録して Embedding を確認する</h2>
+
+<p>レポートは「AI に読ませる生徒ごとの学習記録」です。登録すると<b>保存時に自動でベクトル化</b>され、
+以降の回答で参照されるようになります。</p>
+
+<h3>登録する</h3>
+<ol>
+<li>管理画面 → <b>レポート</b> → <b>新規レポート</b></li>
+<li>入力:</li>
+</ol>
+
+<div class="scroll">
+<table>
+<thead><tr><th>項目</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td><b>生徒</b></td><td>対象の生徒（あとから変更できません）</td></tr>
+<tr><td><b>対象月</b></td><td>例 <code>2026-08</code>。同じ生徒 × 同じ月は 1 件のみ</td></tr>
+<tr><td><b>タイトル</b></td><td>例 <code>2026年8月 学習レポート</code></td></tr>
+<tr><td><b>AI 参照対象にする</b></td><td><b>チェックしたまま</b>（外すと Bot が参照しません）</td></tr>
+<tr><td><b>本文（Markdown）</b></td><td>単元の進捗・つまずき・宿題の状況など。<b>編集／プレビュー</b>で表示を切り替えられます</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="warnbox">
+<p><b>Bot が参照するのは「承認済み」または「送信済み」のレポートだけです。</b>
+下書きのままでは RAG 検索の対象になりません。動作確認をするなら
+<b>承認して保存</b>（左のボタン）を押してください。<b>下書き保存</b>は右のボタンです。</p>
+</div>
+
+<h3>Embedding が生成されたか確認する</h3>
+
+<p>保存後、レポートの詳細ページを開いて次を確認します。</p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>見るところ</th><th>正常</th><th>異常</th></tr></thead>
+<tbody>
+<tr>
+<td>ページ上部の警告バナー</td>
+<td><b>出ていない</b></td>
+<td><code>Embedding 再生成が必要です</code> が出ている</td>
+</tr>
+<tr>
+<td><b>最終 Embedding</b> の欄</td>
+<td>保存した日時が入っている</td>
+<td><code>未生成</code> のまま</td>
+</tr>
+<tr>
+<td>保存直後のトースト</td>
+<td><code>レポートを保存しました</code></td>
+<td><code>保存しました（AI 参照データは未更新）</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="dangerbox">
+<p><b>異常だった場合、原因はほぼ <code>EMBEDDING_*</code> の設定です。</b></p>
+<ul>
+<li>3 つ（<code>EMBEDDING_API_KEY</code> / <code>EMBEDDING_BASE_URL</code> / <code>EMBEDDING_MODEL</code>）が<b>すべて</b>設定されているか。1 つでも欠けると無効になります</li>
+<li>モデルが <b>1536 次元</b>か（<code>text-embedding-3-large</code> は 3072 次元なので不可）</li>
+<li>API キーの残高・利用制限</li>
+</ul>
+<p>直したら<b>再デプロイ</b>し、詳細ページの <b>Embedding 再生成</b>（管理者のみ）で作り直してください。
+確認ダイアログに「API 利用コストが発生します」と出ますが、レポート 1 件ぶんなので微小です。</p>
+</div>
+
+<p class="small"><b>レポートが無くても Bot は動きます</b>（プロフィールと会話履歴だけで回答します）。
+疎通確認を優先するなら、レポートは後回しでも構いません。</p>
+
+<h2>7-10. 【任意】#alerts チャンネルを用意する</h2>
+
+<p>AI 応答を緊急停止・再開したときに Slack へ通知を飛ばしたい場合に設定します。</p>
+
+<ol>
+<li>Slack で運用者向けチャンネルを作る（例 <code>#jukuai-alerts</code>）。<b>生徒は入れない</b></li>
+<li><code>/invite @じゅくAI</code> で Bot を招待する（招待しないと投稿できません）</li>
+<li>7-7 の手順でチャンネル ID を取得</li>
+<li>Vercel → Settings → Environment Variables に <code>SLACK_ALERTS_CHANNEL_ID</code> を追加 → <b>再デプロイ</b></li>
+</ol>
+
+<p class="small">未設定でも停止・再開の操作自体は成功します（通知が飛ばないだけで、
+トーストに <code>AI応答を停止しました（#alerts への通知はできませんでした）</code> と出ます）。</p>
+
+<h2>完了チェック</h2>
+<ul class="check">
+<li><input type="checkbox" id="s7-1"><label for="s7-1">Auth ユーザーを <b>Auto Confirm User</b> 付きで作成した</label></li>
+<li><input type="checkbox" id="s7-2"><label for="s7-2"><code>app_metadata.role</code> を付与した（自分は <b><code>admin</code></b>）</label></li>
+<li><input type="checkbox" id="s7-3"><label for="s7-3">再ログインして <code>/admin</code> が開いた</label></li>
+<li><input type="checkbox" id="s7-4"><label for="s7-4">生徒を登録した（重複していない）</label></li>
+<li><input type="checkbox" id="s7-5"><label for="s7-5">AI 用プロフィールの「全体要約」を書いた</label></li>
+<li><input type="checkbox" id="s7-6"><label for="s7-6">Slack に生徒チャンネルを作った</label></li>
+<li><input type="checkbox" id="s7-7"><label for="s7-7"><b><code>/invite @じゅくAI</code> で Bot を招待した</b></label></li>
+<li><input type="checkbox" id="s7-8"><label for="s7-8">チャンネル ID / ワークスペース ID を控えた</label></li>
+<li><input type="checkbox" id="s7-9"><label for="s7-9">チャンネル紐付けを登録した</label></li>
+<li><input type="checkbox" id="s7-10"><label for="s7-10">レポートを<b>承認して保存</b>し、Embedding 警告が出ないことを確認した</label></li>
+</ul>
+
+<div class="nav">
+<a href="step6_slackイベント購読.html">← 前へ: STEP 6 Slack イベント購読</a>
+<a href="step8_疎通確認.html">次へ: STEP 8 本番疎通確認 →</a>
+</div>
+
+</div>
+
+<script>
+(function(){
+  document.querySelectorAll('pre:not(.nocopy)').forEach(function(pre){
+    var w=document.createElement('div');w.className='codewrap';
+    pre.parentNode.insertBefore(w,pre);w.appendChild(pre);
+    var b=document.createElement('button');b.type='button';b.className='copy';b.textContent='コピー';
+    b.addEventListener('click',function(){
+      var el=pre.querySelector('code');var t=el?el.innerText:pre.innerText;
+      var done=function(ok){b.textContent=ok?'コピーしました':'手動でコピーしてください';
+        setTimeout(function(){b.textContent='コピー';},1600);};
+      if(navigator.clipboard&&window.isSecureContext){
+        navigator.clipboard.writeText(t).then(function(){done(true);},function(){done(false);});
+      }else{
+        try{var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';
+          document.body.appendChild(ta);ta.select();var ok=document.execCommand('copy');
+          document.body.removeChild(ta);done(ok);}catch(e){done(false);}
+      }
+    });
+    w.appendChild(b);
+  });
+  var key='jukuai-setup:'+location.pathname.split('/').pop();
+  document.querySelectorAll('ul.check input[type=checkbox]').forEach(function(cb){
+    var k=key+':'+cb.id;
+    try{if(localStorage.getItem(k)==='1')cb.checked=true;}catch(e){}
+    cb.addEventListener('change',function(){try{localStorage.setItem(k,cb.checked?'1':'0');}catch(e){}});
+  });
+})();
+</script>
+</body>
+</html>

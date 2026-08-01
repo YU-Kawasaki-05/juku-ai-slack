@@ -22,6 +22,7 @@ import {
   setKillSwitch,
   seedUsageLogs,
   shot,
+  shotErrorDetail,
   waitForMockCalls,
   withMention,
 } from './fixtures'
@@ -66,6 +67,7 @@ async function newBoundPerson(label: string, tag: string) {
 
 test('AT-40 kill_switch 停止中は LLM を呼ばずメンテナンス文言だけを返す（F-1）', async ({
   request,
+  page,
 }) => {
   const { channelId } = await newBoundPerson('停止中', 'KILL')
   const marker = `AT40MARKER${uniqueSuffix()}`
@@ -96,6 +98,11 @@ test('AT-40 kill_switch 停止中は LLM を呼ばずメンテナンス文言だ
 
     const logs = await findErrorLogs(channelId)
     expect(logs.some((l) => l.error_code === 'AI_PAUSED')).toBeTruthy()
+    await shotErrorDetail(page, {
+      channelId,
+      code: 'AI_PAUSED',
+      name: 'AT-40_kill_switch停止中はLLMを呼ばない',
+    })
   } finally {
     await resetKillSwitch()
   }

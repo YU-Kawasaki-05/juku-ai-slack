@@ -23,15 +23,29 @@ export interface EventFacts {
   /** 対応 MIME の画像（最大 MAX_IMAGES_PER_MESSAGE 枚）。FR-06 BR-06-01/02 */
   images: SlackFile[]
   hasImage: boolean
+  /** 枚数上限で切り捨てた対応画像の枚数。無通知の破棄を避けるため回答に添える案内に使う */
+  droppedImageCount: number
+}
+
+/**
+ * 対応 MIME の画像を最大枚数まで選び、上限超過で捨てた枚数も返す。
+ * 捨てた枚数を返すのは、4枚目以降が生徒にも運用者にも無通知で消えるのを防ぐため。
+ */
+export function selectSupportedImages(files: SlackFile[] | undefined): {
+  images: SlackFile[]
+  droppedCount: number
+} {
+  const supported = (SUPPORTED_IMAGE_MIMETYPES as readonly string[])
+  const all = (files ?? []).filter((f) => f.mimetype && supported.includes(f.mimetype))
+  return {
+    images: all.slice(0, MAX_IMAGES_PER_MESSAGE),
+    droppedCount: Math.max(0, all.length - MAX_IMAGES_PER_MESSAGE),
+  }
 }
 
 /** 対応 MIME の画像のみを最大枚数まで抽出する（サイズ検証は処理段で行う） */
 export function extractSupportedImages(files: SlackFile[] | undefined): SlackFile[] {
-  if (!files) return []
-  const supported = (SUPPORTED_IMAGE_MIMETYPES as readonly string[])
-  return files
-    .filter((f) => f.mimetype && supported.includes(f.mimetype))
-    .slice(0, MAX_IMAGES_PER_MESSAGE)
+  return selectSupportedImages(files).images
 }
 
 /**
@@ -109,7 +123,7 @@ export function stripBotMention(text: string | undefined, botUserId: string): st
 export function deriveEventFacts(event: SlackMessageEvent, botUserId: string): EventFacts {
   // スレッド返信 = thread_ts が存在し、親（ts）自身でない
   const isThreadReply = Boolean(event.thread_ts && event.thread_ts !== event.ts)
-  const images = extractSupportedImages(event.files)
+  const { images, droppedCount } = selectSupportedImages(event.files)
   return {
     hasBotId: Boolean(event.bot_id),
     subtype: event.subtype,
@@ -120,5 +134,6 @@ export function deriveEventFacts(event: SlackMessageEvent, botUserId: string): E
     messageTs: event.ts,
     images,
     hasImage: images.length > 0,
+    droppedImageCount: droppedCount,
   }
 }
