@@ -7,6 +7,7 @@ import { notFound } from 'next/navigation'
 import { createServerClient } from '@shared/lib/supabase/serverClient'
 import { getReport, updateReportAction } from '@features/reports'
 import { ReportForm } from '@features/reports/components/ReportForm'
+import { isUuid } from '../../../searchParams'
 
 export const metadata: Metadata = { title: 'レポート編集' }
 
@@ -16,6 +17,8 @@ export default async function EditReportPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  // UUID でない ID をそのままクエリすると Postgres 22P02 で 500 になるため事前に 404 に倒す（H-5）
+  if (!isUuid(id)) notFound()
   const report = await getReport(createServerClient(), id)
   if (!report) notFound()
 

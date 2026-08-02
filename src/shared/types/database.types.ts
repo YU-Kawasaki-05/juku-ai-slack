@@ -235,6 +235,7 @@ export type Database = {
           job_type: string
           max_attempts: number
           payload: Json
+          result_text: string | null
           scheduled_at: string
           started_at: string | null
           status: string
@@ -249,6 +250,7 @@ export type Database = {
           job_type: string
           max_attempts?: number
           payload: Json
+          result_text?: string | null
           scheduled_at?: string
           started_at?: string | null
           status?: string
@@ -263,10 +265,35 @@ export type Database = {
           job_type?: string
           max_attempts?: number
           payload?: Json
+          result_text?: string | null
           scheduled_at?: string
           started_at?: string | null
           status?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      kill_switches: {
+        Row: {
+          enabled: boolean
+          name: string
+          reason: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          enabled?: boolean
+          name: string
+          reason?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          enabled?: boolean
+          name?: string
+          reason?: string | null
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -831,6 +858,60 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      // migration 029 で追加（supabase gen types が使えない環境向けに手書きで整合させている）
+      admin_thread_list: {
+        Args: {
+          p_from?: string | null
+          p_has_error?: boolean | null
+          p_has_image?: boolean | null
+          p_limit?: number
+          p_model?: string | null
+          p_offset?: number
+          p_person_id?: string | null
+        }
+        Returns: {
+          channel_name: string | null
+          created_at: string
+          has_error: boolean
+          has_image: boolean
+          id: string
+          last_message_at: string | null
+          message_count: number
+          models: string[]
+          person_id: string
+          person_name: string | null
+          report_id: string | null
+          root_message_ts: string
+          slack_channel_id: string
+          slack_team_id: string
+          status: string
+          summary_message_count: number
+          thread_summary: string | null
+          thread_ts: string
+          total_count: number
+          updated_at: string
+        }[]
+      }
+      admin_usage_analytics: {
+        Args: {
+          p_from: string
+        }
+        Returns: Json
+      }
+      admin_used_models: {
+        Args: Record<string, never>
+        Returns: string[]
+      }
+      admin_usage_summary: {
+        Args: {
+          p_day_start: string
+          p_month_start: string
+        }
+        Returns: {
+          month_cost_usd: number
+          today_question_count: number
+        }[]
+      }
       match_report_chunks: {
         Args: {
           p_person_id: string
@@ -844,6 +925,14 @@ export type Database = {
           report_id: string
           similarity: number
         }[]
+      }
+      rebuild_report_chunks: {
+        Args: {
+          p_chunks: Json
+          p_report_id: string
+          p_updated_at?: string
+        }
+        Returns: number
       }
     }
     Enums: {

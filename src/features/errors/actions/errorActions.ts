@@ -5,7 +5,7 @@
  * 例外: 認証・DB エラーは ActionResult に変換
  * 依存: requireStaff, createServerClient, errorLogSchema
  * 副作用: ai_error_logs の update、一覧/詳細の revalidate
- * セキュリティ: requireStaff 必須（FR-13, EP-17 は staff/admin とも可）。
+ * セキュリティ: requireStaff で staff/admin ロール必須（FR-13, EP-17 は staff/admin とも可）。
  *   resolved は手動でのみ変更（BR-17-03）。Service Role はサーバー専用
  * @implements FR-17, AC-17-02, AC-17-03, BR-17-03
  */
@@ -14,6 +14,7 @@
 import { revalidatePath } from 'next/cache'
 import { createServerClient } from '@shared/lib/supabase/serverClient'
 import { requireStaff } from '@shared/lib/auth/requireStaff'
+import { staffAuthFailure } from '@shared/lib/auth/authFailure'
 import type { ActionResult } from '@shared/types/action'
 import { errorNotesSchema, resolveErrorSchema } from '../schemas/errorLogSchema'
 
@@ -23,8 +24,8 @@ export async function resolveErrorAction(
 ): Promise<ActionResult> {
   try {
     await requireStaff()
-  } catch {
-    return { ok: false, error: 'ログインが必要です' }
+  } catch (e) {
+    return staffAuthFailure(e)
   }
 
   const parsed = resolveErrorSchema.safeParse({
@@ -36,11 +37,14 @@ export async function resolveErrorAction(
   }
 
   const db = createServerClient()
-  const { error } = await db
+  // H-10: .select('id') を付けないと 0 行マッチ（削除済み ID 等）でも成功扱いになる
+  const { data, error } = await db
     .from('ai_error_logs')
     .update({ resolved: parsed.data.resolved })
     .eq('id', parsed.data.id)
+    .select('id')
   if (error) return { ok: false, error: '更新に失敗しました' }
+  if (!data || data.length === 0) return { ok: false, error: '対象が見つかりません' }
 
   revalidatePath('/admin/errors')
   revalidatePath(`/admin/errors/${parsed.data.id}`)
@@ -54,8 +58,8 @@ export async function updateErrorNotesAction(
 ): Promise<ActionResult> {
   try {
     await requireStaff()
-  } catch {
-    return { ok: false, error: 'ログインが必要です' }
+  } catch (e) {
+    return staffAuthFailure(e)
   }
 
   const parsed = errorNotesSchema.safeParse({
@@ -67,11 +71,14 @@ export async function updateErrorNotesAction(
   }
 
   const db = createServerClient()
-  const { error } = await db
+  // H-10: .select('id') を付けないと 0 行マッチ（削除済み ID 等）でも成功扱いになる
+  const { data, error } = await db
     .from('ai_error_logs')
     .update({ notes: parsed.data.notes })
     .eq('id', parsed.data.id)
+    .select('id')
   if (error) return { ok: false, error: '保存に失敗しました' }
+  if (!data || data.length === 0) return { ok: false, error: '対象が見つかりません' }
 
   revalidatePath(`/admin/errors/${parsed.data.id}`)
   return { ok: true }

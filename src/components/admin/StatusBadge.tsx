@@ -47,6 +47,13 @@ const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string 
   // ai_error_logs の対応状況（FR-17）
   resolved: { label: '対応済み', ...emerald },
   unresolved: { label: '未対応', ...amber },
+  // student_profiles の試験期間（FR-09 / DEC-18）。列の値ではなく exam_mode_until の期間判定結果
+  exam_mode: { label: '試験期間中', ...amber },
+  // jobs（FR-04 / F-4。error/warning と語彙が重ならないよう DB の値をそのままキーにする）
+  pending: { label: '待機中', ...amber },
+  processing: { label: '処理中', ...blue },
+  completed: { label: '完了', ...emerald },
+  failed: { label: '失敗', ...red },
 }
 
 // 未知の status は生の値のまま中立色で表示する（enum 追加時に UI が壊れないように）

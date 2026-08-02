@@ -37,6 +37,8 @@ export const processSlackMessagePayloadSchema = z.object({
       }),
     )
     .optional(),
+  /** 枚数上限（MAX_IMAGES_PER_MESSAGE）で切り捨てた画像の枚数。無通知の破棄を生徒に伝えるため */
+  droppedImageCount: z.number().int().nonnegative().optional(),
 })
 
 export type ProcessSlackMessagePayload = z.infer<typeof processSlackMessagePayloadSchema>

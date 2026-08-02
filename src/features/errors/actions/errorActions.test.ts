@@ -33,9 +33,17 @@ describe('resolveErrorAction', () => {
     expect(createServerClient).not.toHaveBeenCalled()
   })
 
+  // ロール未設定は「ログインし直せ」では解決しないので文言を分ける（AT-05）
+  it('ロール未設定は権限がない旨を返す（DB に触れない）', async () => {
+    vi.mocked(requireStaff).mockRejectedValue(new Error('forbidden'))
+    const r = await resolveErrorAction(undefined, fd({ id: ERROR_ID, resolved: 'true' }))
+    expect(r).toEqual({ ok: false, error: 'このアカウントには管理画面の利用権限がありません' })
+    expect(createServerClient).not.toHaveBeenCalled()
+  })
+
   it('resolved を更新して ok を返す', async () => {
     staffOk()
-    const db = createMockDb({ thenable: { error: null } })
+    const db = createMockDb({ thenable: { data: [{ id: ERROR_ID }], error: null } })
     vi.mocked(createServerClient).mockReturnValue(db)
     const r = await resolveErrorAction(undefined, fd({ id: ERROR_ID, resolved: 'true' }))
     expect(r).toEqual({ ok: true })
@@ -47,12 +55,19 @@ describe('resolveErrorAction', () => {
     const r = await resolveErrorAction(undefined, fd({ id: ERROR_ID, resolved: 'yes' }))
     expect(r).toEqual({ ok: false, error: '入力内容を確認してください' })
   })
+
+  it('H-10: 0 行マッチなら「更新しました」ではなく対象なしエラーを返す', async () => {
+    staffOk()
+    vi.mocked(createServerClient).mockReturnValue(createMockDb({ thenable: { data: [], error: null } }))
+    const r = await resolveErrorAction(undefined, fd({ id: ERROR_ID, resolved: 'true' }))
+    expect(r).toEqual({ ok: false, error: '対象が見つかりません' })
+  })
 })
 
 describe('updateErrorNotesAction', () => {
   it('メモを保存する', async () => {
     staffOk()
-    const db = createMockDb({ thenable: { error: null } })
+    const db = createMockDb({ thenable: { data: [{ id: ERROR_ID }], error: null } })
     vi.mocked(createServerClient).mockReturnValue(db)
     const r = await updateErrorNotesAction(undefined, fd({ id: ERROR_ID, notes: '再発なし' }))
     expect(r).toEqual({ ok: true })
@@ -61,9 +76,16 @@ describe('updateErrorNotesAction', () => {
 
   it('空メモは null に正規化して保存する', async () => {
     staffOk()
-    const db = createMockDb({ thenable: { error: null } })
+    const db = createMockDb({ thenable: { data: [{ id: ERROR_ID }], error: null } })
     vi.mocked(createServerClient).mockReturnValue(db)
     await updateErrorNotesAction(undefined, fd({ id: ERROR_ID, notes: '   ' }))
     expect(db.__calls.update[0]).toEqual({ notes: null })
+  })
+
+  it('H-10: 0 行マッチなら対象なしエラーを返す', async () => {
+    staffOk()
+    vi.mocked(createServerClient).mockReturnValue(createMockDb({ thenable: { data: [], error: null } }))
+    const r = await updateErrorNotesAction(undefined, fd({ id: ERROR_ID, notes: 'x' }))
+    expect(r).toEqual({ ok: false, error: '対象が見つかりません' })
   })
 })

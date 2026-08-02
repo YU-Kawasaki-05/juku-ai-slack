@@ -2,7 +2,7 @@
 id: FR-09
 title: 生徒プロフィール要約
 priority: P0
-status: defined
+status: implemented
 related_users: [U-02, U-03]
 related_screens: [SCR-04]
 version: 1
@@ -70,13 +70,16 @@ And プロフィールなしで（一般的な回答として）AIが回答す�
 
 ## 実装ステータス（Phase 4 が更新）
 
-- 実装ファイル（読み取りのみ）: `src/features/student-profiles/lib/getStudentProfile.ts`（回答生成時に参照）
-- テストファイル: `getStudentProfile.test.ts`
-- 最終確認Sprint: Sprint 7（部分）
-
-### 部分実装（Sprint 7 整合性チェックの検証結果）
-
-- ✅ プロフィールの**読み取り**（回答生成時の profileText 注入・exam_mode 変換）は実装済み
-- ⚠️ **未実装**: AC-09-01 プロフィール要約の作成・UPSERT。student_profiles への書き込み経路が
-  リポジトリに存在せず、管理画面（SCR-04）にも編集 UI が無い（BR-09-01 未達）。
-- status は主要 AC 未達のため `defined` を維持。次スプリントで書き込み経路 + 管理画面編集を実装予定。
+- 実装ファイル:
+  - 読み取り（AI）: `src/features/student-profiles/lib/getStudentProfile.ts`, `src/features/ai-answer/lib/buildPrompt.ts`（profileText 注入）, `src/features/jobs/lib/executeProcessMessage.ts`
+  - 書き込み（管理画面）: `src/features/student-profiles/actions/studentProfileActions.ts`, `schemas/studentProfileSchema.ts`, `components/StudentProfileForm.tsx`, `lib/{getStudentProfileRow,examPeriod}.ts`, `src/app/admin/persons/[id]/page.tsx`
+- テストファイル: `getStudentProfile.test.ts`, `getStudentProfileRow.test.ts`, `examPeriod.test.ts`, `studentProfileSchema.test.ts`, `studentProfileActions.test.ts`, `StudentProfileForm.test.tsx`, `executeProcessMessage.test.ts`（AC-09-02/03 の結線）
+- 最終確認Sprint: Sprint 8（F-3 対応）
+- 備考:
+  - 列は migration 002 のまま（summary / learning_style / strengths / weaknesses / instruction_notes /
+    exam_mode_until / exam_subjects）。追加 migration は不要だった
+  - AC-09-01 は SCR-04 の「AI 用プロフィール」カードから `person_id` を onConflict キーに UPSERT（BR-09-01）
+  - 試験期間（DEC-18）は「最終日（JST の暦日）」で入力し、その日の 24:00 JST を `exam_mode_until` に保存する。
+    期限切れの値はフォーム初期値として復元しない（ON に見えて効いていない状態を作らないため）
+  - summary は FR-09 の入力定義上は必須だが、試験期間だけ設定したい運用を塞がないため任意入力にしている
+    （BR-09-04 でプロフィール不在は許容されている）

@@ -43,8 +43,11 @@ export function chunkReport(markdown: string, maxChars: number = RAG_CHUNK_MAX_C
           chunks.push(buf.trim())
           buf = ''
         }
-        for (let i = 0; i < p.length; i += maxChars) {
-          chunks.push(p.slice(i, i + maxChars).trim())
+        // コードポイント単位で切る。UTF-16 のまま slice すると絵文字等のサロゲートペアが
+        // 分断され、孤立サロゲートが embedding リクエストと content に混入する
+        const codePoints = [...p]
+        for (let i = 0; i < codePoints.length; i += maxChars) {
+          chunks.push(codePoints.slice(i, i + maxChars).join('').trim())
         }
         continue
       }

@@ -59,8 +59,12 @@ export type SlackMessageEvent = z.infer<typeof slackMessageEventSchema>
 export type SlackEventCallback = z.infer<typeof slackEventCallbackSchema>
 export type SlackEnvelope = z.infer<typeof slackEnvelopeSchema>
 
-/** チャンネル紐付けの状態 */
-export type BindingStatus = 'active' | 'inactive' | 'none'
+/**
+ * チャンネル紐付けの状態。
+ * person_inactive は「紐付けは生きているが生徒が退塾済み（persons.status != active）」。
+ * inactive / none は案内文言を返すが、person_inactive は無言で無視する（H-6）
+ */
+export type BindingStatus = 'active' | 'inactive' | 'person_inactive' | 'none'
 
 /** 反応制御の判定に必要な入力（DB 参照結果を注入する純粋関数用）。FR-02 */
 export interface ShouldReactInput {

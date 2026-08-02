@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STEP 9 運用ガイド | じゅくAI セットアップガイド</title>
+<style>
+:root{--fg:#191c21;--muted:#5c6470;--line:#d9dee6;--bg:#fff;--soft:#f6f8fa;--soft2:#eef2f7;--accent:#1f5fa9;--code:#0f2b46;
+--warn:#7a4d00;--warnbg:#fff8e8;--warnline:#e6c579;--danger:#96262c;--dangerbg:#fdf1f2;--dangerline:#e3adb1;
+--ok:#1a6444;--okbg:#f0f8f4;--okline:#a5d5bd;--info:#144a73;--infobg:#eef6fc;--infoline:#9dc6e4;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);line-height:1.85;font-size:16px;
+font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,-apple-system,"Segoe UI",sans-serif;}
+.wrap{max-width:940px;margin:0 auto;padding:28px 20px 90px}
+.topbar{border-bottom:1px solid var(--line);background:var(--soft);}
+.topbar .inner{max-width:940px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
+.topbar a{color:var(--accent);text-decoration:none}
+.topbar a:hover{text-decoration:underline}
+.crumb{font-size:13px;color:var(--muted)}
+h1{font-size:27px;line-height:1.45;margin:26px 0 8px;letter-spacing:.01em}
+h2{font-size:21px;margin:44px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--line)}
+h3{font-size:17px;margin:30px 0 8px}
+h4{font-size:15px;margin:22px 0 6px;color:var(--muted)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:1.6em}
+li{margin:5px 0}
+code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13.5px;
+background:var(--soft2);padding:1px 5px;border-radius:3px;word-break:break-all}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:14px 14px;overflow-x:auto;
+font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13px;line-height:1.7;color:var(--code);margin:12px 0}
+pre code{background:none;padding:0;font-size:13px;word-break:normal}
+.codewrap{position:relative}
+.codewrap>pre{padding-right:82px}
+.copy{position:absolute;top:8px;right:8px;font:inherit;font-size:12px;padding:3px 10px;border:1px solid var(--line);
+background:#fff;color:var(--muted);border-radius:4px;cursor:pointer}
+.copy:hover{color:var(--fg);border-color:var(--muted)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--soft2);font-weight:600;white-space:nowrap}
+td code{font-size:12.8px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scroll table{min-width:640px}
+.scroll.wide table{min-width:880px}
+.note,.warnbox,.dangerbox,.okbox{border:1px solid;border-radius:6px;padding:12px 14px;margin:16px 0;font-size:15px}
+.note{border-color:var(--infoline);background:var(--infobg);color:var(--info)}
+.warnbox{border-color:var(--warnline);background:var(--warnbg);color:var(--warn)}
+.dangerbox{border-color:var(--dangerline);background:var(--dangerbg);color:var(--danger)}
+.okbox{border-color:var(--okline);background:var(--okbg);color:var(--ok)}
+.note b,.warnbox b,.dangerbox b,.okbox b{font-weight:700}
+.note p:first-child,.warnbox p:first-child,.dangerbox p:first-child,.okbox p:first-child{margin-top:0}
+.note p:last-child,.warnbox p:last-child,.dangerbox p:last-child,.okbox p:last-child{margin-bottom:0}
+.note code,.warnbox code,.dangerbox code,.okbox code{background:rgba(255,255,255,.7)}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 6px}
+.meta div{flex:1 1 240px;border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--soft)}
+.meta .k{font-size:12px;color:var(--muted);display:block;margin-bottom:2px}
+.meta .v{font-size:15px;font-weight:600;line-height:1.6}
+.meta .v ul{margin:2px 0 0;padding-left:1.3em;font-weight:400;font-size:14px}
+ul.check{list-style:none;padding-left:0}
+ul.check li{margin:6px 0;display:flex;gap:9px;align-items:flex-start}
+ul.check input{margin-top:7px;flex:0 0 auto;width:15px;height:15px}
+ul.check label{cursor:pointer}
+.steps{list-style:none;padding-left:0;margin:20px 0}
+.steps li{border:1px solid var(--line);border-radius:7px;margin:10px 0;padding:0}
+.steps a{display:block;padding:13px 16px;text-decoration:none;color:inherit}
+.steps a:hover{background:var(--soft)}
+.steps .n{display:inline-block;min-width:74px;font-size:12px;color:#fff;background:var(--accent);border-radius:11px;
+padding:1px 9px;text-align:center;margin-right:10px;vertical-align:2px}
+.steps .n.alt{background:#6b7280}
+.steps .t{font-weight:600;font-size:16.5px}
+.steps .d{display:block;color:var(--muted);font-size:14px;margin-top:3px;padding-left:0}
+.steps .tm{float:right;color:var(--muted);font-size:13px;font-weight:400}
+.nav{display:flex;justify-content:space-between;gap:14px;margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:15px}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+.nav span{color:#b6bcc6}
+.ph{background:#fff5d6;border-bottom:1px dotted #b08a19;padding:0 2px;font-weight:600}
+.diagram{font-size:12.5px;line-height:1.55;background:#fff;border:1px solid var(--line)}
+.small{font-size:13.5px;color:var(--muted)}
+.req{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap}
+.req.y{background:#fde8e8;color:#96262c;border:1px solid #e3adb1}
+.req.n{background:#eef2f7;color:#5c6470;border:1px solid #d9dee6}
+.req.r{background:#fff3d9;color:#7a4d00;border:1px solid #e6c579}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+a{color:var(--accent)}
+@media print{
+ .topbar,.nav,.copy{display:none}
+ body{font-size:11.5pt}
+ a{color:#000;text-decoration:none}
+ pre,table,.note,.warnbox,.dangerbox,.okbox{page-break-inside:avoid}
+ h2{page-break-after:avoid}
+}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="inner">
+<span class="crumb"><a href="index.html">目次</a> ／ STEP 9 / 9 — 運用ガイド</span>
+<span class="crumb"><a href="troubleshooting.html">次へ →</a></span>
+</div></div>
+
+<div class="wrap">
+
+<h1>STEP 9 — 運用ガイド（引き渡し前に読む）</h1>
+<p>ここは<b>塾側の担当者に説明する内容</b>です。セットアップした本人だけが知っている状態にせず、
+このページを一緒に見ながら引き渡してください。</p>
+
+<div class="meta">
+<div><span class="k">所要時間</span><span class="v">約 15 分（説明を含む）</span></div>
+<div><span class="k">対象</span><span class="v">塾の運用担当者（staff）と管理者（admin）</span></div>
+</div>
+
+<h2 id="kill">9-1. 緊急停止（一番最初に教えること）</h2>
+
+<div class="dangerbox">
+<p><b>「AI が変なことを言っている」「コストが暴れている」ときに、まずやるのはこれです。</b>
+デプロイも環境変数の変更も不要で、<b>数秒で全生徒への回答を止められます</b>。</p>
+</div>
+
+<h3>止め方</h3>
+<ol>
+<li><code>/admin</code> を開く（<b>ダッシュボードの一番上</b>に <b>AI応答</b> カードがあります）</li>
+<li><b>AI応答を停止</b> をクリック</li>
+<li>理由を入力（例 <code>LLM プロバイダ障害のため一時停止</code>）— 任意ですが<b>必ず書いてください</b>。#alerts と管理画面に残ります</li>
+<li><b>停止する</b></li>
+</ol>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>項目</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td><b>誰ができるか</b></td><td><code>admin</code> のみ。<code>staff</code> はカードを見られるが操作すると <code>AI応答の停止・再開は管理者のみ実行できます</code> で拒否される</td></tr>
+<tr><td><b>止まると何が起きるか</b></td><td>🤔 も付かず、質問には定型文だけが返る:<br>
+<code>いまメンテナンス中でお返事ができないんだ :bow: しばらく経ってからもう一度質問してね。</code><br>
+<b>LLM は呼ばれないので課金も止まります</b></td></tr>
+<tr><td><b>通知</b></td><td><code>SLACK_ALERTS_CHANNEL_ID</code> を設定していれば #alerts に「操作者・理由・時刻」が投稿される。
+<b>状態が変わったときだけ</b>通知される（同じ操作の連打では飛ばない）</td></tr>
+<tr><td><b>再開</b></td><td>同じカードの <b>AI応答を再開</b>。カードが緑の <b>稼働中</b> に戻る</td></tr>
+<tr><td><b>止まらなかった場合</b></td><td>スイッチが読めないときは<b>安全側ではなく稼働側</b>に倒れる設計（全生徒が突然無応答になる事故を避けるため）。
+どうしても止められないときは Vercel のデプロイを停止するか、Slack アプリのイベント購読を Off にする</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="warnbox">
+<p><b>停止したことを忘れないでください。</b>ダッシュボードを開けばカードが赤い <b>停止中</b> になっているので、
+朝いちばんに <code>/admin</code> を見る運用にしておくと取りこぼしません。</p>
+</div>
+
+<h2>9-2. レート制限（生徒 1 人あたり 10 回 / 時）</h2>
+
+<p>1 人の生徒が<b>直近 1 時間に 10 回</b>回答を受け取ると、それ以降の質問には次の定型文が返ります。</p>
+
+<pre class="nocopy"><code>今日はたくさん質問してくれてありがとう！ちょっと休憩して、1時間ほどしてからまた質問してね :relaxed:</code></pre>
+
+<div class="scroll">
+<table>
+<thead><tr><th>項目</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td>単位</td><td><b>生徒ごと</b>（チャンネルごとではない）</td></tr>
+<tr><td>判定タイミング</td><td><b>LLM を呼ぶ前</b>。超過ぶんは<b>課金されません</b></td></tr>
+<tr><td>数え方</td><td>直近 1 時間に<b>成功した回答</b>の件数。スレッド要約や内部処理はカウントされない</td></tr>
+<tr><td>記録</td><td><code>/admin/errors</code> に <code>RATE_LIMITED</code>（深刻度 <b>情報</b>）。既定のフィルタでは表示されない</td></tr>
+<tr><td>解除</td><td>自動。1 時間のスライド窓なので、古い質問が窓から外れれば再び使える</td></tr>
+<tr><td>変更したい場合</td><td><code>src/shared/lib/constants.ts</code> の <code>RATE_LIMIT_QUESTIONS_PER_HOUR</code> を変更 → 再デプロイ（コード変更）</td></tr>
+</tbody>
+</table>
+</div>
+
+<p class="small">「生徒から『使えない』と言われた」ときは、まずこれを疑ってください。
+<code>/admin/errors</code> の深刻度フィルタを <b>すべて</b> にして <code>RATE_LIMITED</code> を探します。</p>
+
+<h2 id="jobs">9-3. ジョブ管理（/admin/jobs）の見方</h2>
+
+<p>生徒の質問は 1 件ずつ「ジョブ」として処理されます。この画面は<b>詰まりを見つける場所</b>です。</p>
+
+<h3>3 つの KPI</h3>
+<div class="scroll wide">
+<table>
+<thead><tr><th>カード</th><th>正常</th><th>滞留しているときの意味</th></tr></thead>
+<tbody>
+<tr><td><b>待機中</b><br><span class="small">登録からの最長待ち時間</span></td><td><code>滞留なし</code></td>
+<td>受け付けたが処理が始まっていない。数分で消えるなら正常な通過状態。<b>15 分以上</b>残るならバックグラウンド実行が起動していない</td></tr>
+<tr><td><b>処理中</b><br><span class="small">実行開始からの最長経過</span></td><td><code>滞留なし</code></td>
+<td>処理が始まったまま終わっていない。<b>10 分以上</b>は異常（関数のタイムアウト・プランの実行時間上限を疑う）</td></tr>
+<tr><td><b>失敗</b><br><span class="small">最も古い失敗からの経過</span></td><td><code>滞留なし</code></td>
+<td>回答できなかった質問がある。<b>生徒は待ちぼうけです。</b>最優先で対応する</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>スイープ（滞留ジョブの回収）</h3>
+<p>このアプリは Cron を使いません。代わりに <b>この画面を開いたとき</b>に自動で回収処理が走ります（60 秒に 1 回まで）。
+手動で走らせたいときは <b>スイープ実行</b> ボタンを押してください。</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>スイープがやること</th><th>基準</th></tr></thead>
+<tbody>
+<tr><td><code>処理中</code> のまま固まったジョブを <code>失敗</code> にする</td><td>開始から <b>10 分</b>超過</td></tr>
+<tr><td><code>待機中</code> のまま放置されたジョブを <code>失敗</code> にする</td><td>登録から <b>15 分</b>超過</td></tr>
+<tr><td>古いジョブ記録を削除</td><td>完了系のみ <b>7 日</b>経過</td></tr>
+<tr><td>古い Slack イベント受信記録を削除</td><td><b>30 日</b>経過</td></tr>
+</tbody>
+</table>
+</div>
+
+<p class="small">回収して <code>失敗</code> にしても、<b>生徒には何も通知されません</b>
+（すでに回答が届いている可能性があり、二重に案内すると混乱するため）。滞留を見つけたら人が判断します。</p>
+
+<h3>失敗ジョブの再実行</h3>
+<p><code>失敗</code> の行にだけ <b>再実行</b> ボタンが出ます。押すと確認ダイアログが表示されます。</p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>ダイアログの文言</th><th>意味</th><th>コスト</th></tr></thead>
+<tbody>
+<tr><td><code>生成済みの回答が残っているため、AI を呼び直さず Slack への投稿だけをやり直します。</code></td>
+<td>回答は作れていたが Slack への投稿で失敗したケース</td><td><b>かからない</b></td></tr>
+<tr><td><code>AI 回答を生成し直して Slack に投稿します（API 利用コストが発生します）。</code></td>
+<td>回答生成そのものが失敗したケース</td><td><b>かかる</b></td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="okbox">
+<p><b>二重返信ガード</b>: 再実行の直前に「同じスレッドに Bot の返信がすでにあるか」を必ず確認します。
+配信済みなら<b>実行せずに完了として記録</b>し、<code>既に回答が配信済みのため再実行せず、完了として記録しました（二重返信の防止）</code> と表示されます。
+<b>安心して押して構いません。</b>誤って同じ回答が 2 回投稿されることはありません。</p>
+</div>
+
+<h2>9-4. エラー対応フロー（/admin/errors）</h2>
+
+<p><b>1 日 1 回、朝に開く</b>のを習慣にしてください。ダッシュボードの <b>未対応エラー</b> の数字が入口です。</p>
+
+<h3>手順</h3>
+<ol>
+<li><code>/admin</code> の <b>未対応エラー</b> が 0 なら何もしなくてよい</li>
+<li>1 以上なら <b>エラー管理を開く →</b> をクリック（未対応で絞り込まれた状態で開く）</li>
+<li>エラーコードをクリックして詳細を見る</li>
+<li>下の表で対応を判断する</li>
+<li>対応が終わったら <b>対応済みにする</b>。何をしたかを <b>対応メモ</b> に残す</li>
+</ol>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>コード</th><th>意味</th><th>やること</th><th>緊急度</th></tr></thead>
+<tbody>
+<tr><td><code>AI_RESPONSE_FAILED</code></td><td>LLM 呼び出しの失敗</td><td>「内部エラー詳細」を確認。API キーの失効・残高切れ・モデル名の誤りが典型。連続するなら緊急停止して調査</td><td><b>高</b></td></tr>
+<tr><td><code>AI_RATE_LIMITED</code></td><td><b>プロバイダ側</b>の 429（生徒のレート制限ではない）</td><td>自動リトライされる（5秒→15秒→45秒）。頻発するならプランの引き上げか、モデル変更を検討</td><td>中</td></tr>
+<tr><td><code>AI_TIMEOUT</code> / <code>JOB_TIMEOUT</code></td><td>生成に時間がかかりすぎた</td><td>単発なら様子見。頻発するならモデルを軽いものに変更</td><td>中</td></tr>
+<tr><td><code>SLACK_POST_FAILED</code></td><td>Slack への投稿に失敗</td><td>Bot がチャンネルから外されていないか確認。<code>/invite</code> し直す</td><td><b>高</b></td></tr>
+<tr><td><code>SLACK_FILE_DOWNLOAD_FAILED</code></td><td>画像の取得に失敗</td><td>単発なら Slack 側の一時障害。頻発するなら <code>files:read</code> スコープを確認</td><td>低</td></tr>
+<tr><td><code>CHANNEL_NOT_BOUND</code></td><td>紐付けの無いチャンネルでメンションされた</td><td>正当なチャンネルなら<a href="step7_管理ユーザーと生徒登録.html">紐付けを登録</a>。無関係なら Bot を退出させる</td><td>低</td></tr>
+<tr><td><code>UNSUPPORTED_FILE_TYPE</code> / <code>IMAGE_TOO_LARGE</code></td><td>生徒の操作ミス</td><td>生徒に伝え方を案内（画像は jpg/png、20MB 以下）</td><td>低</td></tr>
+<tr><td><code>THREAD_SUMMARY_FAILED</code> / <code>EVALUATOR_FAILED</code></td><td>回答後の内部処理の失敗</td><td><b>回答自体は生徒に届いている。</b>頻発しなければ無視してよい</td><td>低</td></tr>
+</tbody>
+</table>
+</div>
+
+<p class="small">既定では <b>エラー・警告</b> のみ表示されます。<code>RATE_LIMITED</code> や重複イベントなどの
+<b>情報</b> レベルは、深刻度フィルタを <b>すべて</b> にしたときだけ見えます（正常動作の記録なので普段は隠されています）。</p>
+
+<h2 id="taijuku">9-5. 退塾・休塾時の処理</h2>
+
+<div class="dangerbox">
+<p><b>生徒を削除しないでください。</b>会話ログ・レポート・利用実績が紐付いており、
+消すと過去の記録が追えなくなります。<b>「無効」にするのが正しい手順です。</b></p>
+</div>
+
+<h3>手順</h3>
+<ol>
+<li><b>生徒管理</b> → 対象の生徒を開く</li>
+<li><b>ステータス</b> を <b>無効</b> に変更 → <b>保存</b></li>
+</ol>
+
+<div class="scroll">
+<table>
+<thead><tr><th>無効にすると</th><th>挙動</th></tr></thead>
+<tbody>
+<tr><td>Bot の応答</td><td><b>完全に沈黙する。</b>メンションしても何も返さない（案内文も出さない）</td></tr>
+<tr><td>集計</td><td>ダッシュボードの生徒数・各種集計から<b>除外される</b></td></tr>
+<tr><td>選択肢</td><td>レポート作成・チャンネル紐付けの生徒選択肢に<b>出なくなる</b></td></tr>
+<tr><td>記録</td><td><b>残る。</b>生徒一覧・会話ログ・レポートからは引き続き参照できる</td></tr>
+<tr><td>ログ</td><td>質問が来ると <code>PERSON_INACTIVE</code>（<b>情報</b> レベル）が記録される</td></tr>
+</tbody>
+</table>
+</div>
+
+<p class="small">Slack のチャンネル自体はアーカイブしておくと、生徒側にも「終わった」ことが伝わります。
+復塾したら<b>有効</b>に戻すだけで元通り動きます。</p>
+
+<h3>チャンネルだけ止めたい場合</h3>
+<p>生徒は在籍したままチャンネルの Bot だけ止めるなら、<b>チャンネル設定</b> → 該当行 → <b>ステータス</b> を <b>無効</b> に。
+この場合は「まだ設定が完了していない」という案内文が返るようになります。</p>
+
+<h2>9-6. 月次のコスト確認</h2>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>頻度</th><th>やること</th><th>見るところ</th></tr></thead>
+<tbody>
+<tr><td>毎日</td><td>未対応エラーの確認</td><td><code>/admin</code> のダッシュボード</td></tr>
+<tr><td>毎週</td><td>質問数の推移に異常な跳ねが無いか</td><td><code>/admin/usage</code> の <b>日別 質問数</b>（7日）</td></tr>
+<tr><td><b>毎月</b></td><td><b>推定コストと実請求の突き合わせ</b></td><td><code>/admin/usage</code>（30日）+ プロバイダの請求ページ</td></tr>
+<tr><td>モデル変更時</td><td><code>MODEL_PRICING</code> の更新</td><td><code>src/shared/lib/constants.ts</code></td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="warnbox">
+<p><b>管理画面のコストは「推定値」です。</b>アプリ内の単価表から計算しているので、次のズレが出ます。</p>
+<ul>
+<li><b>単価未登録のモデルは $0.00 になる</b>（トークン数は正しく記録される）→ <a href="step1_事前準備.html#pricing">STEP 1</a></li>
+<li><b>Embedding のコストは含まれない</b>（LLM 呼び出しのみ記録）</li>
+<li>プロバイダが単価を改定しても自動では追随しない</li>
+</ul>
+<p>月に一度は<b>プロバイダの請求額を正</b>として突き合わせ、乖離が大きければ単価表を更新してください。</p>
+</div>
+
+<h3>コストが急に増えたときの調べ方</h3>
+<ol>
+<li><code>/admin/usage</code> → <b>日別 コスト</b> でいつから増えたかを特定</li>
+<li><b>生徒別 質問数（上位10）</b> で特定の生徒に偏っていないか確認</li>
+<li><b>モデル別 利用回数</b> で意図しない高額モデルが使われていないか確認</li>
+<li>異常なら <a href="#kill">緊急停止</a>してから原因を調べる</li>
+</ol>
+
+<h2>9-7. バックアップ</h2>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>対象</th><th>方法</th><th>頻度</th></tr></thead>
+<tbody>
+<tr><td><b>DB（生徒・レポート・会話ログ）</b></td>
+<td>Supabase Pro の<b>自動日次バックアップ</b>（7 日保持）。Dashboard → <b>Database → Backups</b> から復元
+<br><span class="small">Free プランには自動バックアップがありません</span></td>
+<td>自動</td></tr>
+<tr><td><b>手動スナップショット</b></td>
+<td>大きな変更（一括登録・migration 追加）の<b>前</b>に取る:<br>
+<code>pnpm exec supabase db dump -f backup.sql --linked</code></td>
+<td>都度</td></tr>
+<tr><td><b>添付画像</b></td>
+<td>Storage の <code>attachments</code> バケット。日次バックアップの対象外なので、
+重要なら Dashboard から手動ダウンロード</td>
+<td>任意</td></tr>
+<tr><td><b>環境変数</b></td>
+<td>Vercel の設定値一式を<b>パスワードマネージャに控える</b>。
+プロジェクトを作り直すときに一番困るのがこれ</td>
+<td>変更時</td></tr>
+<tr><td><b>コード</b></td>
+<td>GitHub。<code>MODEL_PRICING</code> を編集したら必ずコミットする</td>
+<td>変更時</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>9-8. 引き渡しチェックリスト</h2>
+
+<p>塾側の担当者に、以下を<b>実際に画面を見せながら</b>説明してください。</p>
+
+<ul class="check">
+<li><input type="checkbox" id="s9-1"><label for="s9-1">ログイン方法とパスワード変更の手順を伝えた</label></li>
+<li><input type="checkbox" id="s9-2"><label for="s9-2"><b>緊急停止の場所と手順</b>を実演した（admin のみ操作可であることも）</label></li>
+<li><input type="checkbox" id="s9-3"><label for="s9-3">毎朝ダッシュボードの<b>未対応エラー</b>を見る運用を決めた</label></li>
+<li><input type="checkbox" id="s9-4"><label for="s9-4">生徒追加の手順（生徒登録 → プロフィール → チャンネル作成 → <b><code>/invite</code></b> → 紐付け）を渡した</label></li>
+<li><input type="checkbox" id="s9-5"><label for="s9-5">退塾時は<b>削除ではなく「無効」</b>と伝えた</label></li>
+<li><input type="checkbox" id="s9-6"><label for="s9-6">レート制限（10 回/時）の存在を伝えた</label></li>
+<li><input type="checkbox" id="s9-7"><label for="s9-7">月次のコスト確認の担当と頻度を決めた</label></li>
+<li><input type="checkbox" id="s9-8"><label for="s9-8">トラブル時の連絡先（あなた）と <a href="troubleshooting.html">トラブルシューティング</a> の場所を伝えた</label></li>
+<li><input type="checkbox" id="s9-9"><label for="s9-9">AI 応答が<b>稼働中</b>であることを最後に確認した</label></li>
+</ul>
+
+<div class="nav">
+<a href="step8_疎通確認.html">← 前へ: STEP 8 本番疎通確認</a>
+<a href="troubleshooting.html">次へ: 別冊 トラブルシューティング →</a>
+</div>
+
+</div>
+
+<script>
+(function(){
+  document.querySelectorAll('pre:not(.nocopy)').forEach(function(pre){
+    var w=document.createElement('div');w.className='codewrap';
+    pre.parentNode.insertBefore(w,pre);w.appendChild(pre);
+    var b=document.createElement('button');b.type='button';b.className='copy';b.textContent='コピー';
+    b.addEventListener('click',function(){
+      var el=pre.querySelector('code');var t=el?el.innerText:pre.innerText;
+      var done=function(ok){b.textContent=ok?'コピーしました':'手動でコピーしてください';
+        setTimeout(function(){b.textContent='コピー';},1600);};
+      if(navigator.clipboard&&window.isSecureContext){
+        navigator.clipboard.writeText(t).then(function(){done(true);},function(){done(false);});
+      }else{
+        try{var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';
+          document.body.appendChild(ta);ta.select();var ok=document.execCommand('copy');
+          document.body.removeChild(ta);done(ok);}catch(e){done(false);}
+      }
+    });
+    w.appendChild(b);
+  });
+  var key='jukuai-setup:'+location.pathname.split('/').pop();
+  document.querySelectorAll('ul.check input[type=checkbox]').forEach(function(cb){
+    var k=key+':'+cb.id;
+    try{if(localStorage.getItem(k)==='1')cb.checked=true;}catch(e){}
+    cb.addEventListener('change',function(){try{localStorage.setItem(k,cb.checked?'1':'0');}catch(e){}});
+  });
+})();
+</script>
+</body>
+</html>

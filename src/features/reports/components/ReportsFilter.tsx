@@ -1,9 +1,13 @@
 /** @file
  * 機能: レポート一覧のフィルタ（生徒 / 対象月 / 状態）。URL クエリと同期し SSR で絞り込む
+ * 備考: H-13 月入力はローカル state で即時反映し、URL 同期はデバウンスする。
+ *   以前は value を props（＝サーバー往復後の値）に直結していたため、
+ *   年→月と打つ途中でサーバー応答が戻るたびに入力値が巻き戻ってちらついていた
  * @implements FR-16（SCR-07）
  */
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -31,6 +35,9 @@ const STATUS_LABELS: Record<string, string> = {
   sent: '送信済み',
 }
 
+/** 月入力の URL 同期を遅らせる時間（ms）。打鍵ごとにサーバー往復させない */
+const MONTH_DEBOUNCE_MS = 300
+
 export function ReportsFilter({
   persons,
   value,
@@ -39,6 +46,15 @@ export function ReportsFilter({
   value: ReportsFilterValue
 }) {
   const router = useRouter()
+  const [month, setMonth] = useState(value.month ?? '')
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // 「クリア」や戻る操作で URL 側が変わったときはローカル state を追従させる
+  useEffect(() => {
+    setMonth(value.month ?? '')
+  }, [value.month])
+
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current) }, [])
 
   function apply(next: ReportsFilterValue) {
     const params = new URLSearchParams()
@@ -47,6 +63,20 @@ export function ReportsFilter({
     if (next.status) params.set('status', next.status)
     const qs = params.toString()
     router.replace(qs ? `/admin/reports?${qs}` : '/admin/reports')
+  }
+
+  function onMonthChange(raw: string) {
+    setMonth(raw)
+    if (timer.current) clearTimeout(timer.current)
+    timer.current = setTimeout(() => {
+      apply({ ...value, month: raw || undefined })
+    }, MONTH_DEBOUNCE_MS)
+  }
+
+  function clearAll() {
+    if (timer.current) clearTimeout(timer.current)
+    setMonth('')
+    apply({})
   }
 
   const hasFilter = Boolean(value.personId || value.month || value.status)
@@ -83,8 +113,8 @@ export function ReportsFilter({
           id="filter-month"
           type="month"
           className="w-40"
-          value={value.month ?? ''}
-          onChange={(e) => apply({ ...value, month: e.target.value || undefined })}
+          value={month}
+          onChange={(e) => onMonthChange(e.target.value)}
         />
       </div>
 
@@ -111,7 +141,7 @@ export function ReportsFilter({
       </div>
 
       {hasFilter && (
-        <Button variant="ghost" size="sm" onClick={() => apply({})}>
+        <Button variant="ghost" size="sm" onClick={clearAll}>
           <X className="h-4 w-4" aria-hidden="true" />
           クリア
         </Button>

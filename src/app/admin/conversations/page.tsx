@@ -11,8 +11,10 @@ import {
   getThreads,
   getUsedModels,
   CONVERSATION_RANGES,
+  CONVERSATION_PAGE_SIZE,
   type ConversationRangeDays,
 } from '@features/conversation-logs'
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -23,6 +25,7 @@ import {
 } from '@/components/ui/table'
 import { ConversationsFilter } from '@features/conversation-logs/components/ConversationsFilter'
 import { formatDateTime } from '@/components/admin/formatDate'
+import { parsePageParam, parseUuidParam } from '../searchParams'
 
 export const metadata: Metadata = { title: '会話ログ' }
 
@@ -35,30 +38,55 @@ export default async function ConversationsPage({
     model?: string
     image?: string
     err?: string
+    page?: string
   }>
 }) {
   const sp = await searchParams
-  const personId = sp.person && /^[0-9a-f-]{36}$/i.test(sp.person) ? sp.person : undefined
+  // 無効なクエリ値はフィルタなしとして扱う（H-4: URL 手編集で 500 にしない）
+  const personId = parseUuidParam(sp.person)
   const days =
     sp.range && (CONVERSATION_RANGES as readonly number[]).includes(Number(sp.range))
       ? (Number(sp.range) as ConversationRangeDays)
       : undefined
   const hasImage = sp.image === '1' || undefined
   const hasError = sp.err === '1' || undefined
+  const page = parsePageParam(sp.page)
 
   const db = createServerClient()
   const [persons, models] = await Promise.all([getPersons(db), getUsedModels(db)])
   const model = sp.model && models.includes(sp.model) ? sp.model : undefined
 
-  const threads = await getThreads(db, { personId, days, model, hasImage, hasError })
+  const { items: threads, total } = await getThreads(db, {
+    personId,
+    days,
+    model,
+    hasImage,
+    hasError,
+    limit: CONVERSATION_PAGE_SIZE,
+    offset: (page - 1) * CONVERSATION_PAGE_SIZE,
+  })
   const hasFilter = Boolean(personId || days || model || hasImage || hasError)
+  const lastPage = Math.max(1, Math.ceil(total / CONVERSATION_PAGE_SIZE))
+
+  function pageHref(next: number): string {
+    const params = new URLSearchParams()
+    if (personId) params.set('person', personId)
+    if (days) params.set('range', String(days))
+    if (model) params.set('model', model)
+    if (hasImage) params.set('image', '1')
+    if (hasError) params.set('err', '1')
+    if (next > 1) params.set('page', String(next))
+    const qs = params.toString()
+    return qs ? `/admin/conversations?${qs}` : '/admin/conversations'
+  }
 
   return (
     <div className="space-y-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight">会話ログ</h1>
         <p className="text-sm text-muted-foreground">
-          生徒と Bot のスレッド単位の会話履歴（表示中 {threads.length} 件）
+          生徒と Bot のスレッド単位の会話履歴（全 {total.toLocaleString('ja-JP')} 件中{' '}
+          {threads.length} 件を表示）
         </p>
       </div>
 
@@ -147,6 +175,32 @@ export default async function ConversationsPage({
             </TableBody>
           </Table>
         </div>
+      )}
+
+      {lastPage > 1 && (
+        <nav className="flex items-center justify-between gap-4" aria-label="ページ送り">
+          {page > 1 ? (
+            <Button variant="outline" size="sm" asChild>
+              <Link href={pageHref(page - 1)}>← 前の{CONVERSATION_PAGE_SIZE}件</Link>
+            </Button>
+          ) : (
+            <Button variant="outline" size="sm" disabled>
+              ← 前の{CONVERSATION_PAGE_SIZE}件
+            </Button>
+          )}
+          <p className="text-sm tabular-nums text-muted-foreground">
+            {page} / {lastPage} ページ
+          </p>
+          {page < lastPage ? (
+            <Button variant="outline" size="sm" asChild>
+              <Link href={pageHref(page + 1)}>次の{CONVERSATION_PAGE_SIZE}件 →</Link>
+            </Button>
+          ) : (
+            <Button variant="outline" size="sm" disabled>
+              次の{CONVERSATION_PAGE_SIZE}件 →
+            </Button>
+          )}
+        </nav>
       )}
     </div>
   )

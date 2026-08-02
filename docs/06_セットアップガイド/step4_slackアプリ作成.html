@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STEP 4 Slack アプリ作成 | じゅくAI セットアップガイド</title>
+<style>
+:root{--fg:#191c21;--muted:#5c6470;--line:#d9dee6;--bg:#fff;--soft:#f6f8fa;--soft2:#eef2f7;--accent:#1f5fa9;--code:#0f2b46;
+--warn:#7a4d00;--warnbg:#fff8e8;--warnline:#e6c579;--danger:#96262c;--dangerbg:#fdf1f2;--dangerline:#e3adb1;
+--ok:#1a6444;--okbg:#f0f8f4;--okline:#a5d5bd;--info:#144a73;--infobg:#eef6fc;--infoline:#9dc6e4;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);line-height:1.85;font-size:16px;
+font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,-apple-system,"Segoe UI",sans-serif;}
+.wrap{max-width:940px;margin:0 auto;padding:28px 20px 90px}
+.topbar{border-bottom:1px solid var(--line);background:var(--soft);}
+.topbar .inner{max-width:940px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
+.topbar a{color:var(--accent);text-decoration:none}
+.topbar a:hover{text-decoration:underline}
+.crumb{font-size:13px;color:var(--muted)}
+h1{font-size:27px;line-height:1.45;margin:26px 0 8px;letter-spacing:.01em}
+h2{font-size:21px;margin:44px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--line)}
+h3{font-size:17px;margin:30px 0 8px}
+h4{font-size:15px;margin:22px 0 6px;color:var(--muted)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:1.6em}
+li{margin:5px 0}
+code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13.5px;
+background:var(--soft2);padding:1px 5px;border-radius:3px;word-break:break-all}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:14px 14px;overflow-x:auto;
+font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13px;line-height:1.7;color:var(--code);margin:12px 0}
+pre code{background:none;padding:0;font-size:13px;word-break:normal}
+.codewrap{position:relative}
+.codewrap>pre{padding-right:82px}
+.copy{position:absolute;top:8px;right:8px;font:inherit;font-size:12px;padding:3px 10px;border:1px solid var(--line);
+background:#fff;color:var(--muted);border-radius:4px;cursor:pointer}
+.copy:hover{color:var(--fg);border-color:var(--muted)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--soft2);font-weight:600;white-space:nowrap}
+td code{font-size:12.8px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scroll table{min-width:640px}
+.scroll.wide table{min-width:880px}
+.note,.warnbox,.dangerbox,.okbox{border:1px solid;border-radius:6px;padding:12px 14px;margin:16px 0;font-size:15px}
+.note{border-color:var(--infoline);background:var(--infobg);color:var(--info)}
+.warnbox{border-color:var(--warnline);background:var(--warnbg);color:var(--warn)}
+.dangerbox{border-color:var(--dangerline);background:var(--dangerbg);color:var(--danger)}
+.okbox{border-color:var(--okline);background:var(--okbg);color:var(--ok)}
+.note b,.warnbox b,.dangerbox b,.okbox b{font-weight:700}
+.note p:first-child,.warnbox p:first-child,.dangerbox p:first-child,.okbox p:first-child{margin-top:0}
+.note p:last-child,.warnbox p:last-child,.dangerbox p:last-child,.okbox p:last-child{margin-bottom:0}
+.note code,.warnbox code,.dangerbox code,.okbox code{background:rgba(255,255,255,.7)}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 6px}
+.meta div{flex:1 1 240px;border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--soft)}
+.meta .k{font-size:12px;color:var(--muted);display:block;margin-bottom:2px}
+.meta .v{font-size:15px;font-weight:600;line-height:1.6}
+.meta .v ul{margin:2px 0 0;padding-left:1.3em;font-weight:400;font-size:14px}
+ul.check{list-style:none;padding-left:0}
+ul.check li{margin:6px 0;display:flex;gap:9px;align-items:flex-start}
+ul.check input{margin-top:7px;flex:0 0 auto;width:15px;height:15px}
+ul.check label{cursor:pointer}
+.steps{list-style:none;padding-left:0;margin:20px 0}
+.steps li{border:1px solid var(--line);border-radius:7px;margin:10px 0;padding:0}
+.steps a{display:block;padding:13px 16px;text-decoration:none;color:inherit}
+.steps a:hover{background:var(--soft)}
+.steps .n{display:inline-block;min-width:74px;font-size:12px;color:#fff;background:var(--accent);border-radius:11px;
+padding:1px 9px;text-align:center;margin-right:10px;vertical-align:2px}
+.steps .n.alt{background:#6b7280}
+.steps .t{font-weight:600;font-size:16.5px}
+.steps .d{display:block;color:var(--muted);font-size:14px;margin-top:3px;padding-left:0}
+.steps .tm{float:right;color:var(--muted);font-size:13px;font-weight:400}
+.nav{display:flex;justify-content:space-between;gap:14px;margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:15px}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+.nav span{color:#b6bcc6}
+.ph{background:#fff5d6;border-bottom:1px dotted #b08a19;padding:0 2px;font-weight:600}
+.diagram{font-size:12.5px;line-height:1.55;background:#fff;border:1px solid var(--line)}
+.small{font-size:13.5px;color:var(--muted)}
+.req{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap}
+.req.y{background:#fde8e8;color:#96262c;border:1px solid #e3adb1}
+.req.n{background:#eef2f7;color:#5c6470;border:1px solid #d9dee6}
+.req.r{background:#fff3d9;color:#7a4d00;border:1px solid #e6c579}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+a{color:var(--accent)}
+@media print{
+ .topbar,.nav,.copy{display:none}
+ body{font-size:11.5pt}
+ a{color:#000;text-decoration:none}
+ pre,table,.note,.warnbox,.dangerbox,.okbox{page-break-inside:avoid}
+ h2{page-break-after:avoid}
+}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="inner">
+<span class="crumb"><a href="index.html">目次</a> ／ STEP 4 / 9 — Slack アプリ作成</span>
+<span class="crumb"><a href="step5_vercelデプロイ.html">次へ →</a></span>
+</div></div>
+
+<div class="wrap">
+
+<h1>STEP 4 — Slack アプリ作成</h1>
+<p>塾の Slack ワークスペースに Bot を作ります。<b>この時点では Event Subscriptions（イベント購読）は設定しません。</b>
+アプリがまだデプロイされていないため、Slack が Request URL を検証しに来ても応答できず、設定が保存できないからです。</p>
+
+<div class="meta">
+<div><span class="k">所要時間</span><span class="v">約 20 分</span></div>
+<div><span class="k">前提</span><span class="v">塾の Slack ワークスペースにアプリを追加できる権限</span></div>
+<div><span class="k">このステップで手に入るもの（控える）</span><span class="v">
+<ul>
+<li>Bot User OAuth Token（<code>xoxb-...</code>）</li>
+<li>Signing Secret</li>
+<li>Bot User ID（<code>U...</code>）</li>
+<li>Team ID（<code>T...</code>）</li>
+</ul></span></div>
+</div>
+
+<h2>4-1. 必要なスコープと、その根拠</h2>
+
+<p>このアプリが Slack Web API に投げるメソッドは <b>3 つだけ</b>（<code>chat.postMessage</code> / <code>reactions.add</code> / <code>reactions.remove</code>）で、
+あとは Events API の受信と、画像ファイルの直接ダウンロードです。必要なのは次の <b>5 スコープ</b>です。</p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>スコープ</th><th>用途</th><th>これが無いと何が壊れるか</th><th>根拠（コード）</th></tr></thead>
+<tbody>
+<tr>
+<td><code>chat:write</code><br><span class="req y">必須</span></td>
+<td>AI 回答・エラー案内文・kill switch の #alerts 通知を投稿する</td>
+<td>質問しても何も返らない。<code>chat.postMessage failed: not_in_channel</code> 等</td>
+<td><code>src/shared/lib/slack/client.ts</code> の <code>postMessage()</code></td>
+</tr>
+<tr>
+<td><code>reactions:write</code><br><span class="req y">必須</span></td>
+<td>処理中を示す 🤔（<code>thinking_face</code>）の付与と、回答後の除去</td>
+<td>回答は返るが 🤔 が付かない。生徒に「受け付けた」感が伝わらない。<br><span class="small">※リアクション失敗はサイレント処理なので、Slack 上は無症状。サーバーログに <code>[slack] reactions.add failed: missing_scope</code> が出る</span></td>
+<td><code>addReaction()</code> / <code>removeReaction()</code>、<code>THINKING_REACTION = 'thinking_face'</code></td>
+</tr>
+<tr>
+<td><code>channels:history</code><br><span class="req y">公開なら必須</span></td>
+<td>公開チャンネルの <code>message.channels</code> イベント（本文・添付ファイル情報を含む）を受け取る</td>
+<td><b>イベントが一切届かない。</b>Bot は完全に無反応</td>
+<td><code>src/app/api/slack/events/route.ts</code>（<code>event.type === 'message'</code> のみ処理）</td>
+</tr>
+<tr>
+<td><code>groups:history</code><br><span class="req r">非公開なら必須</span></td>
+<td>非公開チャンネルの <code>message.groups</code> イベントを受け取る</td>
+<td>非公開チャンネルからのイベントが届かない</td>
+<td>同上（イベント種別が違うだけで処理は共通）</td>
+</tr>
+<tr>
+<td><code>files:read</code><br><span class="req y">必須</span></td>
+<td>Slack の <code>url_private</code> から Bot トークンで画像本体をダウンロードする</td>
+<td>画像付き質問で <code>SLACK_FILE_DOWNLOAD_FAILED</code>。画像だけを送った質問には
+<span class="small">「画像の取得に失敗しちゃった …」</span>と返り、<b>本文がある質問では画像だけが黙って無視される</b>（テキストのみで回答してしまう）</td>
+<td><code>src/features/image-attachments/lib/downloadSlackFile.ts</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<h3>入れなくてよいスコープ（よく間違えるもの）</h3>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>スコープ</th><th>不要な理由</th></tr></thead>
+<tbody>
+<tr><td><code>channels:read</code> / <code>groups:read</code></td>
+<td><code>conversations.list</code> や <code>conversations.info</code> を<b>一度も呼んでいません</b>。
+チャンネル名は管理画面で手入力する<b>表示用</b>の値で、判定には使いません（信頼の基点は <code>channel_id</code>）</td></tr>
+<tr><td><code>users:read</code></td>
+<td><code>users.info</code> を呼んでいません。「誰の質問か」は <code>channel_id</code> → 紐付けテーブルから決まります。
+イベントの <code>user</code> フィールドは<b>認可に使っていません</b>（なりすまし対策）</td></tr>
+<tr><td><code>app_mentions:read</code></td>
+<td><code>app_mention</code> イベントを購読しません。受信ハンドラは <code>event.type !== 'message'</code> を即座に無視するため、
+購読しても捨てられるだけです。メンション判定は <code>message</code> イベント本文の <code>&lt;@BotUserID&gt;</code> を自前で見ています</td></tr>
+<tr><td><code>chat:write.public</code></td>
+<td>Bot を各チャンネルに <code>/invite</code> する運用なので不要です</td></tr>
+<tr><td><code>im:history</code> / <code>mpim:history</code></td>
+<td>DM 運用はしません（紐付けは生徒専用チャンネル単位）</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>4-2. 方法A: manifest から作る（推奨）</h2>
+
+<ol>
+<li><a href="https://api.slack.com/apps">https://api.slack.com/apps</a> → <b>Create New App</b></li>
+<li><b>From an app manifest</b> を選択</li>
+<li>塾のワークスペースを選択 → <b>Next</b></li>
+<li><b>YAML</b> タブを選び、下の manifest を貼り付ける → <b>Next</b> → <b>Create</b></li>
+</ol>
+
+<h3>manifest（そのままコピーして使えます）</h3>
+
+<pre><code>display_information:
+  name: じゅくAI
+  description: 生徒ごとのチャンネルで学習の質問に答える AI アシスタント
+  background_color: "#2b3a55"
+  long_description: 生徒ごとの Slack チャンネルで、学習レポートや過去のやり取りを踏まえて質問に答える AI 学習支援ボットです。メンションまたはスレッド返信に反応し、処理中は :thinking_face: を付けます。
+
+features:
+  bot_user:
+    display_name: じゅくAI
+    always_online: true
+
+oauth_config:
+  scopes:
+    bot:
+      # 回答・案内文・運用アラートの投稿（chat.postMessage）
+      - chat:write
+      # 処理中を示す :thinking_face: の付け外し（reactions.add / reactions.remove）
+      - reactions:write
+      # 公開チャンネルの message.channels イベント受信
+      - channels:history
+      # 非公開チャンネルの message.groups イベント受信（非公開運用なら必須）
+      - groups:history
+      # 添付画像を url_private からダウンロードする
+      - files:read
+
+settings:
+  # Event Subscriptions は STEP 6 で追加する（今 request_url を書くと検証に失敗して作成できない）
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
+  is_hosted: false</code></pre>
+
+<div class="warnbox">
+<p><b>なぜ manifest に <code>event_subscriptions</code> を書かないのか</b></p>
+<p>Slack は <code>request_url</code> を保存する瞬間に、その URL へ <code>type: "url_verification"</code> の
+チャレンジ POST を投げて <b>3 秒以内の応答</b>を要求します。
+アプリがまだ Vercel にデプロイされていない（= 404）、あるいは <code>SLACK_SIGNING_SECRET</code> が未設定で
+起動時バリデーションに落ちている（= 500）状態では検証に失敗し、
+<b>manifest のインポート自体がエラーになります</b>。
+先にアプリを作って Signing Secret を取り、STEP 5 でデプロイしてから STEP 6 で URL を登録する、という順番が必要です。</p>
+</div>
+
+<p class="small">公開チャンネルしか使わないと決めている場合は <code>groups:history</code> を外しても構いませんが、
+後から非公開チャンネルを足すときにスコープ追加＋再インストールが必要になります。両方入れておく方が運用は楽です。</p>
+
+<h2>4-3. 方法B: From scratch で作る</h2>
+
+<p>manifest を使わない場合の手順です（結果は同じ）。</p>
+
+<ol>
+<li><b>Create New App</b> → <b>From scratch</b></li>
+<li>App Name = <code>じゅくAI</code>、ワークスペースを選択 → <b>Create App</b></li>
+<li>左メニュー <b>OAuth &amp; Permissions</b> → <b>Scopes</b> → <b>Bot Token Scopes</b> → <b>Add an OAuth Scope</b> で
+5 つ（<code>chat:write</code> / <code>reactions:write</code> / <code>channels:history</code> / <code>groups:history</code> / <code>files:read</code>）を追加</li>
+<li>左メニュー <b>App Home</b> → <b>App Display Name</b> の <b>Edit</b> で表示名を設定<br>
+<span class="small">※ Bot User が作られていない場合は、ここで作成されます</span></li>
+<li>左メニュー <b>Basic Information</b> → <b>Display Information</b> でアイコン・色を設定（任意）</li>
+</ol>
+
+<h2>4-4. ワークスペースにインストールする</h2>
+
+<ol>
+<li>左メニュー <b>OAuth &amp; Permissions</b> → <b>Install to <span class="ph">&lt;ワークスペース名&gt;</span></b></li>
+<li>権限の確認画面 → <b>許可する</b></li>
+</ol>
+
+<div class="okbox">
+<p>インストール後、<b>Bot User OAuth Token</b>（<code>xoxb-</code> で始まる）が表示されます。<b>控えてください。</b>
+これが環境変数 <code>SLACK_BOT_TOKEN</code> になります。</p>
+</div>
+
+<h2>4-5. Signing Secret を取得する</h2>
+
+<ol>
+<li>左メニュー <b>Basic Information</b> → <b>App Credentials</b></li>
+<li><b>Signing Secret</b> の <b>Show</b> をクリックして表示 → 控える</li>
+</ol>
+
+<p>これが環境変数 <code>SLACK_SIGNING_SECRET</code> です。
+受信した Webhook が本当に Slack から来たものかを HMAC-SHA256 で検証するのに使います（合わないと 401 を返します）。</p>
+
+<div class="dangerbox">
+<p><b>Signing Secret と Bot Token は同じくらい重要な機密です。</b>
+Bot Token が漏れると塾のワークスペースに任意の投稿ができ、生徒が送った画像もダウンロードできてしまいます。
+漏洩時は <b>Basic Information → App Credentials → Regenerate</b>（Signing Secret）と、
+<b>OAuth &amp; Permissions → Revoke / 再インストール</b>（Bot Token）で差し替えてください。</p>
+</div>
+
+<h2 id="botid">4-6. Bot User ID を取得する</h2>
+
+<div class="dangerbox">
+<p><b>ここが一番間違えやすい箇所です。</b>必要なのは <code>U</code> で始まる <b>Bot User ID</b> であって、
+<code>B</code> で始まる <b>Bot ID</b> ではありません。<code>B...</code> を設定すると
+メンション検出が一致せず、<b>Bot が永久に無反応</b>になります（エラーも出ません）。</p>
+</div>
+
+<h3>方法1: auth.test を叩く（確実・推奨）</h3>
+
+<pre><code>curl -s -H "Authorization: Bearer xoxb-&lt;あなたのBotToken&gt;" \
+  https://slack.com/api/auth.test</code></pre>
+
+<p>返ってくる JSON:</p>
+
+<pre class="nocopy"><code>{
+  "ok": true,
+  "url": "https://&lt;ワークスペース&gt;.slack.com/",
+  "team": "&lt;ワークスペース名&gt;",
+  "user": "じゅくai",
+  "team_id": "T01ABCDEFGH",     ← STEP 7 のチャンネル紐付けで使う
+  "user_id": "U01ABCDEFGH",     ← これが SLACK_BOT_USER_ID
+  "bot_id": "B01ABCDEFGH"       ← これではない
+}</code></pre>
+
+<div class="scroll">
+<table>
+<thead><tr><th>フィールド</th><th>控える先</th></tr></thead>
+<tbody>
+<tr><td><code>user_id</code>（<code>U</code> 始まり）</td><td>環境変数 <code>SLACK_BOT_USER_ID</code></td></tr>
+<tr><td><code>team_id</code>（<code>T</code> 始まり）</td><td>STEP 7 のチャンネル紐付けフォームの「ワークスペース ID」</td></tr>
+<tr><td><code>url</code></td><td>環境変数 <code>SLACK_WORKSPACE_URL</code>（任意。管理画面から Slack スレッドへのリンクに使う）</td></tr>
+</tbody>
+</table>
+</div>
+
+<p class="small"><code>auth.test</code> の呼び出しに追加スコープは不要です。<code>"ok": false</code> が返る場合はトークンのコピーミス
+（<code>xoxb-</code> の前後に空白が入っていないか、User Token <code>xoxp-</code> と取り違えていないか）を確認してください。</p>
+
+<h3>方法2: Slack クライアントから調べる</h3>
+<ol>
+<li>Slack で任意のチャンネルの<b>メンバー一覧</b>、または検索窓から <b>じゅくAI</b> を開く</li>
+<li>プロフィールの <b>「…」（その他）</b> → <b>メンバー ID をコピー</b></li>
+</ol>
+<p class="small">この方法でも <code>U</code> 始まりの ID が得られます。ただし表示名が似た別ユーザーを開いてしまう事故があるため、方法1 を推奨します。</p>
+
+<h2>4-7. この時点での状態</h2>
+
+<p>Slack アプリはできましたが、<b>まだイベントは届きません</b>（購読していないため）。
+生徒チャンネルへの招待も STEP 7 で行います。ここで一度、控えた値を確認してください。</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>控えた値</th><th>形式の例</th><th>環境変数名</th></tr></thead>
+<tbody>
+<tr><td>Bot User OAuth Token</td><td><code>xoxb-1234567890-...</code></td><td><code>SLACK_BOT_TOKEN</code></td></tr>
+<tr><td>Signing Secret</td><td>32 桁の英数字</td><td><code>SLACK_SIGNING_SECRET</code></td></tr>
+<tr><td>Bot User ID</td><td><code>U01ABCDEFGH</code></td><td><code>SLACK_BOT_USER_ID</code></td></tr>
+<tr><td>Team ID</td><td><code>T01ABCDEFGH</code></td><td>（環境変数ではない。STEP 7 のフォームで使う）</td></tr>
+<tr><td>ワークスペース URL</td><td><code>https://xxx.slack.com</code></td><td><code>SLACK_WORKSPACE_URL</code>（任意）</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>完了チェック</h2>
+<ul class="check">
+<li><input type="checkbox" id="s4-1"><label for="s4-1">Slack アプリを作成した（manifest または From scratch）</label></li>
+<li><input type="checkbox" id="s4-2"><label for="s4-2">Bot Token Scopes に 5 つのスコープが入っている</label></li>
+<li><input type="checkbox" id="s4-3"><label for="s4-3">ワークスペースにインストールした</label></li>
+<li><input type="checkbox" id="s4-4"><label for="s4-4"><code>xoxb-</code> で始まる Bot Token を控えた</label></li>
+<li><input type="checkbox" id="s4-5"><label for="s4-5">Signing Secret を控えた</label></li>
+<li><input type="checkbox" id="s4-6"><label for="s4-6"><code>auth.test</code> で <b><code>U</code> 始まりの</b> Bot User ID と Team ID を控えた</label></li>
+<li><input type="checkbox" id="s4-7"><label for="s4-7">Event Subscriptions は<b>まだ設定していない</b>（STEP 6 で行う）</label></li>
+</ul>
+
+<div class="nav">
+<a href="step3_DBマイグレーション.html">← 前へ: STEP 3 DB マイグレーション</a>
+<a href="step5_vercelデプロイ.html">次へ: STEP 5 Vercel デプロイ →</a>
+</div>
+
+</div>
+
+<script>
+(function(){
+  document.querySelectorAll('pre:not(.nocopy)').forEach(function(pre){
+    var w=document.createElement('div');w.className='codewrap';
+    pre.parentNode.insertBefore(w,pre);w.appendChild(pre);
+    var b=document.createElement('button');b.type='button';b.className='copy';b.textContent='コピー';
+    b.addEventListener('click',function(){
+      var el=pre.querySelector('code');var t=el?el.innerText:pre.innerText;
+      var done=function(ok){b.textContent=ok?'コピーしました':'手動でコピーしてください';
+        setTimeout(function(){b.textContent='コピー';},1600);};
+      if(navigator.clipboard&&window.isSecureContext){
+        navigator.clipboard.writeText(t).then(function(){done(true);},function(){done(false);});
+      }else{
+        try{var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';
+          document.body.appendChild(ta);ta.select();var ok=document.execCommand('copy');
+          document.body.removeChild(ta);done(ok);}catch(e){done(false);}
+      }
+    });
+    w.appendChild(b);
+  });
+  var key='jukuai-setup:'+location.pathname.split('/').pop();
+  document.querySelectorAll('ul.check input[type=checkbox]').forEach(function(cb){
+    var k=key+':'+cb.id;
+    try{if(localStorage.getItem(k)==='1')cb.checked=true;}catch(e){}
+    cb.addEventListener('change',function(){try{localStorage.setItem(k,cb.checked?'1':'0');}catch(e){}});
+  });
+})();
+</script>
+</body>
+</html>

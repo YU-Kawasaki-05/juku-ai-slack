@@ -15,6 +15,7 @@ import { ResolveErrorButton } from '@features/errors/components/ResolveErrorButt
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { StatusBadge } from '@/components/admin/StatusBadge'
 import { formatDateTime } from '@/components/admin/formatDate'
+import { isUuid } from '../../searchParams'
 
 export const metadata: Metadata = { title: 'エラー詳細' }
 
@@ -24,6 +25,8 @@ export default async function ErrorDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  // UUID でない ID をそのままクエリすると Postgres 22P02 で 500 になるため事前に 404 に倒す（H-5）
+  if (!isUuid(id)) notFound()
   const log = await getErrorLog(createServerClient(), id)
   if (!log) notFound()
 

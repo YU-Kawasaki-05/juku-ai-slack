@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import AdminSidebar from '@/components/admin/AdminSidebar'
 import AdminHeader from '@/components/admin/AdminHeader'
 import { Toaster } from '@/components/ui/toaster'
+import { requireStaffPage } from '@/shared/lib/auth/requireStaffPage'
 
 export const metadata: Metadata = {
   title: {
@@ -10,7 +11,10 @@ export const metadata: Metadata = {
   },
 }
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+// middleware に加えた多層防御（D-2 / FR-13）。matcher の設定ミスでもページが素通りしない
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  await requireStaffPage()
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <a

@@ -88,7 +88,14 @@ Then 二重取得されない（行ロックまたは楽観的ロックで防ぐ
 
 ## 実装ステータス（Phase 4 が更新）
 
-- 実装ファイル: `src/features/jobs/lib/enqueueJob.ts`, `src/features/jobs/lib/processJob.ts`, `src/features/jobs/lib/executeProcessMessage.ts`
-- テストファイル: `enqueueJob.test.ts`, `processJob.test.ts`
-- 最終確認Sprint: Sprint 1
-- 既知の制約: リトライは `waitUntil`(after) 内のインメモリ実装（BR-04-06）。関数が途中 kill された場合の processing 孤児化を回収する JOB_TIMEOUT スイーパは未実装（FR-04 エラーケース表の「長時間 processing」）。将来 Sprint で対応
+- 実装ファイル: `src/features/jobs/lib/{enqueueJob,processJob,executeProcessMessage,sweepStaleJobs,retryJob,listJobs,formatElapsed}.ts`, `src/features/jobs/actions/jobActions.ts`, `src/features/jobs/components/{JobsFilter,RetryJobButton,SweepJobsButton}.tsx`, `src/app/admin/jobs/page.tsx`
+- テストファイル: `enqueueJob.test.ts`, `processJob.test.ts`, `executeProcessMessage.test.ts`, `sweepStaleJobs.test.ts`, `retryJob.test.ts`, `listJobs.test.ts`, `jobActions.test.ts`, `e2e/jobs.spec.ts`
+- 最終確認Sprint: Sprint 7 / Wave 2（ジョブ運用基盤）
+- 備考:
+  - バックグラウンド実行は Next.js の **`after()`（`next/server`）**。`@vercel/functions` の `waitUntil` は使っていない（DEC-13 の主旨は同じ。Cron 不使用）
+  - リトライは `after()` 内のインメモリ実装（BR-04-06）
+  - **JOB_TIMEOUT スイーパ実装済み**（A-1。`sweepStaleJobs()`: processing 10分超 / pending 15分超 → `failed` + `error_code='JOB_TIMEOUT'` + `ai_error_logs` 記録。1回あたり各 100 件まで）
+  - **保持期間の掃除も実装済み**（A-14。`cleanupOldRows()`: `slack_event_receipts` 30日 / `jobs` 7日（completed・skipped・failed のみ））
+  - **起動方式は Cron ではない**（DEC-13）。`runJobMaintenance()` は `/admin/jobs` の表示時（60秒スロットル）と「スイープ実行」ボタンで走る
+  - **ジョブ可視化を実装済み**（`/admin/jobs`）: KPI カード 3 枚（待機中 / 処理中 / 失敗 + 最古の経過時間）・状態/種別の絞り込み・個別「再実行」
+  - 再実行には**二重返信ガード**あり（当該スレッドに質問より後の assistant 発言があれば投稿せず `completed` にする）。生成済み `result_text` は保持されるため LLM の再課金は発生しない（A-3）

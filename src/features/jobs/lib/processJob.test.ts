@@ -1,6 +1,6 @@
 /** @file
- * 検証: ジョブの claim・リトライ・状態遷移・二重処理防止・🤔リアクション
- * @verifies AC-04-02, AC-04-03, AC-04-04, AC-01-06
+ * 検証: ジョブの claim・リトライ・状態遷移・二重処理防止・🤔リアクション・kill_switch
+ * @verifies AC-04-02, AC-04-03, AC-04-04, AC-01-06, A-3, A-11, DEC-15, F-1
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
@@ -11,12 +11,27 @@ vi.mock('@shared/lib/slack/client', () => ({
   removeReaction: slackMocks.removeReaction,
 }))
 
-import { processJob } from './processJob'
+const killSwitch = vi.hoisted(() => ({ isAIEnabled: vi.fn() }))
+vi.mock('@features/kill-switch', () => ({ isAIEnabled: killSwitch.isAIEnabled }))
+
+import { processJob, retryDelayMs } from './processJob'
 import { createMockDb } from '@/test/mocks/supabaseMock'
-import { THINKING_REACTION } from '@shared/lib/constants'
-import { AiRateLimitedError, LowConfidenceSkipError } from '@shared/lib/errors/AppError'
+import {
+  JOB_RETRY_BASE_DELAY_MS,
+  JOB_RETRY_RATE_LIMIT_BASE_DELAY_MS,
+  THINKING_REACTION,
+} from '@shared/lib/constants'
+import {
+  AiRateLimitedError,
+  AiTimeoutError,
+  ConfigurationError,
+  LowConfidenceSkipError,
+  SlackPostFailedError,
+  TokenBudgetExceededError,
+} from '@shared/lib/errors/AppError'
 import { getUserFacingMessage } from '@shared/lib/errors/userMessages'
 import type { ProcessSlackMessagePayload } from '../types'
+import type { ExecuteContext } from './executeProcessMessage'
 
 const validPayload: ProcessSlackMessagePayload = {
   teamId: 'T1',
@@ -37,7 +52,7 @@ function claimedJob(overrides: Record<string, unknown> = {}) {
 const clock = () => '2026-07-03T00:00:00.000Z'
 
 function makeOptions(
-  execute: (db: unknown, p: ProcessSlackMessagePayload) => Promise<void>,
+  execute: (db: unknown, p: ProcessSlackMessagePayload, ctx: ExecuteContext) => Promise<void>,
   reactionOverrides: { add?: () => Promise<unknown>; remove?: () => Promise<unknown> } = {},
 ) {
   const addReactionFn = vi.fn(reactionOverrides.add ?? (async () => ({ ok: true })))
@@ -61,6 +76,8 @@ describe('processJob', () => {
   beforeEach(() => {
     slackMocks.postMessage.mockReset()
     slackMocks.postMessage.mockResolvedValue({ ts: 'x' })
+    killSwitch.isAIEnabled.mockReset()
+    killSwitch.isAIEnabled.mockResolvedValue(true)
   })
 
   it('claim できない（既に処理済み）なら skipped（AC-04-04）', async () => {
@@ -196,5 +213,141 @@ describe('processJob', () => {
     expect(
       db.__calls.update.find((u) => (u as Record<string, unknown>).status === 'failed'),
     ).toBeTruthy()
+  })
+
+  // --- A-11: 非リトライアブルエラーの即時打ち切り ---
+  it.each([
+    ['SLACK_POST_FAILED', () => new SlackPostFailedError()],
+    ['TOKEN_BUDGET_EXCEEDED', () => new TokenBudgetExceededError()],
+    ['設定不備', () => new ConfigurationError('LLM_MODEL_DEFAULT が未設定です')],
+  ])('%s は 1 回で打ち切り failed（リトライしない, A-11）', async (_label, makeError) => {
+    const db = createMockDb({ maybeSingle: { data: claimedJob(), error: null } })
+    const execute = vi.fn(async () => {
+      throw makeError()
+    })
+    const { options, sleep } = makeOptions(execute)
+    const result = await processJob(db, 'job1', options)
+    expect(result).toEqual({ status: 'failed', attempts: 1 })
+    expect(execute).toHaveBeenCalledOnce()
+    expect(sleep).not.toHaveBeenCalled()
+    // attempt_count は実際の試行回数（max_attempts ではない）
+    const failedUpdate = db.__calls.update.find(
+      (u) => (u as Record<string, unknown>).status === 'failed',
+    ) as Record<string, unknown>
+    expect(failedUpdate.attempt_count).toBe(1)
+  })
+
+  it('リトライアブルなエラーは従来どおり max_attempts まで試す（A-11 の回帰）', async () => {
+    const db = createMockDb({ maybeSingle: { data: claimedJob({ max_attempts: 3 }), error: null } })
+    const execute = vi.fn(async () => {
+      throw new AiTimeoutError()
+    })
+    const { options, sleep } = makeOptions(execute)
+    const result = await processJob(db, 'job1', options)
+    expect(result).toEqual({ status: 'failed', attempts: 3 })
+    expect(execute).toHaveBeenCalledTimes(3)
+    expect(sleep).toHaveBeenCalledTimes(2)
+  })
+
+  it('レート制限のバックオフは通常より長い（A-11）', () => {
+    expect(retryDelayMs(new AiRateLimitedError(), 1)).toBe(JOB_RETRY_RATE_LIMIT_BASE_DELAY_MS)
+    expect(retryDelayMs(new AiRateLimitedError(), 2)).toBe(JOB_RETRY_RATE_LIMIT_BASE_DELAY_MS * 3)
+    // 5s / 15s（従来は 500ms / 1000ms で 429 のウィンドウを抜けられなかった）
+    expect(retryDelayMs(new AiRateLimitedError(), 1)).toBeGreaterThanOrEqual(5000)
+    expect(retryDelayMs(new AiTimeoutError(), 1)).toBe(JOB_RETRY_BASE_DELAY_MS)
+    expect(retryDelayMs(new Error('x'), 2)).toBe(JOB_RETRY_BASE_DELAY_MS * 2)
+  })
+
+  it('429 のリトライでは長いバックオフを使う（A-11）', async () => {
+    const db = createMockDb({ maybeSingle: { data: claimedJob({ max_attempts: 2 }), error: null } })
+    const execute = vi.fn(async () => {
+      throw new AiRateLimitedError()
+    })
+    const { options, sleep } = makeOptions(execute)
+    await processJob(db, 'job1', options)
+    expect(sleep).toHaveBeenCalledWith(JOB_RETRY_RATE_LIMIT_BASE_DELAY_MS)
+  })
+
+  // --- A-3: 生成結果のキャッシュ ---
+  it('claim した jobs.result_text を execute に渡す（再生成の回避, A-3）', async () => {
+    const db = createMockDb({
+      maybeSingle: { data: claimedJob({ result_text: '生成済みの回答' }), error: null },
+    })
+    const seen: ExecuteContext[] = []
+    const execute = vi.fn(async (_db: unknown, _p: ProcessSlackMessagePayload, ctx: ExecuteContext) => {
+      seen.push(ctx)
+    })
+    const { options } = makeOptions(execute)
+    await processJob(db, 'job1', options)
+    expect(seen[0]).toEqual({ jobId: 'job1', resultText: '生成済みの回答' })
+  })
+
+  // --- F-1 / DEC-15: kill_switch ---
+  it('kill_switch が停止中なら execute（LLM）を呼ばずに定型文を返す（コスト遮断, F-1）', async () => {
+    killSwitch.isAIEnabled.mockResolvedValue(false)
+    const db = createMockDb({ maybeSingle: { data: claimedJob(), error: null } })
+    const execute = vi.fn(async () => {})
+    const { options, addReactionFn } = makeOptions(execute)
+
+    const result = await processJob(db, 'job1', options)
+
+    expect(execute).not.toHaveBeenCalled()
+    expect(slackMocks.postMessage).toHaveBeenCalledWith({
+      channel: 'C1',
+      text: getUserFacingMessage('AI_PAUSED'),
+      threadTs: '100.1',
+    })
+    // 🤔（処理中）も付けない。応答しないのに考えているように見せない
+    expect(addReactionFn).not.toHaveBeenCalled()
+    expect(result.status).toBe('completed')
+  })
+
+  it('停止中のジョブは completed + error_code=AI_PAUSED で閉じる（リトライさせない, F-1）', async () => {
+    killSwitch.isAIEnabled.mockResolvedValue(false)
+    const db = createMockDb({ maybeSingle: { data: claimedJob(), error: null } })
+    await processJob(db, 'job1', makeOptions(vi.fn(async () => {})).options)
+
+    const last = db.__calls.update.at(-1) as Record<string, unknown>
+    expect(last).toMatchObject({ status: 'completed', error_code: 'AI_PAUSED' })
+  })
+
+  it('停止中は AI_PAUSED を severity=info で 1 件だけ記録する（F-1）', async () => {
+    killSwitch.isAIEnabled.mockResolvedValue(false)
+    const db = createMockDb({ maybeSingle: { data: claimedJob(), error: null } })
+    await processJob(db, 'job1', makeOptions(vi.fn(async () => {})).options)
+
+    const logs = db.__calls.insert as Array<Record<string, unknown>>
+    expect(logs).toHaveLength(1)
+    expect(logs[0]).toMatchObject({
+      error_code: 'AI_PAUSED',
+      severity: 'info',
+      person_id: validPayload.personId,
+      // 生徒に定型文を返しているので記録する。無いとエラー詳細が「返信なし」と誤表示する（OBS-07）
+      user_facing_message: getUserFacingMessage('AI_PAUSED'),
+    })
+  })
+
+  it('kill_switch が有効なら従来どおり execute する（F-1 の回帰）', async () => {
+    const db = createMockDb({ maybeSingle: { data: claimedJob(), error: null } })
+    const execute = vi.fn(async () => {})
+    await processJob(db, 'job1', makeOptions(execute).options)
+    expect(execute).toHaveBeenCalledOnce()
+  })
+
+  it('生成済みの回答は同じ ctx でリトライに引き継がれる（A-3）', async () => {
+    const db = createMockDb({ maybeSingle: { data: claimedJob(), error: null } })
+    const seen: Array<string | null | undefined> = []
+    const execute = vi.fn(async (_db: unknown, _p: ProcessSlackMessagePayload, ctx: ExecuteContext) => {
+      seen.push(ctx.resultText)
+      if (seen.length === 1) {
+        // 生成には成功したが、その後の処理で（リトライアブルに）失敗した想定
+        ctx.resultText = '生成済みの回答'
+        throw new AiTimeoutError()
+      }
+    })
+    const { options } = makeOptions(execute)
+    const result = await processJob(db, 'job1', options)
+    expect(result.status).toBe('completed')
+    expect(seen).toEqual([null, '生成済みの回答'])
   })
 })

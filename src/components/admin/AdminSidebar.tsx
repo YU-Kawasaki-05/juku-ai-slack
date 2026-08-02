@@ -15,6 +15,7 @@ import {
   BarChart3,
   GraduationCap,
   MessagesSquare,
+  ListChecks,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -25,6 +26,7 @@ const nav = [
   { href: '/admin/reports', label: 'レポート', icon: FileText },
   { href: '/admin/conversations', label: '会話ログ', icon: MessagesSquare },
   { href: '/admin/errors', label: 'エラーログ', icon: AlertCircle },
+  { href: '/admin/jobs', label: 'ジョブ', icon: ListChecks },
   { href: '/admin/usage', label: '利用状況', icon: BarChart3 },
 ]
 

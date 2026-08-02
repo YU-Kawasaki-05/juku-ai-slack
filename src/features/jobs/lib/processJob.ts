@@ -10,12 +10,18 @@
  */
 import type { ServerDb, TablesUpdate } from '@shared/types/db'
 import { addReaction, removeReaction, postMessage } from '@shared/lib/slack/client'
-import { JOB_RETRY_BASE_DELAY_MS, THINKING_REACTION } from '@shared/lib/constants'
+import {
+  JOB_RETRY_BASE_DELAY_MS,
+  JOB_RETRY_RATE_LIMIT_BASE_DELAY_MS,
+  JOB_RETRY_RATE_LIMIT_FACTOR,
+  THINKING_REACTION,
+} from '@shared/lib/constants'
 import { AppError } from '@shared/lib/errors/AppError'
 import { getUserFacingMessage, isSilentError } from '@shared/lib/errors/userMessages'
 import { logError } from '@features/error-logs'
+import { isAIEnabled } from '@features/kill-switch'
 import { processSlackMessagePayloadSchema, type ProcessSlackMessagePayload } from '../types'
-import { executeProcessSlackMessage } from './executeProcessMessage'
+import { executeProcessSlackMessage, type ExecuteContext } from './executeProcessMessage'
 
 export type ProcessJobStatus = 'completed' | 'failed' | 'skipped' | 'invalid'
 
@@ -25,7 +31,11 @@ export interface ProcessJobResult {
 }
 
 export interface ProcessJobOptions {
-  execute?: (db: ServerDb, payload: ProcessSlackMessagePayload) => Promise<void>
+  execute?: (
+    db: ServerDb,
+    payload: ProcessSlackMessagePayload,
+    ctx: ExecuteContext,
+  ) => Promise<void>
   sleep?: (ms: number) => Promise<void>
   clock?: () => string
   addReactionFn?: typeof addReaction
@@ -34,6 +44,18 @@ export interface ProcessJobOptions {
 
 const defaultSleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 const defaultClock = (): string => new Date().toISOString()
+
+/**
+ * attempt 回目の失敗後に待つミリ秒（A-11）。
+ * レート制限は provider 側のウィンドウが数秒〜十数秒あるため、通常のバックオフでは短すぎる。
+ */
+export function retryDelayMs(err: unknown, attempt: number): number {
+  const code = err instanceof AppError ? err.code : undefined
+  if (code === 'AI_RATE_LIMITED') {
+    return JOB_RETRY_RATE_LIMIT_BASE_DELAY_MS * JOB_RETRY_RATE_LIMIT_FACTOR ** (attempt - 1)
+  }
+  return JOB_RETRY_BASE_DELAY_MS * 2 ** (attempt - 1)
+}
 
 /** リアクション操作はサイレント（BR-01-06） */
 async function safeSlackCall(fn: () => Promise<unknown>): Promise<void> {
@@ -99,7 +121,43 @@ export async function processJob(
   }
 
   const payload = parsed.data
+
+  // F-1 / DEC-15: kill_switch が停止中なら LLM を一切呼ばずに定型文だけ返す。
+  // ここ（execute の手前 = 🤔 を付ける前）で判定するのがコスト遮断の要件。
+  // 停止は障害・コスト対応の意図的な状態なので failed ではなく completed で閉じ、
+  // error_code に理由を残す（再実行しても同じ結果になるためリトライさせない）。
+  if (!(await isAIEnabled(db))) {
+    await safeSlackCall(() =>
+      postMessage({
+        channel: payload.channelId,
+        text: getUserFacingMessage('AI_PAUSED'),
+        threadTs: payload.threadTs,
+      }),
+    )
+    await updateJobStatus(db, jobId, {
+      status: 'completed',
+      finished_at: clock(),
+      error_code: 'AI_PAUSED',
+    })
+    await logError(db, {
+      code: 'AI_PAUSED',
+      severity: 'info',
+      personId: payload.personId,
+      channelId: payload.channelId,
+      threadTs: payload.threadTs,
+      messageTs: payload.messageTs,
+      internalMessage: 'kill switch ai_responses is disabled; skipped LLM call',
+      // 生徒には定型文を返している。記録しないとエラー詳細画面が「返信なし」と誤表示する
+      userFacingMessage: getUserFacingMessage('AI_PAUSED'),
+    })
+    return { status: 'completed', attempts: 0 }
+  }
+
   const maxAttempts = claimed.max_attempts
+
+  // A-3: 生成済みの回答は attempt をまたいで持ち回す（リトライで LLM を再課金しない）。
+  // execute が生成に成功した時点で ctx.resultText と jobs.result_text の両方に書き込む。
+  const ctx: ExecuteContext = { jobId, resultText: claimed.result_text ?? null }
 
   await safeSlackCall(() =>
     addReactionFn({ channel: payload.channelId, timestamp: payload.messageTs, name: THINKING_REACTION }),
@@ -107,18 +165,24 @@ export async function processJob(
 
   try {
     let lastError: unknown
+    let usedAttempts = 0
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      usedAttempts = attempt
       let executed = false
       try {
-        await execute(db, payload)
+        await execute(db, payload, ctx)
         executed = true
       } catch (err) {
         lastError = err
         await updateJobStatus(db, jobId, { attempt_count: attempt })
-        if (attempt < maxAttempts) {
-          await sleep(JOB_RETRY_BASE_DELAY_MS * 2 ** (attempt - 1))
+        // A-11: 恒久エラー（設定不備・入力超過・Slack 投稿失敗）はリトライしても直らない。
+        // 特に SLACK_POST_FAILED の再試行は二重返信を生むため即座に打ち切る
+        const retryable = !(err instanceof AppError) || err.retryable
+        if (retryable && attempt < maxAttempts) {
+          await sleep(retryDelayMs(err, attempt))
           continue
         }
+        break
       }
 
       // execute 成功時のステータス更新は execute の try/catch 外で行う。
@@ -133,13 +197,13 @@ export async function processJob(
       }
     }
 
-    // max_attempts 到達（AC-04-03）
+    // max_attempts 到達 or 非リトライアブルで打ち切り（AC-04-03 / A-11）
     const code = lastError instanceof AppError ? lastError.code : 'UNKNOWN_ERROR'
     await updateJobStatus(db, jobId, {
       status: 'failed',
       finished_at: clock(),
       error_code: code,
-      attempt_count: maxAttempts,
+      attempt_count: usedAttempts,
     })
     await logError(db, {
       code,
@@ -149,7 +213,7 @@ export async function processJob(
       channelId: payload.channelId,
       threadTs: payload.threadTs,
       messageTs: payload.messageTs,
-      retryable: false,
+      retryable: lastError instanceof AppError ? lastError.retryable : true,
       rawError: lastError,
     })
 
@@ -163,7 +227,7 @@ export async function processJob(
         }),
       )
     }
-    return { status: 'failed', attempts: maxAttempts }
+    return { status: 'failed', attempts: usedAttempts }
   } finally {
     await safeSlackCall(() =>
       removeReactionFn({

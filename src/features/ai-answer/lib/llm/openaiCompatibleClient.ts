@@ -52,6 +52,9 @@ export function createOpenAiCompatibleClient(opts: OpenAiCompatibleOptions): Llm
     apiKey: opts.apiKey,
     baseURL: opts.baseURL,
     timeout: opts.timeoutMs ?? 60_000,
+    // A-10: SDK 既定の maxRetries=2 とジョブ側の 3 attempts が掛け算になり、
+    // 最悪 9 回の LLM 呼び出し（最長 9 分）になる。リトライはジョブ側に一本化する
+    maxRetries: 0,
   })
 
   return {
@@ -67,7 +70,8 @@ export function createOpenAiCompatibleClient(opts: OpenAiCompatibleOptions): Llm
           temperature: params.temperature,
         })
 
-        const text = res.choices[0]?.message?.content ?? ''
+        const choice = res.choices[0]
+        const text = choice?.message?.content ?? ''
         // 空応答をそのまま Slack に投げると no_text で失敗し無応答になる → 明示エラーにする
         if (!text.trim()) {
           throw new AiResponseFailedError('LLM から空の応答が返りました')
@@ -79,12 +83,24 @@ export function createOpenAiCompatibleClient(opts: OpenAiCompatibleOptions): Llm
             outputTokens: res.usage?.completion_tokens ?? 0,
           },
           model: res.model ?? params.model,
+          // A-15 / G-3: 出力上限での打ち切りを呼び出し側に伝える
+          truncated: isTruncated(choice),
         }
       } catch (err) {
         throw mapOpenAiError(err)
       }
     },
   }
+}
+
+/**
+ * 出力トークン上限で打ち切られたか（A-15 / G-3）。
+ * OpenAI 互換プロバイダは finish_reason に 'length'（Anthropic 互換ゲートウェイでは
+ * 'max_tokens' を返す実装もある）を入れる。
+ */
+export function isTruncated(choice: { finish_reason?: string | null } | undefined): boolean {
+  const reason = choice?.finish_reason
+  return reason === 'length' || reason === 'max_tokens'
 }
 
 export function mapOpenAiError(err: unknown): Error {

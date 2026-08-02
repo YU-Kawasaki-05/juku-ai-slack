@@ -11,6 +11,13 @@ const envSchema = z.object({
   SLACK_BOT_USER_ID: z.string().min(1),
   // 管理画面のエラー詳細から Slack スレッドを開くリンク用（任意。未設定ならリンク非表示）
   SLACK_WORKSPACE_URL: z.string().url().optional(),
+  // 運用アラートの通知先チャンネル ID（DEC-15: kill_switch の停止・再開通知）。
+  // 任意にしているのは、未設定で env のパースが落ちると Slack 連携ごと 500 になるため。
+  // 未設定時は通知をスキップして console.warn のみ（切替操作自体は成功する）
+  SLACK_ALERTS_CHANNEL_ID: z.string().min(1).optional(),
+  // Slack Web API の向き先差し替え（受け入れテストのモックサーバー用）。
+  // セキュリティ: Bot Token の流出経路にしないため、ループバック宛て以外は client.ts 側で拒否する。
+  SLACK_API_BASE_URL: z.string().url().optional(),
 
   // LLM プロバイダ非依存設定（OpenAI 互換: OpenRouter / DeepSeek / OpenAI など）。
   // 実行時に LLM を呼ぶ箇所で存在チェックする（未確定でもビルド/他機能を壊さないため optional）
@@ -25,8 +32,10 @@ const envSchema = z.object({
   // Anthropic 直アダプタを使う場合のみ
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
 
-  RESEND_API_KEY: z.string().min(1),
-  RESEND_FROM_EMAIL: z.string().email(),
+  // 保護者メール送信（FR-08 想定）。現時点でコード上の利用箇所はゼロのため optional。
+  // 必須にすると未設定環境で env のパースが落ち、Slack 連携ごと 500 になる
+  RESEND_API_KEY: z.string().min(1).optional(),
+  RESEND_FROM_EMAIL: z.string().email().optional(),
 })
 
 const parsed = envSchema.safeParse(process.env)

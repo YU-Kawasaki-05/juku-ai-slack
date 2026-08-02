@@ -2,6 +2,9 @@
  * 機能: レポートの作成/編集フォーム（Markdown エディタ + プレビュー、下書き/承認の2段保存）
  * 備考: 押した保存ボタン（name="status"）の値が FormData に入り、保存後の状態になる。
  *   生徒・対象月は作成時のみ指定可（編集では固定表示）
+ *   H-2: フォーム先頭に非表示の draft submit を置き、暗黙の submit（テキスト入力での Enter）が
+ *   「承認して保存」ではなく「下書き保存」になるようにしている。書きかけが RAG 参照対象に
+ *   化けるのを防ぐため、Enter で承認が発火しないことを最優先する
  * @implements FR-16, AC-16-01, BR-16-01
  */
 'use client'
@@ -25,6 +28,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from '@/components/ui/use-toast'
 import { StatusBadge } from '@/components/admin/StatusBadge'
+import { FieldError } from '@/components/admin/FieldError'
 import { formatMonth } from '@/components/admin/formatDate'
 import type { ActionResult } from '@shared/types/action'
 import type { ReportWithPerson } from '../lib/getReports'
@@ -74,7 +78,32 @@ export function ReportForm({
     <Card className="max-w-3xl">
       <CardContent className="pt-6">
         <form action={formAction} className="space-y-5">
-          {report && <input type="hidden" name="id" value={report.id} />}
+          {/*
+            name は "id" にしない。HTMLFormElement は [LegacyOverrideBuiltIns] なので
+            name="id" のコントロールが form.id を覆い隠す。React は submitter の name/value を
+            FormData に載せるとき `if (form.id) temp.setAttribute('form', form.id)` を通るため、
+            form.id が要素になると temp の form owner が存在しない ID に向き、
+            submitter（= status）が丸ごと欠落する。結果「承認して保存」が下書き保存になっていた。
+          */}
+          {report && <input type="hidden" name="reportId" value={report.id} />}
+
+          {/*
+            H-2: 暗黙の submit（テキスト入力での Enter）はフォーム内で最初に現れる submit を
+            発火させる。以前は「承認して保存」が最初だったため、書きかけの本文が Enter 一発で
+            承認済み＝AI 参照対象になっていた。視覚順は変えずに draft を先頭へ置く。
+            aria-hidden + tabIndex=-1 で支援技術・キーボード順からは隠す
+          */}
+          <button
+            type="submit"
+            name="status"
+            value="draft"
+            aria-hidden="true"
+            tabIndex={-1}
+            disabled={pending || state?.ok}
+            className="sr-only"
+          >
+            下書き保存
+          </button>
 
           {err && (
             <Alert variant="destructive">
@@ -118,8 +147,13 @@ export function ReportForm({
                     *
                   </span>
                 </Label>
-                <Select name="personId">
-                  <SelectTrigger id="personId" aria-required="true">
+                <Select name="personId" required>
+                  <SelectTrigger
+                    id="personId"
+                    aria-required="true"
+                    aria-invalid={err?.fieldErrors?.personId ? true : undefined}
+                    aria-describedby={err?.fieldErrors?.personId ? 'personId-error' : undefined}
+                  >
                     <SelectValue placeholder="生徒を選択" />
                   </SelectTrigger>
                   <SelectContent>
@@ -130,6 +164,7 @@ export function ReportForm({
                     ))}
                   </SelectContent>
                 </Select>
+                <FieldError id="personId-error" message={err?.fieldErrors?.personId} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="reportMonth">
@@ -138,7 +173,17 @@ export function ReportForm({
                     *
                   </span>
                 </Label>
-                <Input id="reportMonth" name="reportMonth" type="month" required />
+                <Input
+                  id="reportMonth"
+                  name="reportMonth"
+                  type="month"
+                  required
+                  aria-invalid={err?.fieldErrors?.reportMonth ? true : undefined}
+                  aria-describedby={
+                    err?.fieldErrors?.reportMonth ? 'reportMonth-error' : undefined
+                  }
+                />
+                <FieldError id="reportMonth-error" message={err?.fieldErrors?.reportMonth} />
               </div>
             </div>
           )}
@@ -160,11 +205,7 @@ export function ReportForm({
               aria-invalid={err?.fieldErrors?.title ? true : undefined}
               aria-describedby={err?.fieldErrors?.title ? 'title-error' : undefined}
             />
-            {err?.fieldErrors?.title && (
-              <p id="title-error" className="text-sm text-destructive">
-                {err.fieldErrors.title}
-              </p>
-            )}
+            <FieldError id="title-error" message={err?.fieldErrors?.title} />
           </div>
 
           <div className="flex items-start gap-2">
@@ -181,6 +222,7 @@ export function ReportForm({
               <p id="isAiReference-help" className="text-xs text-muted-foreground">
                 オンにすると、承認済み・送信済みのレポートを Bot が回答時に参照します
               </p>
+              <FieldError id="isAiReference-error" message={err?.fieldErrors?.isAiReference} />
             </div>
           </div>
 
@@ -217,7 +259,10 @@ export function ReportForm({
               rows={16}
               placeholder={'# 月次学習レポート\n\n## 今月の様子\n\n- '}
               className={tab === 'edit' ? 'font-mono' : 'hidden'}
+              aria-invalid={err?.fieldErrors?.bodyMarkdown ? true : undefined}
+              aria-describedby={err?.fieldErrors?.bodyMarkdown ? 'bodyMarkdown-error' : undefined}
             />
+            <FieldError id="bodyMarkdown-error" message={err?.fieldErrors?.bodyMarkdown} />
             {tab === 'preview' && (
               <div className="min-h-[200px] rounded-md border bg-muted/20 px-4 py-3">
                 {body.trim() ? (
@@ -234,8 +279,11 @@ export function ReportForm({
             は必須項目です。「承認して保存」すると AI 参照対象（オンの場合）になり、Slack 送信の対象になります
           </p>
 
+          <FieldError id="status-error" message={err?.fieldErrors?.status} />
+
           <div className="flex flex-wrap gap-2 pt-1">
-            <Button type="submit" name="status" value="approved" disabled={pending}>
+            {/* H-9: 成功後も無効のままにして、遷移待ちの間の二重送信を防ぐ */}
+            <Button type="submit" name="status" value="approved" disabled={pending || state?.ok}>
               {pending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
               承認して保存
             </Button>
@@ -244,7 +292,7 @@ export function ReportForm({
               name="status"
               value="draft"
               variant="secondary"
-              disabled={pending}
+              disabled={pending || state?.ok}
             >
               下書き保存
             </Button>

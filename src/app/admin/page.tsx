@@ -1,7 +1,7 @@
 /** @file
- * 機能: ダッシュボード（SCR-02）。サマリー4カード + 最近のエラー
- * 備考: DEC-15 の kill_switch 状態表示は kill_switch 自体が未実装（バックエンド領域）のため未対応
- * @implements FR-18
+ * 機能: ダッシュボード（SCR-02）。AI応答の状態カード（DEC-15）+ サマリー4カード + 最近のエラー
+ * 備考: kill_switch は停止に気づかず放置されるのが最大のリスクなので最上部に置く（DEC-15）
+ * @implements FR-18, DEC-15
  */
 import type { Metadata } from 'next'
 import Link from 'next/link'
@@ -14,8 +14,12 @@ import {
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { createServerClient } from '@/shared/lib/supabase/serverClient'
-import { getUsageSummary } from '@features/usage-logs'
+import { getUsageSummary, getUnpricedModels } from '@features/usage-logs'
+import { UnpricedModelsAlert } from '@features/usage-logs/components/UnpricedModelsAlert'
+import { countActivePersons } from '@features/persons'
 import { getErrorLogs, countUnresolvedErrors } from '@features/errors'
+import { getAIKillSwitch } from '@features/kill-switch'
+import { KillSwitchCard } from '@features/kill-switch/components/KillSwitchCard'
 import { StatusBadge } from '@/components/admin/StatusBadge'
 import { formatDateTime } from '@/components/admin/formatDate'
 import { cn } from '@/lib/utils'
@@ -25,12 +29,17 @@ export const metadata: Metadata = { title: 'ダッシュボード' }
 export default async function AdminDashboardPage() {
   const db = createServerClient()
 
-  const [usage, unresolvedCount, { count: studentCount }, recentErrors] = await Promise.all([
-    getUsageSummary(db),
-    countUnresolvedErrors(db),
-    db.from('persons').select('*', { count: 'exact', head: true }),
-    getErrorLogs(db, { limit: 5 }),
-  ])
+  const [usage, unresolvedCount, studentCount, recentErrors, killSwitch, unpricedModels] =
+    await Promise.all([
+      getUsageSummary(db),
+      countUnresolvedErrors(db),
+      // H-6: 「無効にした生徒は集計から外れます」の説明どおり active のみ数える
+      countActivePersons(db),
+      getErrorLogs(db, { limit: 5 }),
+      getAIKillSwitch(db),
+      // #7: コストカードが 0 円のまま放置されるのを防ぐ
+      getUnpricedModels(db),
+    ])
 
   return (
     <div className="space-y-6">
@@ -38,6 +47,10 @@ export default async function AdminDashboardPage() {
         <h1 className="text-2xl font-bold tracking-tight">ダッシュボード</h1>
         <p className="text-sm text-muted-foreground">じゅくAI の利用状況サマリー</p>
       </div>
+
+      <KillSwitchCard state={killSwitch} />
+
+      <UnpricedModelsAlert models={unpricedModels} scope="これまで" />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -51,7 +64,9 @@ export default async function AdminDashboardPage() {
             />
           </CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-3xl font-bold tabular-nums">{usage.todayQuestionCount}</p>
+            <p className="text-3xl font-bold tabular-nums">
+              {usage.todayQuestionCount.toLocaleString('ja-JP')}
+            </p>
             <p className="text-xs text-muted-foreground">生徒からの質問（日本時間の当日分）</p>
           </CardContent>
         </Card>
@@ -106,7 +121,10 @@ export default async function AdminDashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground/70" aria-hidden="true" />
           </CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-3xl font-bold tabular-nums">{studentCount ?? 0}</p>
+            <p className="text-3xl font-bold tabular-nums">
+              {studentCount.toLocaleString('ja-JP')}
+            </p>
+            <p className="text-xs text-muted-foreground">ステータスが有効な生徒</p>
             <Link
               href="/admin/persons"
               className="inline-block text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"

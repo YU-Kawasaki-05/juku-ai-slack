@@ -14,7 +14,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 11
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -33,14 +33,20 @@ jobs:
       SLACK_BOT_TOKEN: xoxb-placeholder
       SLACK_SIGNING_SECRET: placeholder-secret
       SLACK_BOT_USER_ID: U0PLACEHOLDER
-      ANTHROPIC_API_KEY: sk-ant-placeholder
-      RESEND_API_KEY: re_placeholder
-      RESEND_FROM_EMAIL: noreply@placeholder.com
+      # LLM / Embedding は env.ts では optional だが、未設定と設定済みで分岐する
+      # コードがあるため CI ではダミー値を入れて「設定済み」経路を通す
+      LLM_API_KEY: placeholder-llm-key
+      LLM_BASE_URL: https://placeholder.example.com/v1
+      LLM_MODEL_DEFAULT: deepseek/deepseek-chat
+      LLM_MODEL_COMPLEX: openai/gpt-4o
+      EMBEDDING_API_KEY: placeholder-embedding-key
+      EMBEDDING_BASE_URL: https://placeholder.example.com/v1
+      EMBEDDING_MODEL: text-embedding-3-small
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 11
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -48,30 +54,36 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
 
+  # E2E は本番 Supabase ではなくローカル Supabase（supabase/config.toml の 5434x 帯）に対して回す。
+  # env は .env.test.example が既定で読み込まれる（ローカル固定の anon/service_role とダミー Slack 値）。
+  # そのため secrets は不要で、実行結果がコミット内容だけで決まる。
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    env:
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-      SLACK_SIGNING_SECRET: ${{ secrets.SLACK_SIGNING_SECRET }}
-      SLACK_BOT_USER_ID: ${{ secrets.SLACK_BOT_USER_ID }}
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-      RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 11
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm dlx playwright install --with-deps chromium
-      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Start local Supabase
+        run: pnpm exec supabase start
+      - name: Apply migrations + seed
+        run: pnpm exec supabase db reset
+      # test:e2e は next build → playwright test（webServer が古いビルドを掴まないよう毎回ビルドする）
       - run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+      - name: Stop local Supabase
+        if: always()
+        run: pnpm exec supabase stop --project-id juku-ai-slack

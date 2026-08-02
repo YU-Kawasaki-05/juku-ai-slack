@@ -5,7 +5,7 @@
  * 例外: 認証・DB エラーは ActionResult に変換。重複（生徒×月）は専用メッセージ
  * 依存: requireStaff, requireAdmin, createServerClient, reportSchema, rebuildReportEmbeddings
  * 副作用: reports への insert/update、report_chunks の再生成（DEC-14）、一覧の revalidate
- * セキュリティ: requireStaff 必須（FR-13）。Embedding 再生成（手動）は admin のみ（BR-16-02, EP-14）。
+ * セキュリティ: requireStaff で staff/admin ロール必須（FR-13）。Embedding 再生成（手動）は admin のみ（BR-16-02, EP-14）。
  *   person_id はフォーム値を zod で検証しサーバーでのみ使用。Service Role はサーバー専用
  * @implements FR-16, AC-16-01, AC-16-02, BR-16-01, BR-16-02
  */
@@ -14,6 +14,7 @@
 import { revalidatePath } from 'next/cache'
 import { createServerClient } from '@shared/lib/supabase/serverClient'
 import { requireStaff } from '@shared/lib/auth/requireStaff'
+import { staffAuthFailure } from '@shared/lib/auth/authFailure'
 import { requireAdmin } from '@shared/lib/auth/requireAdmin'
 import type { ActionResult } from '@shared/types/action'
 import type { ServerDb } from '@shared/types/db'
@@ -56,8 +57,8 @@ export async function createReportAction(
   let staffId: string
   try {
     staffId = (await requireStaff()).userId
-  } catch {
-    return { ok: false, error: 'ログインが必要です' }
+  } catch (e) {
+    return staffAuthFailure(e)
   }
 
   const parsed = reportCreateSchema.safeParse({
@@ -103,13 +104,15 @@ export async function updateReportAction(
 ): Promise<ActionResult<ReportSaveResult>> {
   try {
     await requireStaff()
-  } catch {
-    return { ok: false, error: 'ログインが必要です' }
+  } catch (e) {
+    return staffAuthFailure(e)
   }
 
+  // フィールド名が "id" だと form.id を覆い隠して submitter（status）が欠落する。
+  // 詳細は ReportForm.tsx のコメント参照
   const parsed = reportUpdateSchema.safeParse({
     ...readForm(formData),
-    id: String(formData.get('id') ?? ''),
+    id: String(formData.get('reportId') ?? ''),
   })
   if (!parsed.success) {
     return { ok: false, error: '入力内容を確認してください', fieldErrors: flatten(parsed.error) }
@@ -120,11 +123,13 @@ export async function updateReportAction(
   // 本文が変わっていなければ Embedding 再生成は不要（無駄な埋め込み課金を避ける）。
   // RAG の可視条件（is_ai_reference / status）は検索時に RPC 側でフィルタされるため、
   // チャンクは本文の内容だけを反映していればよい。
-  const { data: existing } = await db
+  const { data: existing, error: readError } = await db
     .from('reports')
-    .select('body_markdown')
+    .select('body_markdown, embeddings_updated_at')
     .eq('id', parsed.data.id)
     .maybeSingle()
+  // 読めないと「本文が変わったか」を判定できず、embedding が黙って陳腐化する
+  if (readError) return { ok: false, error: '保存に失敗しました' }
 
   // 生徒・対象月は変更不可（reportUpdateSchema と対応）
   const { error } = await db
@@ -139,7 +144,18 @@ export async function updateReportAction(
   if (error) return { ok: false, error: '保存に失敗しました' }
 
   const bodyChanged = (existing?.body_markdown ?? null) !== parsed.data.bodyMarkdown
-  const embeddingWarning = bodyChanged ? await tryRebuildEmbeddings(db, parsed.data.id) : false
+  let embeddingWarning = false
+  if (bodyChanged) {
+    embeddingWarning = await tryRebuildEmbeddings(db, parsed.data.id)
+  } else if (existing?.embeddings_updated_at) {
+    // タイトルのみ編集でも updated_at は進むため、既存 embedding が最新でも
+    // 詳細ページに「再生成が必要」の誤警告が出続ける。時刻だけ追従させる（BR-16-03）。
+    // 未生成（NULL）のときは触らない — 生成済みと誤認させないため
+    await db
+      .from('reports')
+      .update({ embeddings_updated_at: new Date().toISOString() })
+      .eq('id', parsed.data.id)
+  }
 
   revalidatePath('/admin/reports')
   revalidatePath(`/admin/reports/${parsed.data.id}`)

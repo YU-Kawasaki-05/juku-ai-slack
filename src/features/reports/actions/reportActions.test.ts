@@ -44,6 +44,14 @@ describe('createReportAction', () => {
     expect(createServerClient).not.toHaveBeenCalled()
   })
 
+  // ロール未設定は「ログインし直せ」では解決しないので文言を分ける（AT-05）
+  it('ロール未設定は権限がない旨を返す（DB に触れない）', async () => {
+    vi.mocked(requireStaff).mockRejectedValue(new Error('forbidden'))
+    const r = await createReportAction(undefined, fd({ personId: PERSON_ID, reportMonth: '2026-06', title: 't', status: 'draft' }))
+    expect(r).toEqual({ ok: false, error: 'このアカウントには管理画面の利用権限がありません' })
+    expect(createServerClient).not.toHaveBeenCalled()
+  })
+
   it('入力不正は fieldErrors を返す', async () => {
     staffOk()
     const r = await createReportAction(undefined, fd({ personId: PERSON_ID, reportMonth: '2026-06', title: '', status: 'draft' }))
@@ -82,7 +90,7 @@ describe('updateReportAction', () => {
     vi.mocked(createServerClient).mockReturnValue(
       createMockDb({ maybeSingle: { data: { body_markdown: 'old' }, error: null }, thenable: { error: null } }),
     )
-    const r = await updateReportAction(undefined, fd({ id: REPORT_ID, title: 't', bodyMarkdown: 'new', status: 'approved' }))
+    const r = await updateReportAction(undefined, fd({ reportId: REPORT_ID, title: 't', bodyMarkdown: 'new', status: 'approved' }))
     expect(r).toEqual({ ok: true, data: { reportId: REPORT_ID, embeddingWarning: false } })
     expect(rebuildReportEmbeddings).toHaveBeenCalledOnce()
   })
@@ -92,8 +100,53 @@ describe('updateReportAction', () => {
     vi.mocked(createServerClient).mockReturnValue(
       createMockDb({ maybeSingle: { data: { body_markdown: 'same' }, error: null }, thenable: { error: null } }),
     )
-    const r = await updateReportAction(undefined, fd({ id: REPORT_ID, title: 't', bodyMarkdown: 'same', status: 'approved' }))
+    const r = await updateReportAction(undefined, fd({ reportId: REPORT_ID, title: 't', bodyMarkdown: 'same', status: 'approved' }))
     expect(r.ok).toBe(true)
+    expect(rebuildReportEmbeddings).not.toHaveBeenCalled()
+  })
+
+  it('本文が同じでも生成済みなら embeddings_updated_at を touch する（誤警告の恒久解消）', async () => {
+    staffOk()
+    const db = createMockDb({
+      maybeSingle: {
+        data: { body_markdown: 'same', embeddings_updated_at: '2026-08-01T00:00:00+00:00' },
+        error: null,
+      },
+      thenable: { error: null },
+    })
+    vi.mocked(createServerClient).mockReturnValue(db)
+    await updateReportAction(undefined, fd({ reportId: REPORT_ID, title: '新タイトル', bodyMarkdown: 'same', status: 'approved' }))
+
+    const touch = db.__calls.update.at(-1) as { embeddings_updated_at?: string }
+    expect(db.__calls.update).toHaveLength(2)
+    expect(Date.parse(touch.embeddings_updated_at ?? '')).toBeGreaterThan(
+      Date.parse('2026-08-01T00:00:00+00:00'),
+    )
+  })
+
+  it('embedding 未生成（null）なら touch しない（生成済みと誤認させない）', async () => {
+    staffOk()
+    const db = createMockDb({
+      maybeSingle: { data: { body_markdown: 'same', embeddings_updated_at: null }, error: null },
+      thenable: { error: null },
+    })
+    vi.mocked(createServerClient).mockReturnValue(db)
+    await updateReportAction(undefined, fd({ reportId: REPORT_ID, title: '新タイトル', bodyMarkdown: 'same', status: 'approved' }))
+
+    expect(db.__calls.update).toHaveLength(1)
+  })
+
+  it('既存レポートの読み取りエラーは保存失敗にする（本文差分を判定できないため）', async () => {
+    staffOk()
+    const db = createMockDb({
+      maybeSingle: { data: null, error: { message: 'read failed' } },
+      thenable: { error: null },
+    })
+    vi.mocked(createServerClient).mockReturnValue(db)
+    const r = await updateReportAction(undefined, fd({ reportId: REPORT_ID, title: 't', bodyMarkdown: 'new', status: 'approved' }))
+
+    expect(r).toEqual({ ok: false, error: '保存に失敗しました' })
+    expect(db.__calls.update).toHaveLength(0)
     expect(rebuildReportEmbeddings).not.toHaveBeenCalled()
   })
 })

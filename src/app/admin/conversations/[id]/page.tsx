@@ -10,6 +10,7 @@ import { createServerClient } from '@shared/lib/supabase/serverClient'
 import { getThreadDetail, formatMessageTime } from '@features/conversation-logs'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { isUuid } from '../../searchParams'
 
 export const metadata: Metadata = { title: '会話ログ詳細' }
 
@@ -19,6 +20,8 @@ export default async function ConversationDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  // UUID でない ID をそのままクエリすると Postgres 22P02 で 500 になるため事前に 404 に倒す（H-5）
+  if (!isUuid(id)) notFound()
   const detail = await getThreadDetail(createServerClient(), id)
   if (!detail) notFound()
 
