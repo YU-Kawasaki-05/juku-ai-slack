@@ -47,6 +47,58 @@ function toChatMessages(system: string | undefined, messages: LlmMessage[]) {
   return out
 }
 
+/** 出力上限を指定するリクエストパラメータ名。モデルによって排他的（両方送るとエラーになる） */
+type TokenParam = 'max_tokens' | 'max_completion_tokens'
+
+/**
+ * モデルごとに「通った上限パラメータ名」を記憶する（プロセス内キャッシュ）。
+ * Vercel の関数はコールドスタートごとに空になるが、その場合でも
+ * preferredTokenParam の推測が当たれば無駄な往復は発生しない。
+ */
+const tokenParamByModel = new Map<string, TokenParam>()
+
+/**
+ * 上限パラメータ名の初期推測。
+ *
+ * OpenAI の GPT-5 系 / o シリーズは `max_tokens` を 400 で拒否し `max_completion_tokens` を要求する
+ * （実測: gpt-5.6-luna / gpt-5.6-terra とも "Unsupported parameter: 'max_tokens'"）。
+ * 一方 gpt-4o 系や OpenAI 互換ゲートウェイ経由の非 OpenAI モデルは `max_tokens` しか知らないことがあり、
+ * 知らないパラメータを黙って無視する実装だと**出力上限が効かなくなる**（エラーも出ない）。
+ * そのため「広く通る max_tokens」を既定にし、新世代 OpenAI モデルだけ例外にする。
+ *
+ * 推測が外れても generate() が 400 を見て入れ替えるので、ここは当たれば往復が減るだけの最適化。
+ */
+export function preferredTokenParam(model: string): TokenParam {
+  // OpenRouter の `provider/model` 形式でも判定できるようサフィックスを見る
+  const name = model.slice(model.lastIndexOf('/') + 1)
+  return /^(gpt-5|o[1-9])/.test(name) ? 'max_completion_tokens' : 'max_tokens'
+}
+
+/**
+ * その 400 が「いま送った上限パラメータが非対応」を意味するか。
+ * 単なる 400（不正なメッセージ形式など）で再試行して二重課金しないよう、
+ * パラメータ名が名指しされていることまで確認する。
+ */
+export function isUnsupportedTokenParam(err: unknown, sent: TokenParam): boolean {
+  const e = err as {
+    status?: number
+    message?: string
+    error?: { message?: string; param?: string; code?: string }
+  }
+  if (e?.status !== 400) return false
+  if (e.error?.param === sent) return true
+
+  // 本文判定は「名指しされている形」だけを見る。単純な部分一致にすると
+  // 実メッセージ "Unsupported parameter: 'max_tokens' ... Use 'max_completion_tokens' instead."
+  // の**提案側**を拾って、送っていない側でも true になってしまう
+  const message = `${e.error?.message ?? ''} ${e.message ?? ''}`
+  return (
+    message.includes(`parameter: '${sent}'`) ||
+    message.includes(`'${sent}' is not supported`) ||
+    message.includes(`'${sent}' is unsupported`)
+  )
+}
+
 export function createOpenAiCompatibleClient(opts: OpenAiCompatibleOptions): LlmClient {
   const client = new OpenAI({
     apiKey: opts.apiKey,
@@ -59,16 +111,37 @@ export function createOpenAiCompatibleClient(opts: OpenAiCompatibleOptions): Llm
 
   return {
     async generate(params: LlmGenerateParams): Promise<LlmResult> {
-      try {
-        const res = await client.chat.completions.create({
+      const messages = toChatMessages(
+        params.system,
+        params.messages,
+      ) as OpenAI.Chat.Completions.ChatCompletionMessageParam[]
+
+      const send = (tokenParam: TokenParam) =>
+        client.chat.completions.create({
           model: params.model,
-          messages: toChatMessages(
-            params.system,
-            params.messages,
-          ) as OpenAI.Chat.Completions.ChatCompletionMessageParam[],
-          max_tokens: params.maxTokens,
+          messages,
+          // 上限パラメータ名はモデルによって排他（下記 preferredTokenParam のコメント参照）
+          ...(params.maxTokens === undefined ? {} : { [tokenParam]: params.maxTokens }),
           temperature: params.temperature,
         })
+
+      try {
+        const first = tokenParamByModel.get(params.model) ?? preferredTokenParam(params.model)
+        let res: Awaited<ReturnType<typeof send>>
+        try {
+          res = await send(first)
+        } catch (err) {
+          // 推測が外れた場合だけ入れ替えて 1 回だけ再試行し、結果を記憶する。
+          // これをやらないとモデルを差し替えた瞬間に全質問が 400 で落ちる（発生時にコード修正が必要になる）
+          if (!isUnsupportedTokenParam(err, first)) throw err
+          const alt: TokenParam =
+            first === 'max_tokens' ? 'max_completion_tokens' : 'max_tokens'
+          console.warn(
+            `[llm] ${params.model} は ${first} 非対応。${alt} で再試行する（以降はキャッシュ）`,
+          )
+          res = await send(alt)
+          tokenParamByModel.set(params.model, alt)
+        }
 
         const choice = res.choices[0]
         const text = choice?.message?.content ?? ''
