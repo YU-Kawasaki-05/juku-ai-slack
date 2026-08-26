@@ -22,7 +22,9 @@ import { cn } from '@/lib/utils'
 const nav = [
   { href: '/admin', label: 'ダッシュボード', icon: LayoutDashboard },
   { href: '/admin/persons', label: '生徒管理', icon: Users },
-  { href: '/admin/channels', label: 'チャンネル設定', icon: Link2 },
+  // チャンネル紐付けは admin 限定（EP-07）。staff に出すと開いた先で断られるだけなので隠す。
+  // 認可は画面側の hasChannelAdminAccess と Server Action の requireAdmin が担う（ここは表示のみ）
+  { href: '/admin/channels', label: 'チャンネル設定', icon: Link2, adminOnly: true },
   { href: '/admin/reports', label: 'レポート', icon: FileText },
   { href: '/admin/conversations', label: '会話ログ', icon: MessagesSquare },
   { href: '/admin/errors', label: 'エラーログ', icon: AlertCircle },
@@ -35,8 +37,9 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-export default function AdminSidebar() {
+export default function AdminSidebar({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname()
+  const items = nav.filter((item) => !item.adminOnly || isAdmin)
 
   return (
     <aside className="flex w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
@@ -45,7 +48,7 @@ export default function AdminSidebar() {
         <span className="font-bold text-sidebar-primary">じゅくAI</span>
       </div>
       <nav aria-label="メインナビゲーション" className="flex-1 space-y-1 overflow-y-auto p-3">
-        {nav.map(({ href, label, icon: Icon }) => {
+        {items.map(({ href, label, icon: Icon }) => {
           const active = isActive(pathname, href)
           return (
             <Link

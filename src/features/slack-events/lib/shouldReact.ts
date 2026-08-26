@@ -3,18 +3,20 @@
  * 入力: ShouldReactInput（イベント属性 + DB 参照結果）
  * 出力: ReactionDecision（ignore / process / channel_not_bound）
  * 例外: なし
- * 依存: なし（純粋関数。DB 参照は呼び出し側で行い結果を注入）
+ * 依存: eventFacts（処理対象 subtype の許容リスト）。純粋関数で DB 参照は呼び出し側から注入
  * セキュリティ: channel_id ベースの binding 状態のみで判定。channel_name は使わない（BR-07-01）
  * @implements FR-02, AC-02-01, AC-02-02, AC-02-03, AC-02-04, AC-02-05, AC-02-06
  */
 import type { ReactionDecision, ShouldReactInput } from '../types'
+import { isProcessableSubtype } from './eventFacts'
 
 /**
  * 反応制御の判定。
  *
  * 優先順位:
  * 1. Bot 自身のメッセージ → ignore（BR-02-01）
- * 2. subtype 付き（message_changed 等）→ ignore（BR-02-02）。ただし file_share は画像添付なので許容
+ * 2. subtype 付き（message_changed 等）→ ignore（BR-02-02）。
+ *    ただし file_share（画像添付）と thread_broadcast（スレッド返信の「チャンネルにも送信」）は許容
  * 3. テキストも対応画像もなし → ignore（BR-02-06 / BR-06-08）
  * 4. スレッド内返信:
  *    - セッション登録済み → 反応対象（BR-02-04, AC-02-03）。ただし binding が無効なら channel_not_bound
@@ -31,8 +33,8 @@ export function shouldReact(input: ShouldReactInput): ReactionDecision {
     return { action: 'ignore', reason: 'bot_message' }
   }
 
-  // file_share は画像添付を伴う通常メッセージなので許容。それ以外の subtype は無視
-  if (input.subtype && input.subtype !== 'file_share') {
+  // file_share / thread_broadcast は本文を持つ通常メッセージなので許容。それ以外の subtype は無視
+  if (!isProcessableSubtype(input.subtype)) {
     return { action: 'ignore', reason: `subtype:${input.subtype}` }
   }
 

@@ -29,7 +29,7 @@ function fd(entries: Record<string, string>): FormData {
   return f
 }
 
-const staffOk = () => vi.mocked(requireStaff).mockResolvedValue({ userId: 'u1', email: 'a@b.com' })
+const staffOk = () => vi.mocked(requireStaff).mockResolvedValue({ userId: 'u1', email: 'a@b.com' , role: 'staff' })
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -160,7 +160,7 @@ describe('rebuildEmbeddingsAction', () => {
   })
 
   it('管理者なら再生成を実行する', async () => {
-    vi.mocked(requireAdmin).mockResolvedValue({ userId: 'admin', email: 'a@b.com' })
+    vi.mocked(requireAdmin).mockResolvedValue({ userId: 'admin', email: 'a@b.com' , role: 'admin' })
     vi.mocked(createServerClient).mockReturnValue(createMockDb())
     const r = await rebuildEmbeddingsAction(undefined, fd({ id: REPORT_ID }))
     expect(r).toEqual({ ok: true })

@@ -112,14 +112,21 @@ export function ReportForm({
             </Alert>
           )}
 
-          {report?.status === 'sent' && (
-            <Alert>
-              <AlertCircle className="h-4 w-4" aria-hidden="true" />
-              <AlertDescription>
-                このレポートは Slack 送信済みです。保存すると状態が「下書き」または「承認済み」に変わります
-              </AlertDescription>
-            </Alert>
-          )}
+          {/*
+            送信済みバナーは意図的に無効化している。status='sent' を書き込むのは
+            生徒チャンネルへの Slack 送信（FR-08 / AC-08-02）だけで、その処理自体が未実装のため
+            この分岐には到達しない。到達しない警告を出しておくと、スタッフに
+            「承認したら生徒に届いた」と誤認させる。FR-08 実装時に下を戻す:
+
+            {report?.status === 'sent' && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" aria-hidden="true" />
+                <AlertDescription>
+                  このレポートは Slack 送信済みです。保存すると状態が「下書き」または「承認済み」に変わります
+                </AlertDescription>
+              </Alert>
+            )}
+          */}
 
           {report ? (
             <dl className="flex flex-wrap gap-x-8 gap-y-2 rounded-md border bg-muted/40 px-4 py-3 text-sm">
@@ -220,7 +227,7 @@ export function ReportForm({
             <div className="space-y-1">
               <Label htmlFor="isAiReference">AI 参照対象にする</Label>
               <p id="isAiReference-help" className="text-xs text-muted-foreground">
-                オンにすると、承認済み・送信済みのレポートを Bot が回答時に参照します
+                オンにすると、承認済みのレポートを Bot が回答時に参照します
               </p>
               <FieldError id="isAiReference-error" message={err?.fieldErrors?.isAiReference} />
             </div>
@@ -274,9 +281,13 @@ export function ReportForm({
             )}
           </div>
 
+          {/*
+            承認は「Bot の参照対象にする」までで、生徒への Slack 送信は起きない
+            （FR-08 / AC-08-02 が未実装）。送信されたと誤解させない文言にする
+          */}
           <p className="text-xs text-muted-foreground">
             <span aria-hidden="true">*</span>{' '}
-            は必須項目です。「承認して保存」すると AI 参照対象（オンの場合）になり、Slack 送信の対象になります
+            は必須項目です。「承認して保存」すると、AI 参照対象がオンのレポートは Bot が回答時に参照するようになります（生徒への Slack 送信は行いません）
           </p>
 
           <FieldError id="status-error" message={err?.fieldErrors?.status} />

@@ -66,6 +66,16 @@ function safeAfter(db: ServerDb, context: string, fn: () => Promise<unknown>): v
   })
 }
 
+/**
+ * 署名検証失敗ログ用の時計ずれ表示。Slack 側との時刻同期ずれと単なる改ざんを切り分けるために残す。
+ * ヘッダは未認証入力なので、数値として解釈できたときだけ秒数（丸め済み）を出す。
+ */
+function describeTimestampSkew(timestamp: string | null): string {
+  const tsNum = Number(timestamp)
+  if (!timestamp || !Number.isFinite(tsNum)) return ''
+  return ` (skew=${Math.round(Date.now() / 1000 - tsNum)}s)`
+}
+
 export async function POST(req: Request): Promise<NextResponse> {
   const rawBody = await req.text()
   const signature = req.headers.get('x-slack-signature')
@@ -79,9 +89,24 @@ export async function POST(req: Request): Promise<NextResponse> {
     signingSecret: env.SLACK_SIGNING_SECRET,
   })
   if (!sig.valid) {
-    // 未認証リクエストで DB 書き込みを誘発させないため、DB でなくサーバーログに記録する
-    // （公開エンドポイントのため増幅・コスト増を防ぐ）
     console.warn('[slack/events] signature verification failed:', sig.reason)
+    // BR-11-02: 攻撃・SLACK_SIGNING_SECRET の設定ミス・時計ずれを管理画面から検知できるよう記録する。
+    // severity=error は 07_エラー文言設計 の定義に合わせる。設定ミスなら全イベントが弾かれ
+    // Bot が完全停止するため、既定フィルタで確実に目に入る必要がある。
+    // （公開エンドポイントなのでインターネットからの無差別プローブでも 1 行だけ立つ。
+    //   Bot が動いているかどうかで攻撃・ノイズと設定ミスを切り分ける）
+    // 公開エンドポイントなので dedupeWhileUnresolved で「未解決 1 行」に抑え、
+    // 総当たりで ai_error_logs が埋まる（DB 増幅）のを防ぐ。
+    // 署名検証前なので body は信用できない: 残すのは失敗理由と時計ずれ（数値）だけに限る。
+    const db = createServerClient()
+    safeAfter(db, 'signature-invalid-log', () =>
+      logError(db, {
+        code: 'SLACK_SIGNATURE_INVALID',
+        severity: 'error',
+        internalMessage: `signature verification failed: ${sig.reason}${describeTimestampSkew(timestamp)}`,
+        dedupeWhileUnresolved: true,
+      }),
+    )
     return new NextResponse('invalid signature', { status: 401 })
   }
 
@@ -143,12 +168,8 @@ export async function POST(req: Request): Promise<NextResponse> {
     const facts = deriveEventFacts(messageEvent, env.SLACK_BOT_USER_ID)
     const hasText = Boolean(facts.text && facts.text.trim())
 
-    // DB 不要の早期 ignore（Bot自身・非file_share subtype・コンテンツなし・直下メンションなし）
-    if (
-      facts.hasBotId ||
-      (facts.subtype && facts.subtype !== 'file_share') ||
-      (!hasText && !facts.hasImage)
-    ) {
+    // DB 不要の早期 ignore（Bot自身・処理対象外 subtype・コンテンツなし・直下メンションなし）
+    if (facts.hasBotId || !facts.isProcessableSubtype || (!hasText && !facts.hasImage)) {
       return ok()
     }
     if (!facts.isThreadReply && !facts.hasMention) {

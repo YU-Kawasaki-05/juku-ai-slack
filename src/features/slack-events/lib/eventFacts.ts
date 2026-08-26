@@ -13,6 +13,8 @@ import type { SlackMessageEvent, SlackFile } from '../types'
 export interface EventFacts {
   hasBotId: boolean
   subtype: string | undefined
+  /** 通常メッセージとして処理してよい subtype か（PROCESSABLE_MESSAGE_SUBTYPES 参照） */
+  isProcessableSubtype: boolean
   text: string | undefined
   hasMention: boolean
   isThreadReply: boolean
@@ -25,6 +27,20 @@ export interface EventFacts {
   hasImage: boolean
   /** 枚数上限で切り捨てた対応画像の枚数。無通知の破棄を避けるため回答に添える案内に使う */
   droppedImageCount: number
+}
+
+/**
+ * subtype 付きでも通常メッセージとして処理するもの。BR-02-02
+ * - file_share: 画像を添付した通常メッセージ
+ * - thread_broadcast: スレッド返信を「チャンネルにも送信」したもの。本文・thread_ts は
+ *   通常のスレッド返信と同一で、捨てると登録済みスレッドでも無反応になる（AC-02-03）
+ */
+export const PROCESSABLE_MESSAGE_SUBTYPES = ['file_share', 'thread_broadcast'] as const
+
+/** subtype なし、または PROCESSABLE_MESSAGE_SUBTYPES に含まれるか */
+export function isProcessableSubtype(subtype: string | null | undefined): boolean {
+  if (!subtype) return true
+  return (PROCESSABLE_MESSAGE_SUBTYPES as readonly string[]).includes(subtype)
 }
 
 /**
@@ -127,6 +143,7 @@ export function deriveEventFacts(event: SlackMessageEvent, botUserId: string): E
   return {
     hasBotId: Boolean(event.bot_id),
     subtype: event.subtype,
+    isProcessableSubtype: isProcessableSubtype(event.subtype),
     text: event.text,
     hasMention: containsMention(event.text, botUserId),
     isThreadReply,

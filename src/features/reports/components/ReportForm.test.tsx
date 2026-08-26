@@ -1,6 +1,7 @@
 /** @file
- * 検証: レポートフォームの暗黙 submit が「承認して保存」にならないこと（H-2）と二重送信防止（H-9）
- * @verifies FR-16, H-2, H-9
+ * 検証: レポートフォームの暗黙 submit が「承認して保存」にならないこと（H-2）、二重送信防止（H-9）、
+ *   Slack 送信（AC-08-02）が未実装であることを踏まえた文言・表示
+ * @verifies FR-16, H-2, H-9, AC-08-02
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
@@ -115,5 +116,27 @@ describe('ReportForm（H-8: fieldErrors の描画）', () => {
     expect(await screen.findByText('タイトルは必須です')).toBeInTheDocument()
     expect(screen.getByText('本文が長すぎます')).toBeInTheDocument()
     expect(screen.getByLabelText(/タイトル/)).toHaveAttribute('aria-invalid', 'true')
+  })
+})
+
+describe('ReportForm（AC-08-02 未実装: Slack 送信と誤認させない）', () => {
+  it('承認の説明では Slack 送信が起きないことを明示する', () => {
+    render(<ReportForm action={vi.fn()} report={report} />)
+
+    expect(screen.getByText(/生徒への Slack 送信は行いません/)).toBeInTheDocument()
+    expect(screen.queryByText(/Slack 送信の対象/)).not.toBeInTheDocument()
+  })
+
+  it('AI 参照の説明に「送信済み」を含めない', () => {
+    render(<ReportForm action={vi.fn()} report={report} />)
+
+    expect(screen.getByText('オンにすると、承認済みのレポートを Bot が回答時に参照します')).toBeInTheDocument()
+  })
+
+  // status='sent' を書き込む処理が無いので実際には出ないが、バナーを消したことを固定する
+  it('status=sent でも「Slack 送信済み」バナーを出さない', () => {
+    render(<ReportForm action={vi.fn()} report={{ ...report, status: 'sent' }} />)
+
+    expect(screen.queryByText(/Slack 送信済み/)).not.toBeInTheDocument()
   })
 })

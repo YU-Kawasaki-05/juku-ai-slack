@@ -669,6 +669,52 @@ describe('executeProcessSlackMessage', () => {
     expect(text).toContain('画像を読み取れない')
   })
 
+  it('LLM_MODEL_COMPLEX 未設定なら画像は LLM に渡さない（非Visionモデルへの image_url で全滅させない, #1）', async () => {
+    const restore = withoutVisionModel()
+    try {
+      mocks.processAttachments.mockResolvedValue({
+        dataUrls: ['data:image/png;base64,AAA'],
+        errorCodes: [],
+        skippedForTotalSize: 0,
+      })
+      await executeProcessSlackMessage(db, imgPayload)
+    } finally {
+      restore()
+    }
+
+    // 質問はテキストのみ（image content part を含む配列にしない）
+    const lastMsg = mocks.generate.mock.calls[0][0].messages.at(-1)
+    expect(lastMsg.content).toBe('二次方程式がわからない')
+    // 生徒が画像を送った事実は利用量ログ側には残す（管理画面の「画像あり」絞り込み用）
+    expect(mocks.logUsage.mock.calls[0][1].hasImage).toBe(true)
+  })
+
+  it('画像のみ + LLM_MODEL_COMPLEX 未設定は LLM を呼ばず、文章で送り直す案内を返す（#1）', async () => {
+    const restore = withoutVisionModel()
+    try {
+      mocks.processAttachments.mockResolvedValue({
+        dataUrls: ['data:image/png;base64,AAA'],
+        errorCodes: [],
+        skippedForTotalSize: 0,
+      })
+      await executeProcessSlackMessage(db, imageOnlyPayload)
+    } finally {
+      restore()
+    }
+
+    // 画像を落とすと材料が残らない。空プロンプトで課金しない
+    expect(mocks.generate).not.toHaveBeenCalled()
+    expect(mocks.logUsage).not.toHaveBeenCalled()
+    expect(mocks.postMessage).toHaveBeenCalledOnce()
+    expect(mocks.postMessage.mock.calls[0][0].text).toBe(
+      getUserFacingMessage('IMAGE_MODEL_NOT_CONFIGURED'),
+    )
+    // 運用者向けの痕跡はこの分岐でも残す
+    expect(
+      mocks.logError.mock.calls.some((c) => c[1].code === 'IMAGE_MODEL_NOT_CONFIGURED'),
+    ).toBe(true)
+  })
+
   it('画像が無いメッセージでは LLM_MODEL_COMPLEX 未設定でも記録も案内もしない（誤検知防止）', async () => {
     const restore = withoutVisionModel()
     try {

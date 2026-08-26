@@ -3,10 +3,29 @@
  * @verifies FR-02, FR-03
  */
 import { describe, it, expect } from 'vitest'
-import { containsMention, deriveEventFacts, stripBotMention } from './eventFacts'
+import {
+  containsMention,
+  deriveEventFacts,
+  isProcessableSubtype,
+  stripBotMention,
+} from './eventFacts'
 import type { SlackMessageEvent } from '../types'
 
 const BOT = 'U_BOT'
+
+describe('isProcessableSubtype', () => {
+  it('subtype なし / file_share / thread_broadcast は処理対象', () => {
+    expect(isProcessableSubtype(undefined)).toBe(true)
+    expect(isProcessableSubtype('file_share')).toBe(true)
+    expect(isProcessableSubtype('thread_broadcast')).toBe(true)
+  })
+  it('それ以外の subtype は処理対象外', () => {
+    expect(isProcessableSubtype('message_changed')).toBe(false)
+    expect(isProcessableSubtype('message_deleted')).toBe(false)
+    expect(isProcessableSubtype('channel_join')).toBe(false)
+    expect(isProcessableSubtype('bot_message')).toBe(false)
+  })
+})
 
 describe('containsMention', () => {
   it('Bot メンションを含めば true', () => {
@@ -165,6 +184,39 @@ describe('deriveEventFacts', () => {
     const f = deriveEventFacts(event, BOT)
     expect(f.hasImage).toBe(false)
     expect(f.droppedImageCount).toBe(0)
+  })
+
+  it('処理対象 subtype かどうかを facts に載せる（1-7）', () => {
+    const ev = (subtype?: string): SlackMessageEvent => ({
+      type: 'message',
+      channel: 'C1',
+      ts: '2',
+      thread_ts: '1',
+      text: 'hi',
+      ...(subtype ? { subtype } : {}),
+    })
+    expect(deriveEventFacts(ev(), BOT).isProcessableSubtype).toBe(true)
+    expect(deriveEventFacts(ev('file_share'), BOT).isProcessableSubtype).toBe(true)
+    expect(deriveEventFacts(ev('thread_broadcast'), BOT).isProcessableSubtype).toBe(true)
+    expect(deriveEventFacts(ev('message_changed'), BOT).isProcessableSubtype).toBe(false)
+  })
+
+  it('thread_broadcast は通常のスレッド返信として扱う（thread_ts と ts が別, 1-7）', () => {
+    const event: SlackMessageEvent = {
+      type: 'message',
+      subtype: 'thread_broadcast',
+      channel: 'C1',
+      ts: '200.2',
+      thread_ts: '100.1',
+      text: 'もう1問いい？',
+      root: { type: 'message', ts: '100.1', bot_id: 'B1' },
+    }
+    const f = deriveEventFacts(event, BOT)
+    expect(f.isThreadReply).toBe(true)
+    expect(f.threadTs).toBe('100.1')
+    expect(f.messageTs).toBe('200.2')
+    // root（親メッセージ）の bot_id は自分の投稿かどうかとは無関係
+    expect(f.hasBotId).toBe(false)
   })
 
   it('bot_id / subtype / mention を正しく反映', () => {

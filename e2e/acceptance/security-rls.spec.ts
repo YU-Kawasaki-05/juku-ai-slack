@@ -8,7 +8,7 @@
 import { test, expect } from '@playwright/test'
 import { STAFF_STATE, testUsers } from '../fixtures/users'
 import { createPerson, createReport, deletePersons, uniqueSuffix } from '../fixtures/db'
-import { alert, toast } from '../fixtures/ui'
+import { toast } from '../fixtures/ui'
 import {
   ANON_KEY,
   deleteAuthUser,
@@ -150,19 +150,28 @@ test.describe('管理画面の権限（証拠あり）', () => {
     await shot(page, 'AT-12_staffはEmbedding再生成が拒否される')
   })
 
-  test('AT-13 staff はチャンネル紐付けを作成できない（EP-07〜09 / D-3）', async ({ page }) => {
+  /**
+   * EP-07: 紐付けは admin 限定。画面自体を塞ぐ（フォームを見せて保存時に断る、ではない）。
+   * 生徒名とチャンネル ID の対応表そのものなので、データを読む前に止める。
+   */
+  test('AT-13 staff はチャンネル紐付けの画面に到達できない（EP-07〜09 / D-3）', async ({ page }) => {
     const person = await createPerson(`AT 権限紐付け ${uniqueSuffix()}`)
     personIds.push(person.id)
 
     await page.goto('/admin/channels/new')
-    await page.getByLabel('SlackチャンネルID').fill(`C${uniqueSuffix().toUpperCase().replace(/[^A-Z0-9]/g, '0')}`)
-    await page.getByLabel('ワークスペースID').fill('T0E2ETEAM')
-    await page.getByLabel('生徒').click()
-    await page.getByRole('option', { name: person.name }).click()
-    await page.getByRole('button', { name: '紐付ける' }).click()
+    await expect(
+      page.getByText('チャンネル紐付けの管理は管理者（admin）のみが利用できます'),
+    ).toBeVisible()
+    await expect(page.getByLabel('SlackチャンネルID')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: '紐付ける' })).toHaveCount(0)
+    await shot(page, 'AT-13_staffはチャンネル紐付けの画面に到達できない')
 
-    await expect(alert(page)).toContainText('この操作は管理者のみ実行できます')
-    await shot(page, 'AT-13_staffはチャンネル紐付けを作成できない')
+    // 一覧側も同様に塞がれ、生徒名が漏れない
+    await page.goto('/admin/channels')
+    await expect(
+      page.getByText('チャンネル紐付けの管理は管理者（admin）のみが利用できます'),
+    ).toBeVisible()
+    await expect(page.getByText(person.name)).toHaveCount(0)
   })
 })
 

@@ -16,9 +16,13 @@
 import 'server-only'
 import { createAuthServerClient } from '@shared/lib/supabase/authServerClient'
 
+export type StaffRole = 'staff' | 'admin'
+
 export interface StaffContext {
   userId: string
   email: string
+  /** 画面の出し分けに使う。認可の判定には必ず requireAdmin / requireStaff を使うこと */
+  role: StaffRole
 }
 
 export async function requireStaff(): Promise<StaffContext> {
@@ -34,5 +38,5 @@ export async function requireStaff(): Promise<StaffContext> {
   if (role !== 'staff' && role !== 'admin') {
     throw new Error('forbidden')
   }
-  return { userId: user.id, email: user.email ?? '' }
+  return { userId: user.id, email: user.email ?? '', role }
 }

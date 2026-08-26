@@ -1,12 +1,15 @@
 import { test, expect } from '@playwright/test'
 import { STAFF_STATE } from './fixtures/users'
 import { createPerson, createReport, deletePersons, uniqueSuffix } from './fixtures/db'
-import { alert, toast } from './fixtures/ui'
+import { toast } from './fixtures/ui'
 
 /**
- * 権限境界（03_権限設計）。Server Action は URL から直接叩けるため、
- * UI の出し分けではなくサーバー側の requireAdmin が効いていることを確認する。
- * staff にもボタンは見えている状態でクリック → 日本語の拒否メッセージ、が期待動作。
+ * 権限境界（03_権限設計）。
+ *
+ * 2 つの防御層をそれぞれ検証する:
+ * - Server Action 層: URL から直接叩けるため requireAdmin が最後の砦（Embedding 再生成）
+ * - 画面層: チャンネル紐付け（SCR-05/06）は生徒名とチャンネルの対応表そのものなので、
+ *   admin 以外にはデータを読ませず画面ごと塞ぐ（EP-07）
  */
 test.use({ storageState: STAFF_STATE })
 
@@ -33,18 +36,24 @@ test('staff は Embedding 再生成を実行できない', async ({ page }) => {
   await expect(toast(page)).toContainText('Embedding 再生成は管理者のみ実行できます')
 })
 
-test('staff はチャンネル紐付けを作成できない', async ({ page }) => {
+/**
+ * EP-07: staff はチャンネル紐付けの画面自体に到達できない。
+ * フォームを見せて「保存して初めて拒否」ではなく、データを読む前に塞ぐ。
+ */
+test('staff はチャンネル紐付けの画面に到達できない（一覧・新規・詳細）', async ({ page }) => {
   const person = await createPerson(`E2E生徒_権限紐付け_${uniqueSuffix()}`)
   personIds.push(person.id)
 
-  await page.goto('/admin/channels/new')
-  await page.getByLabel('SlackチャンネルID').fill(`C${uniqueSuffix().toUpperCase().replace(/[^A-Z0-9]/g, '0')}`)
-  await page.getByLabel('ワークスペースID').fill('T0E2ETEAM')
-  await page.getByLabel('生徒').click()
-  await page.getByRole('option', { name: person.name }).click()
-  await page.getByRole('button', { name: '紐付ける' }).click()
-
-  await expect(alert(page)).toContainText('この操作は管理者のみ実行できます')
+  for (const path of ['/admin/channels', '/admin/channels/new']) {
+    await page.goto(path)
+    await expect(
+      page.getByText('チャンネル紐付けの管理は管理者（admin）のみが利用できます'),
+    ).toBeVisible()
+    // フォームも一覧も描画されない（生徒名とチャンネルの対応が漏れない）
+    await expect(page.getByLabel('SlackチャンネルID')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: '紐付ける' })).toHaveCount(0)
+    await expect(page.getByText(person.name)).toHaveCount(0)
+  }
 })
 
 /** ロールを持つ人が案内ページに迷い込んでも、そこで足止めされない（リダイレクトの往復も無い） */

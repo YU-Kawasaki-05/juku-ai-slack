@@ -1,6 +1,6 @@
 /** @file
- * 検証: 滞留ジョブの回収（A-1 後半）と保持期間掃除（A-14）
- * @verifies A-1, A-14, AC-04-03
+ * 検証: 滞留ジョブの回収（A-1 後半）と保持期間掃除（A-14）、回収時の 🤔 除去（AC-01-06）
+ * @verifies A-1, A-14, AC-04-03, AC-01-06
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createQueuedDb } from '@/test/mocks/queuedDb'
@@ -9,10 +9,12 @@ import {
   JOB_PROCESSING_TIMEOUT_MIN,
   JOB_RETENTION_DAYS,
   RECEIPT_RETENTION_DAYS,
+  THINKING_REACTION,
 } from '@shared/lib/constants'
 
-const mocks = vi.hoisted(() => ({ logError: vi.fn() }))
+const mocks = vi.hoisted(() => ({ logError: vi.fn(), removeReaction: vi.fn() }))
 vi.mock('@features/error-logs', () => ({ logError: mocks.logError }))
+vi.mock('@shared/lib/slack/client', () => ({ removeReaction: mocks.removeReaction }))
 
 import { sweepStaleJobs, cleanupOldRows, runJobMaintenance, SWEEP_BATCH_LIMIT } from './sweepStaleJobs'
 
@@ -142,6 +144,8 @@ describe('sweepStaleJobs', () => {
       personId: null,
       channelId: null,
     })
+    // 宛先が分からないので Slack は呼ばない（例外で掃除を止めない）
+    expect(mocks.removeReaction).not.toHaveBeenCalled()
   })
 
   it('閾値内のジョブしかなければ何もしない', async () => {
@@ -160,6 +164,83 @@ describe('sweepStaleJobs', () => {
   it('select の DB エラーは伝播する', async () => {
     const db = createQueuedDb([{ data: null, error: { message: 'boom' } }])
     await expect(sweepStaleJobs(db, NOW)).rejects.toThrow(/boom/)
+  })
+
+  // AC-01-06: after() が kill されると processJob の finally が走らず 🤔 が残るため、
+  // 回収時にスイーパ側で外す
+  it('processing を failed 化したら 🤔 を外す', async () => {
+    const db = createQueuedDb([
+      { data: [jobRow({ payload: payload({ channelId: 'C9', messageTs: '200.5' }) })], error: null },
+      { data: [{ id: 'job-1' }], error: null },
+      { data: [], error: null },
+    ])
+
+    await sweepStaleJobs(db, NOW)
+
+    expect(mocks.removeReaction).toHaveBeenCalledTimes(1)
+    expect(mocks.removeReaction).toHaveBeenCalledWith({
+      channel: 'C9',
+      timestamp: '200.5',
+      name: THINKING_REACTION,
+    })
+  })
+
+  it('CAS が 0 行なら 🤔 は外さない（本処理側が外している）', async () => {
+    const db = createQueuedDb([
+      { data: [jobRow()], error: null },
+      { data: [], error: null },
+      { data: [], error: null },
+    ])
+
+    await sweepStaleJobs(db, NOW)
+
+    expect(mocks.removeReaction).not.toHaveBeenCalled()
+  })
+
+  it('pending の孤児は 🤔 を付ける前に止まっているので Slack を呼ばない', async () => {
+    const db = createQueuedDb([
+      { data: [], error: null },
+      { data: [jobRow({ id: 'job-2', started_at: null })], error: null },
+      { data: [{ id: 'job-2' }], error: null },
+    ])
+
+    const result = await sweepStaleJobs(db, NOW)
+
+    expect(result.orphanPending).toBe(1)
+    expect(mocks.removeReaction).not.toHaveBeenCalled()
+  })
+
+  it('removeReaction が失敗しても回収は成立する', async () => {
+    mocks.removeReaction.mockRejectedValueOnce(new Error('slack down'))
+    const db = createQueuedDb([
+      { data: [jobRow()], error: null },
+      { data: [{ id: 'job-1' }], error: null },
+      { data: [], error: null },
+    ])
+
+    const result = await sweepStaleJobs(db, NOW)
+
+    expect(result).toEqual({ stuckProcessing: 1, orphanPending: 0, total: 1 })
+    expect(mocks.logError).toHaveBeenCalledTimes(1)
+  })
+
+  it('複数の処理落ちジョブそれぞれの 🤔 を外す', async () => {
+    const db = createQueuedDb([
+      {
+        data: [
+          jobRow({ id: 'job-a', payload: payload({ messageTs: '301.1' }) }),
+          jobRow({ id: 'job-b', payload: payload({ messageTs: '302.2' }) }),
+        ],
+        error: null,
+      },
+      { data: [{ id: 'job-a' }], error: null },
+      { data: [{ id: 'job-b' }], error: null },
+      { data: [], error: null },
+    ])
+
+    await sweepStaleJobs(db, NOW)
+
+    expect(mocks.removeReaction.mock.calls.map((c) => c[0].timestamp)).toEqual(['301.1', '302.2'])
   })
 })
 

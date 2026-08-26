@@ -80,6 +80,32 @@ describe('shouldReact', () => {
     ).toBe('ignore')
   })
 
+  // --- 1-7: thread_broadcast（スレッド返信の「チャンネルにも送信」）---
+  it('登録済みスレッドの thread_broadcast はメンションなしでも process（AC-02-03）', () => {
+    expect(
+      shouldReact({
+        ...base,
+        subtype: 'thread_broadcast',
+        isThreadReply: true,
+        sessionExists: true,
+        hasMention: false,
+      }).action,
+    ).toBe('process')
+  })
+
+  it('未登録スレッドの thread_broadcast は subtype ではなくメンション有無で判定する（AC-02-04）', () => {
+    const d = shouldReact({
+      ...base,
+      subtype: 'thread_broadcast',
+      isThreadReply: true,
+      sessionExists: false,
+      hasMention: false,
+    })
+    expect(d.action).toBe('ignore')
+    // subtype ゲートで先に落とさないこと（落ちていれば reason は subtype:thread_broadcast になる）
+    if (d.action === 'ignore') expect(d.reason).toBe('unregistered_thread_no_mention')
+  })
+
   it('メンションありだが紐付けなし → channel_not_bound（AC-02-06）', () => {
     expect(shouldReact({ ...base, hasMention: true, bindingStatus: 'none' }).action).toBe(
       'channel_not_bound',

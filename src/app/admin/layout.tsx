@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 // middleware に加えた多層防御（D-2 / FR-13）。matcher の設定ミスでもページが素通りしない
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  await requireStaffPage()
+  const { role } = await requireStaffPage()
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -23,7 +23,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       >
         メインコンテンツへスキップ
       </a>
-      <AdminSidebar />
+      <AdminSidebar isAdmin={role === 'admin'} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <AdminHeader />
         <main id="admin-main" tabIndex={-1} className="flex-1 overflow-y-auto p-6 focus:outline-none">

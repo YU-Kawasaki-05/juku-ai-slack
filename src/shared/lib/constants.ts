@@ -150,6 +150,15 @@ const PRICE_CLAUDE_SONNET_4_6: ModelPrice = { inputPerM: 3.0, outputPerM: 15.0 }
 const PRICE_GPT_4O_MINI: ModelPrice = { inputPerM: 0.15, outputPerM: 0.6 }
 const PRICE_GPT_4O: ModelPrice = { inputPerM: 2.5, outputPerM: 10.0 }
 const PRICE_DEEPSEEK_CHAT: ModelPrice = { inputPerM: 0.27, outputPerM: 1.1 }
+/**
+ * 本番の LLM_MODEL_DEFAULT / LLM_MODEL_COMPLEX（本番移行 §3-4）。OpenAI 直の定価。
+ * モデル ID は実キーでの `/models` 疎通確認前なので、正式名が違っていたら
+ * 下の MODEL_PRICING のキー名だけを直す（単価はプロバイダの公表値で据え置き）。
+ * OpenRouter 経由にする場合は単価も変わる（現在プロモで概ね半額）。
+ * cached 入力の単価枠が ModelPrice に無いため、キャッシュヒット分は過大計上（安全側）になる。
+ */
+const PRICE_GPT_5_6_LUNA: ModelPrice = { inputPerM: 0.2, outputPerM: 1.2 }
+const PRICE_GPT_5_6_TERRA: ModelPrice = { inputPerM: 2.0, outputPerM: 12.0 }
 
 /**
  * モデル別の料金（USD / 100万トークン）。プロバイダ非依存。
@@ -171,6 +180,10 @@ export const MODEL_PRICING: Record<string, ModelPrice> = {
   'openai/gpt-4o-mini': PRICE_GPT_4O_MINI,
   'gpt-4o': PRICE_GPT_4O,
   'openai/gpt-4o': PRICE_GPT_4O,
+  'gpt-5.6-luna': PRICE_GPT_5_6_LUNA,
+  'openai/gpt-5.6-luna': PRICE_GPT_5_6_LUNA,
+  'gpt-5.6-terra': PRICE_GPT_5_6_TERRA,
+  'openai/gpt-5.6-terra': PRICE_GPT_5_6_TERRA,
   // DeepSeek
   'deepseek-chat': PRICE_DEEPSEEK_CHAT,
   'deepseek/deepseek-chat': PRICE_DEEPSEEK_CHAT,

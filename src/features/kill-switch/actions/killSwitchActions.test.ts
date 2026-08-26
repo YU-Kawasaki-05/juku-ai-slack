@@ -22,7 +22,7 @@ function fd(entries: Record<string, string>): FormData {
 }
 
 const adminOk = () =>
-  vi.mocked(requireAdmin).mockResolvedValue({ userId: 'u1', email: 'admin@example.com' })
+  vi.mocked(requireAdmin).mockResolvedValue({ userId: 'u1', email: 'admin@example.com', role: 'admin' })
 
 beforeEach(() => {
   vi.clearAllMocks()
