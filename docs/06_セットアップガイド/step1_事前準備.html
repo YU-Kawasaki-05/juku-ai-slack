@@ -137,7 +137,7 @@ a{color:var(--accent)}
 <thead><tr><th>環境変数</th><th>いつ使われるか</th><th>未設定だと</th></tr></thead>
 <tbody>
 <tr><td><code>LLM_MODEL_DEFAULT</code></td><td>通常の質問すべて。スレッド要約・生徒回答の評価（BKT）にもこれを使う</td><td><b>回答不可</b>。<code>ConfigurationError（LLM_MODEL_DEFAULT が未設定です）</code>でジョブが失敗する（リトライしても直らない）</td></tr>
-<tr><td><code>LLM_MODEL_COMPLEX</code></td><td><b>画像が添付された質問のみ</b></td><td><code>LLM_MODEL_DEFAULT</code> にフォールバックする。Vision 非対応モデルだと画像が黙って無視されるので、画像対応するなら必ず設定する</td></tr>
+<tr><td><code>LLM_MODEL_COMPLEX</code></td><td><b>画像が添付された質問のみ</b></td><td>画像は LLM に送らずテキストのみで回答する。生徒には「画像は読み取れなかった」旨を添え、運用者向けには <code>IMAGE_MODEL_NOT_CONFIGURED</code> をエラーログに残す。画像対応するなら設定する</td></tr>
 </tbody>
 </table>
 </div>

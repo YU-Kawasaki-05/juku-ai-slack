@@ -8,7 +8,7 @@
 'use client'
 
 import { useActionState, useEffect, useState } from 'react'
-import { AlertCircle, Loader2 } from 'lucide-react'
+import { AlertCircle, Info, Loader2 } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -71,6 +71,15 @@ export function StudentProfileForm({
               <AlertDescription>{err.error}</AlertDescription>
             </Alert>
           )}
+
+          {/* 自由記述はそのまま外部 LLM に渡る。氏名を書かせないための注意書き（学年は persons.grade から自動で入る） */}
+          <Alert>
+            <Info className="h-4 w-4" aria-hidden="true" />
+            <AlertDescription>
+              ここに入力した内容はそのまま AI に送信されます。
+              生徒の氏名は書かないでください（学年は生徒情報から自動で送られます）
+            </AlertDescription>
+          </Alert>
 
           <div className="space-y-2">
             <Label htmlFor="summary">全体要約</Label>

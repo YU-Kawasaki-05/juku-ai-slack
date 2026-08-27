@@ -200,6 +200,20 @@ describe('executeProcessSlackMessage', () => {
     expect(mocks.getStudentProfile).toHaveBeenCalledWith(db, payload.personId)
   })
 
+  it('学年は system に載せるが、氏名・生徒 ID はプロンプトに出さない', async () => {
+    mocks.getStudentProfile.mockResolvedValue({
+      profileText: '学年: 中学3年\n要約: 文章題でつまずきやすい',
+      examMode: false,
+    })
+    await executeProcessSlackMessage(db, payload)
+
+    const call = mocks.generate.mock.calls[0][0]
+    expect(call.system).toContain('学年: 中学3年')
+    // 生徒 ID（UUID）は LLM にとって無意味でトークンを消費するだけなので載せない。
+    // 氏名も getStudentProfile が select しないため、プロンプト全体のどこにも現れない
+    expect(JSON.stringify([call.system, call.messages])).not.toContain(payload.personId)
+  })
+
   it('AC-09-03: プロフィール未登録でもエラーにせず回答する（BR-09-04）', async () => {
     mocks.getStudentProfile.mockResolvedValue({ profileText: null, examMode: false })
     await expect(executeProcessSlackMessage(db, payload)).resolves.toBeUndefined()
