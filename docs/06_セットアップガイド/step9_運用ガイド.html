@@ -325,23 +325,58 @@ a{color:var(--accent)}
 <li>異常なら <a href="#kill">緊急停止</a>してから原因を調べる</li>
 </ol>
 
-<h2>9-7. バックアップ</h2>
+<h2 id="backup">9-7. バックアップ</h2>
+
+<div class="dangerbox">
+<p><b>Free プランには自動バックアップがありません。</b>
+生徒の会話ログ・プロフィール・レポートが消えたら<b>復旧できません</b>。
+週 1 回の取得を<b>運用の必須作業</b>として担当と曜日を決めてください。</p>
+<p><b>よくある誤解</b>: <code>supabase db dump</code> は<b>既定でスキーマ（テーブル定義）だけ</b>を出します。
+<code>--data-only</code> を付けないと<b>生徒のデータは 1 行も入りません</b>。
+「ファイルはできているのに中身が無い」という最悪の勘違いを避けるため、下の
+<code>scripts/backup-db.sh</code> を使ってください（3 本まとめて取り、中身の検査までします）。</p>
+</div>
+
+<h3>週次の取り方</h3>
+
+<p>接続文字列は Supabase Dashboard → <b>Project Settings → Database → Connection string</b> の
+<b>Session pooler</b>（<code>...pooler.supabase.com:5432</code>）を使います。</p>
+
+<pre><code>SUPABASE_DB_URL='&lt;Session pooler の接続文字列&gt;' ./scripts/backup-db.sh</code></pre>
+
+<ul>
+<li>出力は<b>リポジトリの外</b>（既定 <code>../juku-ai-backups/</code>）。
+公開リポジトリに個人情報を置かないため、リポジトリ内を指定すると<b>実行を拒否</b>します</li>
+<li><b>失敗すると非ゼロ終了し、途中まで出たファイルは捨てます。</b>
+「テーブルが揃っていない」「データが 0 件」のダンプも失敗扱いです</li>
+<li>同時に出る <code>...-MANIFEST.txt</code> には<b>テーブルごとの行数</b>が入ります。
+<b>捨てずに保管</b>してください（復元できたかの判定に使います）</li>
+</ul>
+
+<div class="warnbox">
+<p><b>取れているだけでは不十分です。</b>
+<b>四半期に 1 回</b>、実際に空の DB へ復元して戻ることを確認してください。
+手順と判定基準は <code>docs/03_技術設計/09_バックアップとリストア.md</code>、
+判定用のクエリは <code>scripts/restore-verify.sql</code> にあります。</p>
+</div>
 
 <div class="scroll wide">
 <table>
 <thead><tr><th>対象</th><th>方法</th><th>頻度</th></tr></thead>
 <tbody>
 <tr><td><b>DB（生徒・レポート・会話ログ）</b></td>
-<td>Supabase Pro の<b>自動日次バックアップ</b>（7 日保持）。Dashboard → <b>Database → Backups</b> から復元
-<br><span class="small">Free プランには自動バックアップがありません</span></td>
-<td>自動</td></tr>
+<td><code>./scripts/backup-db.sh</code>（roles / schema / <b>data</b> の 3 本 + MANIFEST）
+<br><span class="small">Free プランに自動バックアップは無いので、これが唯一の防波堤です</span></td>
+<td><b>週次</b></td></tr>
 <tr><td><b>手動スナップショット</b></td>
-<td>大きな変更（一括登録・migration 追加）の<b>前</b>に取る:<br>
-<code>pnpm exec supabase db dump -f backup.sql --linked</code></td>
+<td>大きな変更（一括登録・migration 追加）の<b>前</b>に、同じスクリプトを回す</td>
 <td>都度</td></tr>
+<tr><td><b>リストア訓練</b></td>
+<td>ダンプから空の DB へ復元し、<code>scripts/restore-verify.sql</code> で行数・RLS・RAG を確認</td>
+<td>四半期</td></tr>
 <tr><td><b>添付画像</b></td>
-<td>Storage の <code>attachments</code> バケット。日次バックアップの対象外なので、
-重要なら Dashboard から手動ダウンロード</td>
+<td>Storage の <code>attachments</code> バケット。<b>DB のダンプには実ファイルが入りません</b>
+（メタデータの行だけ）。重要なら Dashboard から手動ダウンロード</td>
 <td>任意</td></tr>
 <tr><td><b>環境変数</b></td>
 <td>Vercel の設定値一式を<b>パスワードマネージャに控える</b>。
@@ -366,6 +401,8 @@ a{color:var(--accent)}
 <li><input type="checkbox" id="s9-5"><label for="s9-5">退塾時は<b>削除ではなく「無効」</b>と伝えた</label></li>
 <li><input type="checkbox" id="s9-6"><label for="s9-6">レート制限（10 回/時）の存在を伝えた</label></li>
 <li><input type="checkbox" id="s9-7"><label for="s9-7">月次のコスト確認の担当と頻度を決めた</label></li>
+<li><input type="checkbox" id="s9-10"><label for="s9-10"><b>週次バックアップ</b>の担当・曜日・保存先を決めた（<a href="#backup">9-7</a>。Free プランに自動バックアップは無い）</label></li>
+<li><input type="checkbox" id="s9-11"><label for="s9-11"><b>1 回リストアを試して</b>復元できることを確認した（取れているだけでは不十分）</label></li>
 <li><input type="checkbox" id="s9-8"><label for="s9-8">トラブル時の連絡先（あなた）と <a href="troubleshooting.html">トラブルシューティング</a> の場所を伝えた</label></li>
 <li><input type="checkbox" id="s9-9"><label for="s9-9">AI 応答が<b>稼働中</b>であることを最後に確認した</label></li>
 </ul>

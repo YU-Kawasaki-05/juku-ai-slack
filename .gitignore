@@ -57,3 +57,12 @@ Thumbs.db
 
 # Claude Code local context (anonymization mapping — never publish)
 CLAUDE.local.md
+
+# DB バックアップ（生徒の個人情報。このリポジトリは PUBLIC なので絶対にコミットしない）
+# scripts/backup-db.sh は既定でリポジトリ外に出力し、リポジトリ内への出力を拒否する。
+# これは手で置いてしまった場合の保険。
+/backups/
+/juku-ai-backups/
+juku-ai-backup-*.sql
+juku-ai-backup-*.sql.gpg
+juku-ai-backup-*-MANIFEST.txt

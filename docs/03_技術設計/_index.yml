@@ -84,6 +84,11 @@ documents:
     file: 08_ローンチ計画.md
     title: ローンチ計画
 
+  - id: backup
+    file: 09_バックアップとリストア.md
+    title: バックアップとリストア
+    key_constraint: "Supabase Free は自動バックアップ無し。scripts/backup-db.sh で週次取得し、四半期に1回リストア訓練を行う"
+
 key_decisions:
   - id: TDC-01
     content: "Next.js App Router モノリス（ソロ開発でのコンテキスト集約）"

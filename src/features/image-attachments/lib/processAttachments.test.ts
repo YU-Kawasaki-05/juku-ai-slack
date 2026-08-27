@@ -134,6 +134,56 @@ describe('processAttachments', () => {
     expect(store).toHaveBeenCalledTimes(1)
   })
 
+  it('合計上限の判定はメタデータ除去後のバイト数で行う（EXIF 分を枚数に活かす）', async () => {
+    // 生バイトでは 2 枚で 8MB を超えるが、EXIF を落とすと収まるサイズにする
+    const raw = jpegWithExif(4_200_000, 65_000)
+    expect(raw.byteLength * 2).toBeGreaterThan(MAX_TOTAL_IMAGE_BYTES)
+    const download = vi.fn(async () => ({ bytes: raw, contentType: 'image/jpeg' }))
+    const store = vi.fn(async () => 'path')
+    const r = await processAttachments(
+      db,
+      {
+        personId: 'p1', channelId: 'C1', threadTs: 't', messageTs: 'm', botToken: 'x',
+        files: [png('F1'), png('F2')],
+      },
+      { download, store },
+    )
+    expect(r.dataUrls).toHaveLength(2)
+    expect(r.skippedForTotalSize).toBe(0)
+    expect(r.errorCodes).toEqual([])
+    expect(r.metadataStrippedBytes).toBe(65_004 * 2)
+  })
+
+  it('Storage 保存にも Vision 送信にもメタデータ除去後のバイト列を渡す', async () => {
+    const raw = jpegWithExif(4_000, 200)
+    const download = vi.fn(async () => ({ bytes: raw, contentType: 'image/jpeg' }))
+    let storedBytes: Uint8Array = new Uint8Array(0)
+    const store = vi.fn(async (_db: unknown, p: { bytes: Uint8Array }) => {
+      storedBytes = p.bytes
+      return 'path'
+    })
+    const r = await processAttachments(
+      db,
+      { personId: 'p1', channelId: 'C1', threadTs: 't', messageTs: 'm', botToken: 'x', files: [png('F1')] },
+      { download, store },
+    )
+    expect(storedBytes.byteLength).toBe(raw.byteLength - 204)
+    expect(Buffer.from(storedBytes).toString('latin1')).not.toContain('GPSLatitude')
+    // data URL 側も同じ（除去後）バイト列
+    const decoded = Buffer.from(r.dataUrls[0].split(',')[1], 'base64')
+    expect(decoded.toString('latin1')).not.toContain('GPSLatitude')
+    expect(decoded.byteLength).toBe(storedBytes.byteLength)
+  })
+
+  it('メタデータが無い画像では metadataStrippedBytes が 0', async () => {
+    const r = await processAttachments(
+      db,
+      { personId: 'p1', channelId: 'C1', threadTs: 't', messageTs: 'm', botToken: 'x', files: [png('F1')] },
+      { download: okDownload, store: okStore },
+    )
+    expect(r.metadataStrippedBytes).toBe(0)
+  })
+
   it('合計が上限以内なら全枚数を通す（skippedForTotalSize=0）', async () => {
     const r = await processAttachments(
       db,
@@ -148,3 +198,32 @@ describe('processAttachments', () => {
     expect(r.errorCodes).toEqual([])
   })
 })
+
+/**
+ * 合計 totalBytes の JPEG を組み立てる。APP1(EXIF) は exifPayload バイト分、
+ * 残りは SOS 以降のダミースキャンデータ（= ピクセル領域）で埋める。
+ */
+function jpegWithExif(totalBytes: number, exifPayload: number): Uint8Array {
+  const exifSegLen = exifPayload + 2 // 長さフィールド 2 バイトを含む
+  const sosHeader = [0xff, 0xda, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3f, 0x00]
+  const scanLen = totalBytes - (2 + 2 + exifSegLen + sosHeader.length + 2)
+  if (scanLen < 0) throw new Error('totalBytes too small')
+
+  const out = new Uint8Array(totalBytes)
+  let i = 0
+  out[i++] = 0xff
+  out[i++] = 0xd8 // SOI
+  out[i++] = 0xff
+  out[i++] = 0xe1 // APP1
+  out[i++] = (exifSegLen >> 8) & 0xff
+  out[i++] = exifSegLen & 0xff
+  const marker = 'Exif\0\0II*\0GPSLatitude 35.6812'
+  for (const ch of marker) out[i++] = ch.charCodeAt(0)
+  i += exifPayload - marker.length // 残りは 0 埋め
+  for (const b of sosHeader) out[i++] = b
+  out.fill(0x5a, i, i + scanLen)
+  i += scanLen
+  out[i++] = 0xff
+  out[i++] = 0xd9 // EOI
+  return out
+}

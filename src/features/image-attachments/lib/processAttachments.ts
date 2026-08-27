@@ -1,12 +1,13 @@
 /** @file
- * 機能: payload の添付画像を検証→DL→保存し、Vision 用 data URL を収集する
+ * 機能: payload の添付画像を検証→DL→メタデータ除去→保存し、Vision 用 data URL を収集する
  *   MIME は Slack 申告値ではなく実際の content-type で判定し、合計バイト上限を超えた分はスキップする
  * 入力: db, ProcessAttachmentsParams, deps（テスト用に download/store を注入可）
- * 出力: { dataUrls, errorCodes, skippedForTotalSize }
+ * 出力: { dataUrls, errorCodes, skippedForTotalSize, metadataStrippedBytes }
  * 例外: なし（各画像の失敗はエラーコードとして収集し、処理は継続）
- * 依存: validateAttachment, downloadSlackFile, storeAttachment
+ * 依存: validateAttachment, downloadSlackFile, stripImageMetadata, storeAttachment
  * 副作用: Slack GET, Storage put, attachments insert
- * セキュリティ: person_id は payload（channel 解決済み）のみ
+ * セキュリティ: person_id は payload（channel 解決済み）のみ。
+ *   EXIF/GPS は Storage 保存前・LLM 送信前の同一バイト列に対して除去する（両経路で漏れない）
  * @implements FR-06, AC-06-01, AC-06-03, AC-06-04, BR-06-02, BR-06-03
  */
 import type { ServerDb } from '@shared/types/db'
@@ -14,6 +15,7 @@ import { MAX_TOTAL_IMAGE_BYTES, SUPPORTED_IMAGE_MIMETYPES } from '@shared/lib/co
 import { ImageTooLargeError } from '@shared/lib/errors/AppError'
 import { validateAttachment } from './validateAttachment'
 import { downloadSlackFile, toDataUrl, type DownloadedFile } from './downloadSlackFile'
+import { stripImageMetadata } from './stripImageMetadata'
 import { storeAttachment } from './storeAttachment'
 
 export interface AttachmentInput {
@@ -40,6 +42,8 @@ export interface ProcessAttachmentsResult {
   errorCodes: string[]
   /** 合計バイト上限（MAX_TOTAL_IMAGE_BYTES）超過でスキップした枚数 */
   skippedForTotalSize: number
+  /** メタデータ除去で削減できた合計バイト数（0 なら除去対象なし。削減効果の観測用） */
+  metadataStrippedBytes: number
 }
 
 export interface ProcessAttachmentsDeps {
@@ -59,6 +63,7 @@ export async function processAttachments(
   const errorCodes: string[] = []
   let skippedForTotalSize = 0
   let totalBytes = 0
+  let metadataStrippedBytes = 0
 
   for (const file of params.files) {
     const valid = validateAttachment({ mimetype: file.mimetype, size: file.size ?? undefined })
@@ -84,8 +89,14 @@ export async function processAttachments(
       continue
     }
 
+    // EXIF/GPS は Storage 保存と Vision 送信の両方より前に落とす（同じバイト列を両方で使う）
+    const stripped = stripImageMetadata(downloaded.bytes, actualMimetype)
+    metadataStrippedBytes += stripped.removedBytes
+    const bytes = stripped.bytes
+
     // 合計サイズ上限（枚数上限だけでは Vision API の受付上限を超える）。超過分はスキップ
-    if (totalBytes + downloaded.bytes.byteLength > MAX_TOTAL_IMAGE_BYTES) {
+    // 判定は除去後のバイト数で行う（メタデータ分の削減を枚数に活かす）
+    if (totalBytes + bytes.byteLength > MAX_TOTAL_IMAGE_BYTES) {
       skippedForTotalSize += 1
       errorCodes.push('IMAGE_TOO_LARGE')
       continue
@@ -100,7 +111,7 @@ export async function processAttachments(
         slackFileId: file.id,
         mimetype: actualMimetype,
         originalName: file.name,
-        bytes: downloaded.bytes,
+        bytes,
       })
     } catch {
       // BR: 保存失敗はテキストのみで継続（この画像は Vision に渡さない）
@@ -108,11 +119,11 @@ export async function processAttachments(
       continue
     }
 
-    totalBytes += downloaded.bytes.byteLength
-    dataUrls.push(toDataUrl(downloaded.bytes, actualMimetype))
+    totalBytes += bytes.byteLength
+    dataUrls.push(toDataUrl(bytes, actualMimetype))
   }
 
-  return { dataUrls, errorCodes, skippedForTotalSize }
+  return { dataUrls, errorCodes, skippedForTotalSize, metadataStrippedBytes }
 }
 
 /** 'image/png; charset=binary' → 'image/png'（パラメータを落とし小文字化） */
