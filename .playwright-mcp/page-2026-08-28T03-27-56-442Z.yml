@@ -1,0 +1,14 @@
+- generic [active] [ref=e1]:
+  - main [ref=e3]:
+    - generic [ref=e9]:
+      - heading "じゅくAI 管理画面" [level=1] [ref=e10]
+      - paragraph [ref=e11]: スタッフアカウントでログイン
+    - generic [ref=e12]:
+      - generic [ref=e13]:
+        - text: メールアドレス
+        - textbox "メールアドレス" [ref=e14]
+      - generic [ref=e15]:
+        - text: パスワード
+        - textbox "パスワード" [ref=e16]
+      - button "ログイン" [ref=e17]
+  - alert [ref=e18]

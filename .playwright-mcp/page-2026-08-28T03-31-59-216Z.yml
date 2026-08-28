@@ -1,0 +1,66 @@
+- generic [active] [ref=f6e1]:
+  - generic [ref=f6e2]:
+    - link "メインコンテンツへスキップ" [ref=f6e3] [cursor=pointer]:
+      - /url: "#admin-main"
+    - complementary [ref=f6e4]:
+      - generic [ref=f6e5]: じゅくAI
+      - navigation "メインナビゲーション" [ref=f6e10]:
+        - link "ダッシュボード" [ref=f6e11] [cursor=pointer]:
+          - /url: /admin
+        - link "生徒管理" [ref=f6e17] [cursor=pointer]:
+          - /url: /admin/persons
+        - link "チャンネル設定" [ref=f6e23] [cursor=pointer]:
+          - /url: /admin/channels
+        - link "レポート" [ref=f6e27] [cursor=pointer]:
+          - /url: /admin/reports
+        - link "会話ログ" [ref=f6e31] [cursor=pointer]:
+          - /url: /admin/conversations
+        - link "エラーログ" [ref=f6e35] [cursor=pointer]:
+          - /url: /admin/errors
+        - link "ジョブ" [ref=f6e38] [cursor=pointer]:
+          - /url: /admin/jobs
+        - link "利用状況" [ref=f6e42] [cursor=pointer]:
+          - /url: /admin/usage
+    - generic [ref=f6e45]:
+      - banner [ref=f6e46]:
+        - navigation "パンくずリスト" [ref=f6e47]:
+          - list [ref=f6e48]:
+            - listitem [ref=f6e49]:
+              - link "ダッシュボード" [ref=f6e50] [cursor=pointer]:
+                - /url: /admin
+            - listitem [ref=f6e51]:
+              - generic [ref=f6e54]: チャンネル紐付け
+        - generic [ref=f6e55]:
+          - button "テーマを切り替える" [ref=f6e56]
+          - button "e2e-admin@example.test" [ref=f6e63]
+      - main [ref=f6e71]:
+        - generic [ref=f6e73]:
+          - generic [ref=f6e74]:
+            - generic [ref=f6e75]:
+              - heading "チャンネル紐付け" [level=1] [ref=f6e76]
+              - paragraph [ref=f6e77]: Slack チャンネルと生徒の対応付け。Bot はここで有効なチャンネルにだけ反応します（全 1 件）
+            - link "新規紐付け" [ref=f6e78] [cursor=pointer]:
+              - /url: /admin/channels/new
+          - table [ref=f6e82]:
+            - rowgroup [ref=f6e83]:
+              - row [ref=f6e84]:
+                - columnheader "チャンネル" [ref=f6e85]
+                - columnheader "チャンネルID" [ref=f6e86]
+                - columnheader "生徒" [ref=f6e87]
+                - columnheader "既定レポート" [ref=f6e88]
+                - columnheader "ステータス" [ref=f6e89]
+                - columnheader "登録日" [ref=f6e90]
+            - rowgroup [ref=f6e91]:
+              - row [ref=f6e92]:
+                - cell [ref=f6e93]:
+                  - link "#test-taro" [ref=f6e94] [cursor=pointer]:
+                    - /url: /admin/channels/45ebcf0c-d30a-4d33-9c75-3720f9f34799
+                - cell [ref=f6e95]:
+                  - code [ref=f6e96]: <REPLACE_CHANNEL_ID>
+                - cell "テスト太郎" [ref=f6e97]
+                - cell "—" [ref=f6e98]
+                - cell "有効" [ref=f6e99]
+                - cell "2026/08/27" [ref=f6e102]
+    - region "Notifications (F8)":
+      - list
+  - alert [ref=f6e103]

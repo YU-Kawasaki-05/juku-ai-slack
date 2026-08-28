@@ -1,0 +1,84 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e18]: ダッシュボード
+  - generic [ref=e19]:
+    - link "メインコンテンツへスキップ" [ref=e20] [cursor=pointer]:
+      - /url: "#admin-main"
+    - complementary [ref=e21]:
+      - generic [ref=e22]: じゅくAI
+      - navigation "メインナビゲーション" [ref=e27]:
+        - link "ダッシュボード" [ref=e28] [cursor=pointer]:
+          - /url: /admin
+        - link "生徒管理" [ref=e34] [cursor=pointer]:
+          - /url: /admin/persons
+        - link "チャンネル設定" [ref=e40] [cursor=pointer]:
+          - /url: /admin/channels
+        - link "レポート" [ref=e44] [cursor=pointer]:
+          - /url: /admin/reports
+        - link "会話ログ" [ref=e48] [cursor=pointer]:
+          - /url: /admin/conversations
+        - link "エラーログ" [ref=e52] [cursor=pointer]:
+          - /url: /admin/errors
+        - link "ジョブ" [ref=e55] [cursor=pointer]:
+          - /url: /admin/jobs
+        - link "利用状況" [ref=e59] [cursor=pointer]:
+          - /url: /admin/usage
+    - generic [ref=e62]:
+      - banner [ref=e63]:
+        - navigation "パンくずリスト" [ref=e64]:
+          - list [ref=e65]:
+            - listitem [ref=e66]:
+              - generic [ref=e67]: ダッシュボード
+        - generic [ref=e68]:
+          - button "テーマを切り替える" [ref=e69]
+          - button "e2e-admin@example.test" [ref=e76]
+      - main [ref=e84]:
+        - generic [ref=e86]:
+          - generic [ref=e87]:
+            - heading "ダッシュボード" [level=1] [ref=e88]
+            - paragraph [ref=e89]: じゅくAI の利用状況サマリー
+          - generic [ref=e91]:
+            - generic [ref=e95]:
+              - generic [ref=e96]:
+                - generic [ref=e97]: AI応答
+                - generic [ref=e98]: 稼働中
+              - paragraph [ref=e100]: 生徒からの質問に AI が回答しています
+              - paragraph [ref=e101]: "最終更新: 2026/08/27 17:49"
+            - button "AI応答を停止" [ref=e102]
+          - generic [ref=e106]:
+            - generic [ref=e107]:
+              - generic [ref=e108]: 今日の質問数
+              - generic [ref=e113]:
+                - paragraph [ref=e114]: "0"
+                - paragraph [ref=e115]: 生徒からの質問（日本時間の当日分）
+            - generic [ref=e116]:
+              - generic [ref=e117]: 今月のコスト
+              - generic [ref=e122]:
+                - paragraph [ref=e123]: $0.00
+                - paragraph [ref=e124]: AI API の推定利用額（USD）
+            - generic [ref=e125]:
+              - generic [ref=e126]: 未対応エラー
+              - generic [ref=e130]:
+                - paragraph [ref=e131]: "1"
+                - link "エラー管理を開く →" [ref=e132] [cursor=pointer]:
+                  - /url: /admin/errors?resolved=false
+            - generic [ref=e133]:
+              - generic [ref=e134]: 生徒数
+              - generic [ref=e141]:
+                - paragraph [ref=e142]: "1"
+                - paragraph [ref=e143]: ステータスが有効な生徒
+                - link "生徒管理を開く →" [ref=e144] [cursor=pointer]:
+                  - /url: /admin/persons
+          - generic [ref=e145]:
+            - generic [ref=e146]:
+              - generic [ref=e147]: 最近のエラー
+              - link "すべて表示" [ref=e148] [cursor=pointer]:
+                - /url: /admin/errors
+            - list [ref=e152]:
+              - listitem [ref=e153]:
+                - generic [ref=e154]: エラー
+                - link "SLACK_SIGNATURE_INVALID" [ref=e156] [cursor=pointer]:
+                  - /url: /admin/errors/4e27d37f-75ac-4e8c-ba00-5bdbaff9c540
+                - generic [ref=e157]: —
+                - generic [ref=e158]: 2026/08/27 17:38
+    - region "Notifications (F8)":
+      - list

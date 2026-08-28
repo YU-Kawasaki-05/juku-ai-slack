@@ -1,0 +1,115 @@
+- generic [active] [ref=f2e1]:
+  - generic [ref=f2e2]:
+    - link "メインコンテンツへスキップ" [ref=f2e3] [cursor=pointer]:
+      - /url: "#admin-main"
+    - complementary [ref=f2e4]:
+      - generic [ref=f2e5]: じゅくAI
+      - navigation "メインナビゲーション" [ref=f2e10]:
+        - link "ダッシュボード" [ref=f2e11] [cursor=pointer]:
+          - /url: /admin
+        - link "生徒管理" [ref=f2e17] [cursor=pointer]:
+          - /url: /admin/persons
+        - link "チャンネル設定" [ref=f2e23] [cursor=pointer]:
+          - /url: /admin/channels
+        - link "レポート" [ref=f2e27] [cursor=pointer]:
+          - /url: /admin/reports
+        - link "会話ログ" [ref=f2e31] [cursor=pointer]:
+          - /url: /admin/conversations
+        - link "エラーログ" [ref=f2e35] [cursor=pointer]:
+          - /url: /admin/errors
+        - link "ジョブ" [ref=f2e38] [cursor=pointer]:
+          - /url: /admin/jobs
+        - link "利用状況" [ref=f2e42] [cursor=pointer]:
+          - /url: /admin/usage
+    - generic [ref=f2e45]:
+      - banner [ref=f2e46]:
+        - navigation "パンくずリスト" [ref=f2e47]:
+          - list [ref=f2e48]:
+            - listitem [ref=f2e49]:
+              - link "ダッシュボード" [ref=f2e50] [cursor=pointer]:
+                - /url: /admin
+            - listitem [ref=f2e51]:
+              - link "生徒管理" [ref=f2e54] [cursor=pointer]:
+                - /url: /admin/persons
+            - listitem [ref=f2e55]:
+              - generic [ref=f2e58]: 詳細・編集
+        - generic [ref=f2e59]:
+          - button "テーマを切り替える" [ref=f2e60]
+          - button "e2e-admin@example.test" [ref=f2e67]
+      - main [ref=f2e75]:
+        - generic [ref=f2e77]:
+          - generic [ref=f2e78]:
+            - heading "テスト太郎" [level=1] [ref=f2e79]
+            - paragraph [ref=f2e80]: 生徒の基本情報を編集します
+          - generic [ref=f2e83]:
+            - generic [ref=f2e84]:
+              - generic [ref=f2e85]: 名前 *
+              - textbox "名前" [ref=f2e86]: テスト太郎
+            - generic [ref=f2e87]:
+              - text: 表示名（任意）
+              - textbox "表示名（任意）" [ref=f2e88]: たろう
+              - paragraph [ref=f2e89]: "Bot が呼びかけに使う名前です（例: 太郎くん）"
+            - generic [ref=f2e90]:
+              - text: 学年（任意）
+              - textbox "学年（任意）" [ref=f2e91]:
+                - /placeholder: "例: 中学3年"
+                - text: 中2
+            - generic [ref=f2e92]:
+              - text: ステータス
+              - combobox "ステータス" [ref=f2e93]:
+                - generic: 有効
+              - combobox [ref=f2e96]
+              - paragraph [ref=f2e97]: 無効にすると Bot が応答しなくなり、集計・選択肢からも除外されます（生徒一覧には残ります）
+            - generic [ref=f2e98]:
+              - text: 保護者メール（任意）
+              - textbox "保護者メール（任意）" [ref=f2e99]
+            - paragraph [ref=f2e100]: "* は必須項目です"
+            - generic [ref=f2e101]:
+              - button "保存" [ref=f2e102]
+              - link "キャンセル" [ref=f2e103] [cursor=pointer]:
+                - /url: /admin/persons
+          - generic [ref=f2e104]:
+            - generic [ref=f2e105]:
+              - generic [ref=f2e106]: AI 用プロフィール
+              - paragraph [ref=f2e107]: AI が回答時に参照する生徒の特徴・学習状況メモです。すべての質問への回答に使われます
+            - generic [ref=f2e109]:
+              - alert [ref=f2e110]:
+                - generic [ref=f2e113]: ここに入力した内容はそのまま AI に送信されます。 生徒の氏名は書かないでください（学年は生徒情報から自動で送られます）
+              - generic [ref=f2e114]:
+                - text: 全体要約
+                - textbox "全体要約" [ref=f2e115]:
+                  - /placeholder: "例: 中学3年。数学は基礎計算は安定してきたが、文章題で条件を式に落とすところでつまずきやすい。"
+                - paragraph [ref=f2e116]: 現在の学習状況と直近の重点課題。200〜800 文字程度が目安です
+              - generic [ref=f2e117]:
+                - text: 学習スタイル・説明トーン
+                - textbox "学習スタイル・説明トーン" [ref=f2e118]:
+                  - /placeholder: "例: 図を使った説明が入りやすい。長文の説明は読み飛ばしがち。"
+              - generic [ref=f2e119]:
+                - text: 得意分野
+                - textbox "得意分野" [ref=f2e120]
+              - generic [ref=f2e121]:
+                - text: 苦手分野
+                - textbox "苦手分野" [ref=f2e122]
+              - generic [ref=f2e123]:
+                - text: 指導上の注意
+                - textbox "指導上の注意" [ref=f2e124]:
+                  - /placeholder: "例: 答えをすぐ出すと写して終わりになりやすいので、まず考え方から。"
+              - group "試験期間" [ref=f2e125]:
+                - generic [ref=f2e127]:
+                  - checkbox "試験期間中にする" [ref=f2e128]
+                  - generic [ref=f2e129]:
+                    - text: 試験期間中にする
+                    - paragraph [ref=f2e130]: 試験期間中は、確認の質問をはさまず、要点をすばやく伝える回答に切り替わります。 最終日を過ぎると自動で通常の回答に戻ります
+                - generic [ref=f2e131]:
+                  - text: 最終日
+                  - textbox "最終日" [disabled] [ref=f2e132]
+                  - paragraph [ref=f2e133]: この日いっぱいまで試験期間として扱います
+                - generic [ref=f2e134]:
+                  - text: 試験科目（任意）
+                  - textbox "試験科目（任意）" [ref=f2e135]:
+                    - /placeholder: 数学, 英語
+                  - paragraph [ref=f2e136]: カンマ区切りで入力します
+              - button "プロフィールを保存" [ref=f2e138]
+    - region "Notifications (F8)":
+      - list
+  - alert [ref=f2e139]

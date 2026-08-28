@@ -1,0 +1,71 @@
+- generic [active] [ref=f4e1]:
+  - generic [ref=f4e2]:
+    - link "メインコンテンツへスキップ" [ref=f4e3] [cursor=pointer]:
+      - /url: "#admin-main"
+    - complementary [ref=f4e4]:
+      - generic [ref=f4e5]: じゅくAI
+      - navigation "メインナビゲーション" [ref=f4e10]:
+        - link "ダッシュボード" [ref=f4e11] [cursor=pointer]:
+          - /url: /admin
+        - link "生徒管理" [ref=f4e17] [cursor=pointer]:
+          - /url: /admin/persons
+        - link "チャンネル設定" [ref=f4e23] [cursor=pointer]:
+          - /url: /admin/channels
+        - link "レポート" [ref=f4e27] [cursor=pointer]:
+          - /url: /admin/reports
+        - link "会話ログ" [ref=f4e31] [cursor=pointer]:
+          - /url: /admin/conversations
+        - link "エラーログ" [ref=f4e35] [cursor=pointer]:
+          - /url: /admin/errors
+        - link "ジョブ" [ref=f4e38] [cursor=pointer]:
+          - /url: /admin/jobs
+        - link "利用状況" [ref=f4e42] [cursor=pointer]:
+          - /url: /admin/usage
+    - generic [ref=f4e45]:
+      - banner [ref=f4e46]:
+        - navigation "パンくずリスト" [ref=f4e47]:
+          - list [ref=f4e48]:
+            - listitem [ref=f4e49]:
+              - link "ダッシュボード" [ref=f4e50] [cursor=pointer]:
+                - /url: /admin
+            - listitem [ref=f4e51]:
+              - generic [ref=f4e54]: エラーログ
+        - generic [ref=f4e55]:
+          - button "テーマを切り替える" [ref=f4e56]
+          - button "e2e-admin@example.test" [ref=f4e63]
+      - main [ref=f4e71]:
+        - generic [ref=f4e73]:
+          - generic [ref=f4e74]:
+            - heading "エラー管理" [level=1] [ref=f4e75]
+            - paragraph [ref=f4e76]: Bot の処理で発生したエラーの確認と対応記録（表示中 1 件）
+          - generic [ref=f4e77]:
+            - generic [ref=f4e78]:
+              - text: 深刻度
+              - combobox "深刻度" [ref=f4e79]:
+                - generic: エラー・警告（既定）
+            - generic [ref=f4e82]:
+              - text: 対応状況
+              - combobox "対応状況" [ref=f4e83]:
+                - generic: すべて
+          - table [ref=f4e88]:
+            - rowgroup [ref=f4e89]:
+              - row [ref=f4e90]:
+                - columnheader "エラーコード" [ref=f4e91]
+                - columnheader "生徒" [ref=f4e92]
+                - columnheader "チャンネル" [ref=f4e93]
+                - columnheader "深刻度" [ref=f4e94]
+                - columnheader "対応状況" [ref=f4e95]
+                - columnheader "発生日時" [ref=f4e96]
+            - rowgroup [ref=f4e97]:
+              - row [ref=f4e98]:
+                - cell [ref=f4e99]:
+                  - link "SLACK_SIGNATURE_INVALID" [ref=f4e100] [cursor=pointer]:
+                    - /url: /admin/errors/4e27d37f-75ac-4e8c-ba00-5bdbaff9c540
+                - cell "—" [ref=f4e101]
+                - cell "—" [ref=f4e102]
+                - cell "エラー" [ref=f4e103]
+                - cell "未対応" [ref=f4e106]
+                - cell "2026/08/27 17:38" [ref=f4e109]
+    - region "Notifications (F8)":
+      - list
+  - alert [ref=f4e110]
