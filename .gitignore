@@ -66,3 +66,7 @@ CLAUDE.local.md
 juku-ai-backup-*.sql
 juku-ai-backup-*.sql.gpg
 juku-ai-backup-*-MANIFEST.txt
+
+# Python
+__pycache__/
+*.pyc
