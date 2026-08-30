@@ -70,3 +70,8 @@ juku-ai-backup-*-MANIFEST.txt
 # Python
 __pycache__/
 *.pyc
+
+# 編集中のバックアップ（公開リポジトリに混入させない）
+*.bak
+*.bak[0-9]
+*.orig

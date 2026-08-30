@@ -5,6 +5,7 @@
 import { describe, it, expect } from 'vitest'
 import { calculateCost } from './calculateCost'
 import { MODEL_PRICING, findModelPrice } from '@shared/lib/constants'
+import { findUnpricedModels } from '@features/usage-logs'
 
 describe('calculateCost', () => {
   it('既知モデルの単価で計算する（haiku: $1/$5 per M）', () => {
@@ -68,6 +69,30 @@ describe('calculateCost', () => {
 
   it('サフィックスも未登録なら 0（未知モデル）', () => {
     expect(calculateCost('openai/o9-imaginary', { inputTokens: 1000, outputTokens: 1000 })).toBe(0)
+  })
+})
+
+// 本番移行 §3-0 / §3-4: 実キーで疎通確認済みの本番モデル（2026-08-29 実測）。
+// ここが未登録に戻ると `/admin/usage` に「単価が未登録のモデル」警告が出て、
+// 累計コストが $0.00 のまま積み上がる（記録済みログは遡って再計算されない）。
+describe('本番モデルの単価登録（/admin/usage の未登録警告が出ないこと）', () => {
+  const PRODUCTION_MODELS = ['gpt-5.6-luna', 'gpt-5.6-terra']
+
+  it.each(PRODUCTION_MODELS)('%s の単価を MODEL_PRICING から引ける', (model) => {
+    expect(findModelPrice(model)).toBeDefined()
+  })
+
+  it('本番の 2 モデルは未登録として列挙されない（素の名前 / OpenRouter 形式とも）', () => {
+    expect(findUnpricedModels(PRODUCTION_MODELS)).toEqual([])
+    expect(findUnpricedModels(PRODUCTION_MODELS.map((m) => `openai/${m}`))).toEqual([])
+  })
+
+  it('未登録モデルは 0 のままで、警告にも列挙される（判定が全部通る実装になっていない）', () => {
+    const usage = { inputTokens: 10_000, outputTokens: 1_000 }
+    expect(calculateCost('gpt-5.6-unregistered', usage)).toBe(0)
+    expect(findUnpricedModels([...PRODUCTION_MODELS, 'gpt-5.6-unregistered'])).toEqual([
+      'gpt-5.6-unregistered',
+    ])
   })
 })
 

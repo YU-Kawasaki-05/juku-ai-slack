@@ -1,20 +1,23 @@
 /** @file
- * 機能: payload の添付画像を検証→DL→メタデータ除去→保存し、Vision 用 data URL を収集する
+ * 機能: payload の添付画像を検証→DL→長辺キャップ／メタデータ除去→保存し、Vision 用 data URL を収集する
  *   MIME は Slack 申告値ではなく実際の content-type で判定し、合計バイト上限を超えた分はスキップする
  * 入力: db, ProcessAttachmentsParams, deps（テスト用に download/store を注入可）
- * 出力: { dataUrls, errorCodes, skippedForTotalSize, metadataStrippedBytes }
+ * 出力: { dataUrls, errorCodes, skippedForTotalSize, metadataStrippedBytes, resizedCount }
  * 例外: なし（各画像の失敗はエラーコードとして収集し、処理は継続）
- * 依存: validateAttachment, downloadSlackFile, stripImageMetadata, storeAttachment
+ * 依存: validateAttachment, downloadSlackFile, resizeImage, stripImageMetadata, storeAttachment
  * 副作用: Slack GET, Storage put, attachments insert
  * セキュリティ: person_id は payload（channel 解決済み）のみ。
- *   EXIF/GPS は Storage 保存前・LLM 送信前の同一バイト列に対して除去する（両経路で漏れない）
- * @implements FR-06, AC-06-01, AC-06-03, AC-06-04, BR-06-02, BR-06-03
+ *   EXIF/GPS は Storage 保存前・LLM 送信前の同一バイト列から落とす（両経路で漏れない）。
+ *   縮小した画像は sharp の再エンコードでメタデータごと消え、縮小しなかった画像は
+ *   stripImageMetadata が落とす（どちらの経路でも残らない）
+ * @implements FR-06, AC-06-01, AC-06-03, AC-06-04, BR-06-02, BR-06-03, BR-06-05
  */
 import type { ServerDb } from '@shared/types/db'
 import { MAX_TOTAL_IMAGE_BYTES, SUPPORTED_IMAGE_MIMETYPES } from '@shared/lib/constants'
 import { ImageTooLargeError } from '@shared/lib/errors/AppError'
 import { validateAttachment } from './validateAttachment'
 import { downloadSlackFile, toDataUrl, type DownloadedFile } from './downloadSlackFile'
+import { resizeImage } from './resizeImage'
 import { stripImageMetadata } from './stripImageMetadata'
 import { storeAttachment } from './storeAttachment'
 
@@ -44,6 +47,8 @@ export interface ProcessAttachmentsResult {
   skippedForTotalSize: number
   /** メタデータ除去で削減できた合計バイト数（0 なら除去対象なし。削減効果の観測用） */
   metadataStrippedBytes: number
+  /** 長辺が上限を超えていて縮小した枚数（トークン削減効果の観測用） */
+  resizedCount: number
 }
 
 export interface ProcessAttachmentsDeps {
@@ -64,6 +69,7 @@ export async function processAttachments(
   let skippedForTotalSize = 0
   let totalBytes = 0
   let metadataStrippedBytes = 0
+  let resizedCount = 0
 
   for (const file of params.files) {
     const valid = validateAttachment({ mimetype: file.mimetype, size: file.size ?? undefined })
@@ -89,13 +95,23 @@ export async function processAttachments(
       continue
     }
 
-    // EXIF/GPS は Storage 保存と Vision 送信の両方より前に落とす（同じバイト列を両方で使う）
-    const stripped = stripImageMetadata(downloaded.bytes, actualMimetype)
-    metadataStrippedBytes += stripped.removedBytes
-    const bytes = stripped.bytes
+    // 長辺キャップ。Vision のトークン数は解像度に比例するので、送る前にここで天井を作る
+    const resized = await resizeImage(downloaded.bytes, actualMimetype)
+    let bytes: Uint8Array
+    if (resized.resized) {
+      // sharp の再エンコードは入力のメタデータを引き継がない＝EXIF/GPS はこの時点で消えている。
+      // ここに stripImageMetadata を重ねても落とすものが無いので通さない
+      resizedCount += 1
+      bytes = resized.bytes
+    } else {
+      // 上限以下（＝1 バイトも変わっていない原本）。EXIF/GPS はバイト列レベルで落とす
+      const stripped = stripImageMetadata(resized.bytes, actualMimetype)
+      metadataStrippedBytes += stripped.removedBytes
+      bytes = stripped.bytes
+    }
 
     // 合計サイズ上限（枚数上限だけでは Vision API の受付上限を超える）。超過分はスキップ
-    // 判定は除去後のバイト数で行う（メタデータ分の削減を枚数に活かす）
+    // 判定は縮小・除去後のバイト数で行う（削減分を枚数に活かす）
     if (totalBytes + bytes.byteLength > MAX_TOTAL_IMAGE_BYTES) {
       skippedForTotalSize += 1
       errorCodes.push('IMAGE_TOO_LARGE')
@@ -123,7 +139,7 @@ export async function processAttachments(
     dataUrls.push(toDataUrl(bytes, actualMimetype))
   }
 
-  return { dataUrls, errorCodes, skippedForTotalSize, metadataStrippedBytes }
+  return { dataUrls, errorCodes, skippedForTotalSize, metadataStrippedBytes, resizedCount }
 }
 
 /** 'image/png; charset=binary' → 'image/png'（パラメータを落とし小文字化） */

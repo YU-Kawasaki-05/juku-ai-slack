@@ -124,6 +124,20 @@ export const MAX_IMAGES_PER_MESSAGE = 3
  * base64 化すると約 1.33 倍になるため、枚数上限だけでは Vision API の受付上限を超える。
  */
 export const MAX_TOTAL_IMAGE_BYTES = 8 * 1024 * 1024
+/**
+ * LLM 送信前に縮小する長辺の上限（px）。これを超える画像だけを縮小する。
+ *
+ * なぜ 2048 か（実キーでの実測にもとづく）:
+ *   - 画像のトークン数は解像度に比例する（正方形の実測で 64px=4 / 512px=307 / 1024px=1228 /
+ *     2048px=4915。辺が 2 倍でトークンは約 4 倍＝ピクセル数に比例）。2048px までの範囲で
+ *     頭打ちは観測されなかった＝上限を設けないと 1 枚のコストに天井が無い
+ *     （スマホ写真 3024x4032 をそのまま送ると 1 万トークンを超える）。
+ *   - `detail` パラメータ（auto/low/high/original）はトークン数を変えなかった。
+ *     つまりコストのレバーは実際の画像サイズだけであり、送信前の縮小以外に手段が無い。
+ *   - 2048px なら数式・手書き文字の判読に必要な解像度は保たれる（A4 を 2048px で撮った程度）。
+ *   値を下げればコストが下がり、上げれば精度側に振れる。バランス調整はこの 1 箇所で行う。
+ */
+export const MAX_IMAGE_LONG_EDGE = 2048
 /** Supabase Storage の添付バケット名 */
 export const ATTACHMENTS_BUCKET = 'attachments'
 
@@ -151,9 +165,8 @@ const PRICE_GPT_4O_MINI: ModelPrice = { inputPerM: 0.15, outputPerM: 0.6 }
 const PRICE_GPT_4O: ModelPrice = { inputPerM: 2.5, outputPerM: 10.0 }
 const PRICE_DEEPSEEK_CHAT: ModelPrice = { inputPerM: 0.27, outputPerM: 1.1 }
 /**
- * 本番の LLM_MODEL_DEFAULT / LLM_MODEL_COMPLEX（本番移行 §3-4）。OpenAI 直の定価。
- * モデル ID は実キーでの `/models` 疎通確認前なので、正式名が違っていたら
- * 下の MODEL_PRICING のキー名だけを直す（単価はプロバイダの公表値で据え置き）。
+ * 本番の LLM_MODEL_DEFAULT / LLM_MODEL_COMPLEX（本番移行 §3-0 / §3-4）。OpenAI 直の定価。
+ * 2026-08-29 に実キーで疎通済み（モデル ID は実在し、生成も通る）。
  * OpenRouter 経由にする場合は単価も変わる（現在プロモで概ね半額）。
  * cached 入力の単価枠が ModelPrice に無いため、キャッシュヒット分は過大計上（安全側）になる。
  */
