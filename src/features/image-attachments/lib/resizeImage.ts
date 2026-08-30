@@ -33,9 +33,10 @@ export interface ResizeImageResult {
  * トークン数はピクセル数だけで決まりバイト数に依存しないため、品質を上げてもコストは増えない。
  * 一方で下げすぎると鉛筆の細線や小さな添え字が潰れて誤読の原因になる。
  * 85 はスマホ写真の一般的な保存品質（90 前後）から視覚的な劣化がほぼ無い水準。
+ * この値と chromaSubsampling は resizeImage.test.ts が固定している（下げるとテストが落ちる）。
  */
 const JPEG_QUALITY = 85
-/** WebP も同じ理由で 85（WebP は同品質値で JPEG より高画質側に出る） */
+/** WebP も同じ理由で 85（WebP は同品質値で JPEG より高画質側に出る）。同じくテストで固定 */
 const WEBP_QUALITY = 85
 
 export async function resizeImage(bytes: Uint8Array, mimetype: string): Promise<ResizeImageResult> {
@@ -86,7 +87,11 @@ function encodeSameFormat(pipeline: sharp.Sharp, mimetype: string): sharp.Sharp 
       // chromaSubsampling 4:4:4 … 赤ペンの添削線など色付きの細線が滲まないようにする
       return pipeline.jpeg({ quality: JPEG_QUALITY, chromaSubsampling: '4:4:4' })
     case 'image/png':
-      // PNG は可逆。縮小によるピクセル変化以外の劣化は無い
+      // PNG の符号化自体は可逆なので、縮小によるピクセル変化以外の圧縮劣化は無い。
+      // ただし 16bit(ushort) PNG はこの経路で 8bit に落ちる（libvips の既定の出力深度）。
+      // Vision 側が 8bit でしか受け取らない以上 16bit を保つ利得が無く、保持するとバイト数が
+      // 約 2 倍になるだけなので、意図した挙動としてテストで固定している
+      // （生徒が送るスマホ・教科書の写真は実質すべて 8bit で、16bit が来ること自体がまず無い）。
       return pipeline.png({ compressionLevel: 9 })
     default:
       return pipeline.webp({ quality: WEBP_QUALITY })

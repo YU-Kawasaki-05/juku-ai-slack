@@ -1,7 +1,10 @@
 /** @file
  * 検証: 送信前の長辺キャップ。上限超のみを縮小し、上限以下は 1 バイトも変えないこと、
  *   アスペクト比・形式が維持されること、壊れた入力で例外を投げないこと、
- *   縮小経路でも EXIF/GPS が残らないこと
+ *   縮小経路でも EXIF/GPS が残らないこと、および再エンコードの画質設定
+ *   （JPEG quality 85 / chromaSubsampling 4:4:4、WebP quality 85、PNG の可逆性）が
+ *   黙って下がらないこと。画質は「数式・鉛筆の細線・小さな添え字の判読性」そのものなので、
+ *   劣化しても CI が気づけない状態を作らない。
  * @verifies FR-06, BR-06-05
  */
 import { describe, it, expect } from 'vitest'
@@ -38,6 +41,82 @@ async function makeImage(width: number, height: number, format: Format): Promise
 async function dimensions(bytes: Uint8Array): Promise<{ width: number; height: number }> {
   const meta = await sharp(bytes).metadata()
   return { width: meta.width ?? 0, height: meta.height ?? 0 }
+}
+
+/** 実装と同じ縮小指定。参照エンコードを作るときだけ使う */
+const RESIZE = {
+  width: MAX_IMAGE_LONG_EDGE,
+  height: MAX_IMAGE_LONG_EDGE,
+  fit: 'inside',
+  withoutEnlargement: true,
+} as const
+
+/**
+ * JPEG の量子化テーブル（DQT セグメント）を hex で取り出す。
+ * libjpeg のテーブルは quality から一意に決まり、画像の内容にも寸法にも
+ * chromaSubsampling にも依存しないので、出力バイト列だけから「どの quality で
+ * 符号化されたか」を判定できる。
+ */
+function quantizationTables(bytes: Uint8Array): string {
+  const b = Buffer.from(bytes)
+  const tables: string[] = []
+  let i = 2 // SOI の次から
+  while (i < b.length - 3) {
+    if (b[i] !== 0xff) {
+      i += 1
+      continue
+    }
+    const marker = b[i + 1]
+    // パラメータを持たないマーカー（fill byte / TEM / RSTn）
+    if (marker === 0xff || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd8)) {
+      i += 2
+      continue
+    }
+    if (marker === 0xda) break // SOS 以降はエントロピー符号化データ
+    const length = b.readUInt16BE(i + 2)
+    if (marker === 0xdb) tables.push(b.subarray(i + 4, i + 2 + length).toString('hex'))
+    i += 2 + length
+  }
+  return tables.join('|')
+}
+
+/** quality だけを変えた参照テーブル。内容非依存なので 8x8 のダミーで足りる */
+async function referenceQuantizationTables(quality: number): Promise<string> {
+  const buf = await sharp({
+    create: { width: 8, height: 8, channels: 3, background: { r: 10, g: 120, b: 200 } },
+  })
+    .jpeg({ quality })
+    .toBuffer()
+  return quantizationTables(new Uint8Array(buf))
+}
+
+/**
+ * 実装と同じ縮小を行い quality だけを変えた WebP 参照エンコード。
+ * WebP には JPEG の量子化テーブルのような内容非依存の指紋が無いため、出力バイト列そのもので固定する。
+ * 参照は同一プロセスの同じ sharp が作るので sharp を上げても両辺が同時に動く（＝版差では壊れない）が、
+ * 実装側で縮小指定を変えたら RESIZE も合わせる必要がある。
+ */
+async function referenceWebp(input: Uint8Array, quality: number): Promise<Buffer> {
+  return sharp(input, { failOn: 'error', animated: false }).resize(RESIZE).webp({ quality }).toBuffer()
+}
+
+/** 16bit(ushort) PNG。実運用ではまず来ないが、縮小時に 8bit へ落ちる挙動を固定するために使う */
+async function make16BitPng(width: number, height: number): Promise<Uint8Array> {
+  const channels = 3
+  const raw = Buffer.alloc(width * height * channels)
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const i = (y * width + x) * channels
+      raw[i] = Math.round((x / width) * 255)
+      raw[i + 1] = Math.round((y / height) * 255)
+      raw[i + 2] = ((x >> 6) ^ (y >> 6)) & 1 ? 210 : 45
+    }
+  }
+  const buf = await sharp(raw, { raw: { width, height, channels } })
+    .toColourspace('rgb16') // libvips の出力深度が ushort になり 16bit PNG が書かれる
+    .png()
+    .toBuffer()
+  return new Uint8Array(buf)
 }
 
 describe('resizeImage', () => {
@@ -148,5 +227,70 @@ describe('resizeImage', () => {
     const { width, height } = await dimensions(r.bytes)
     // 12.2M px → 3.1M px。トークンはピクセル数に比例するので約 14300 → 約 3700 トークン相当
     expect(width * height).toBeLessThan(before / 3)
+  })
+
+  it('JPEG は quality 85 で再エンコードする（量子化テーブルで固定）', async () => {
+    const input = await makeImage(3000, 2000, 'jpeg')
+    const r = await resizeImage(input, 'image/jpeg')
+
+    expect(r.resized).toBe(true)
+    const actual = quantizationTables(r.bytes)
+    expect(actual).not.toBe('') // テーブルを読めていない状態で通過させない
+    expect(actual).toBe(await referenceQuantizationTables(85))
+    // 判定が quality に反応していることの担保（±1 でも別テーブルになる）
+    expect(actual).not.toBe(await referenceQuantizationTables(30))
+    expect(actual).not.toBe(await referenceQuantizationTables(84))
+    expect(actual).not.toBe(await referenceQuantizationTables(86))
+  })
+
+  it('JPEG は chromaSubsampling 4:4:4 のまま（赤ペンなど色付きの細線を滲ませない）', async () => {
+    const input = await makeImage(3000, 2000, 'jpeg')
+    const r = await resizeImage(input, 'image/jpeg')
+
+    expect(r.resized).toBe(true)
+    expect((await sharp(r.bytes).metadata()).chromaSubsampling).toBe('4:4:4')
+    // 判定が効いていることの担保: 4:2:0 で符号化すれば metadata もそう報告する
+    const subsampled = await sharp(input).jpeg({ chromaSubsampling: '4:2:0' }).toBuffer()
+    expect((await sharp(subsampled).metadata()).chromaSubsampling).toBe('4:2:0')
+  })
+
+  it('WebP は quality 85 で再エンコードする（参照エンコードとのバイト一致で固定）', async () => {
+    const input = await makeImage(3000, 2000, 'webp')
+    const r = await resizeImage(input, 'image/webp')
+
+    expect(r.resized).toBe(true)
+    expect(Buffer.from(r.bytes).equals(await referenceWebp(input, 85))).toBe(true)
+    // 判定が quality に反応していることの担保
+    expect(Buffer.from(r.bytes).equals(await referenceWebp(input, 84))).toBe(false)
+    expect(Buffer.from(r.bytes).equals(await referenceWebp(input, 30))).toBe(false)
+  })
+
+  it('PNG 経路は可逆（縮小後のピクセルが 1 サンプルも変わらない）', async () => {
+    const input = await makeImage(3000, 2000, 'png')
+    const r = await resizeImage(input, 'image/png')
+
+    expect(r.resized).toBe(true)
+    // compressionLevel はサイズだけの設定なので固定しない。守るのは「非可逆な符号化を混ぜないこと」
+    const expected = await sharp(input, { failOn: 'error', animated: false }).resize(RESIZE).raw().toBuffer()
+    const actual = await sharp(r.bytes).raw().toBuffer()
+    expect(actual.equals(expected)).toBe(true)
+  })
+
+  it('16bit PNG は縮小すると 8bit に落ちる（既知かつ許容した挙動）', async () => {
+    const input = await make16BitPng(2400, 200)
+    // 前提: 入力は 16bit
+    expect((await sharp(input).metadata()).depth).toBe('ushort')
+
+    const r = await resizeImage(input, 'image/png')
+
+    expect(r.resized).toBe(true)
+    expect((await sharp(r.bytes).metadata()).depth).toBe('uchar')
+
+    // 劣化するのは再エンコード経路だけ。上限以下なら 16bit のまま素通しされる
+    const small = await make16BitPng(1000, 200)
+    const rSmall = await resizeImage(small, 'image/png')
+    expect(rSmall.resized).toBe(false)
+    expect(rSmall.bytes).toBe(small)
+    expect((await sharp(rSmall.bytes).metadata()).depth).toBe('ushort')
   })
 })
