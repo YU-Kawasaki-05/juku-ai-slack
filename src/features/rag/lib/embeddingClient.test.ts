@@ -4,6 +4,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { EMBEDDING_DIM } from '@shared/lib/constants'
+import { env } from '@shared/lib/env'
 
 const embeddingsCreate = vi.hoisted(() => vi.fn())
 vi.mock('openai', () => ({
@@ -75,16 +76,69 @@ describe('createOpenAiCompatibleEmbeddingClient', () => {
   })
 })
 
+type MutableEmbeddingEnv = {
+  EMBEDDING_API_KEY?: string
+  EMBEDDING_BASE_URL?: string
+  EMBEDDING_MODEL?: string
+}
+
+/** EMBEDDING_* を未設定にする。戻り値を呼ぶと元に戻す */
+function withoutEmbeddingConfig(): () => void {
+  const m = env as MutableEmbeddingEnv
+  const before = { ...m }
+  m.EMBEDDING_API_KEY = undefined
+  m.EMBEDDING_BASE_URL = undefined
+  m.EMBEDDING_MODEL = undefined
+  return () => {
+    m.EMBEDDING_API_KEY = before.EMBEDDING_API_KEY
+    m.EMBEDDING_BASE_URL = before.EMBEDDING_BASE_URL
+    m.EMBEDDING_MODEL = before.EMBEDDING_MODEL
+  }
+}
+
+/** EMBEDDING_* を揃った状態にする。戻り値を呼ぶと元に戻す */
+function withEmbeddingConfig(): () => void {
+  const m = env as MutableEmbeddingEnv
+  const before = { ...m }
+  m.EMBEDDING_API_KEY = 'test-embedding-key'
+  m.EMBEDDING_BASE_URL = 'https://embedding.test/v1'
+  m.EMBEDDING_MODEL = 'test-embedding-model'
+  return () => {
+    m.EMBEDDING_API_KEY = before.EMBEDDING_API_KEY
+    m.EMBEDDING_BASE_URL = before.EMBEDDING_BASE_URL
+    m.EMBEDDING_MODEL = before.EMBEDDING_MODEL
+  }
+}
+
 describe('getEmbeddingClient', () => {
   it('EMBEDDING_* 未設定は EmbeddingNotConfiguredError（severity=info。ログ洪水を避けるため専用型）', () => {
-    __setEmbeddingClientForTest(undefined)
-    let thrown: unknown
+    // 環境変数が「未設定」であることをテスト自身で作る。
+    // ambient な env に依存すると、CI（ci.yml が EMBEDDING_* を渡す）と
+    // ローカル（setup.ts は渡さない）で結果が変わる（実際に CI だけ落ちた）。
+    const restore = withoutEmbeddingConfig()
     try {
-      getEmbeddingClient()
-    } catch (e) {
-      thrown = e
+      __setEmbeddingClientForTest(undefined)
+      let thrown: unknown
+      try {
+        getEmbeddingClient()
+      } catch (e) {
+        thrown = e
+      }
+      expect(thrown).toBeInstanceOf(EmbeddingNotConfiguredError)
+      expect(thrown).toMatchObject({ code: 'EMBEDDING_NOT_CONFIGURED', severity: 'info' })
+    } finally {
+      restore()
     }
-    expect(thrown).toBeInstanceOf(EmbeddingNotConfiguredError)
-    expect(thrown).toMatchObject({ code: 'EMBEDDING_NOT_CONFIGURED', severity: 'info' })
+  })
+
+  it('EMBEDDING_* が揃っていればクライアントを返す（上のテストの対照）', () => {
+    const restore = withEmbeddingConfig()
+    try {
+      __setEmbeddingClientForTest(undefined)
+      expect(() => getEmbeddingClient()).not.toThrow()
+    } finally {
+      restore()
+      __setEmbeddingClientForTest(undefined)
+    }
   })
 })
