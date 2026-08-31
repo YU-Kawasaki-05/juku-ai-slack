@@ -57,6 +57,18 @@ describe('buildPrompt', () => {
     expect(typeof messages.at(-1)!.content).toBe('string')
   })
 
+  it('threadSummary があれば system に含める（無ければ含めない）（FR-20）', () => {
+    const withSummary = buildPrompt({
+      ...base,
+      mode: 'socratic',
+      threadSummary: '前半は二次関数の平方完成を練習した',
+    })
+    expect(withSummary.system).toContain('これまでの要約')
+    expect(withSummary.system).toContain('平方完成を練習した')
+    const without = buildPrompt({ ...base, mode: 'socratic' })
+    expect(without.system).not.toContain('これまでの要約')
+  })
+
   it('履歴の後に現在の質問を user として積む', () => {
     const history: LlmMessage[] = [
       { role: 'user', content: '前の質問' },

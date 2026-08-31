@@ -39,4 +39,25 @@ describe('chunkReport', () => {
     const chunks = chunkReport('## X\n短い本文', 1500)
     expect(chunks.length).toBe(1)
   })
+
+  it('ハードスライスでサロゲートペアを分断しない（絵文字が境界に来るケース）', () => {
+    // 999字 + 絵文字（サロゲートペア）+ 500字 → UTF-16 の slice(0,1000) だと絵文字が割れる
+    const p = 'あ'.repeat(999) + '😀' + 'い'.repeat(500)
+    const chunks = chunkReport(p, 1000)
+
+    expect(chunks.length).toBeGreaterThan(1)
+    for (const c of chunks) {
+      // 孤立サロゲート（ペアになっていない上位/下位サロゲート）が残っていないこと
+      expect(c).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/)
+      expect(c).not.toMatch(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/)
+    }
+    expect(chunks.join('')).toContain('😀')
+  })
+
+  it('絵文字だけの長い段落もコードポイント単位で切る', () => {
+    const p = '😀'.repeat(300)
+    const chunks = chunkReport(p, 100)
+    expect(chunks.length).toBe(3)
+    for (const c of chunks) expect([...c].length).toBe(100)
+  })
 })

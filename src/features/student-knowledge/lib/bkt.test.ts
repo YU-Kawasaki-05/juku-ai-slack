@@ -1,9 +1,9 @@
 /** @file
- * 検証: BKT 更新式と忘却減衰
- * @verifies AC-23-01, AC-23-02
+ * 検証: BKT 更新式と忘却減衰、吸収状態（p=1.0）の回避
+ * @verifies AC-23-01, AC-23-02, G-5
  */
 import { describe, it, expect } from 'vitest'
-import { updateBKT, applyForgettingDecay } from './bkt'
+import { updateBKT, applyForgettingDecay, clampMastery } from './bkt'
 
 describe('updateBKT', () => {
   it('正答で p_mastery が上昇する（AC-23-01）', () => {
@@ -33,6 +33,52 @@ describe('updateBKT', () => {
   it('学習率 P(T) により誤答でも 0 には落ちきらない', () => {
     const after = updateBKT(0.01, false)
     expect(after).toBeGreaterThan(0)
+  })
+
+  // --- G-5: 吸収状態の回避 ---
+  it('連続正解を重ねても p は 1.0 に到達しない（吸収状態にならない）', () => {
+    let p = 0.2
+    for (let i = 0; i < 100; i++) p = updateBKT(p, true)
+    expect(p).toBeLessThan(1)
+  })
+
+  it('連続正解24回のあとでも不正解で p が下がる（G-5 回帰）', () => {
+    let p = 0.2
+    for (let i = 0; i < 24; i++) p = updateBKT(p, true)
+    const beforeMiss = p
+    const afterMiss = updateBKT(p, false)
+    // 修正前は p が厳密に 1.0 になり、以後どんな不正解でも 1.0 のまま動かなかった
+    expect(beforeMiss).toBeLessThan(1)
+    expect(afterMiss).toBeLessThan(beforeMiss)
+  })
+
+  it('p=1.0 を渡されても（既存データの救済）不正解で下がる', () => {
+    expect(updateBKT(1, false)).toBeLessThan(1)
+  })
+
+  it('p=0 を渡されても正解で上がる', () => {
+    expect(updateBKT(0, true)).toBeGreaterThan(0)
+  })
+
+  it('戻り値は常に開区間 (0,1) に収まる', () => {
+    for (const p of [0, 1, 0.5, -1, 2]) {
+      expect(updateBKT(p, true)).toBeLessThan(1)
+      expect(updateBKT(p, true)).toBeGreaterThan(0)
+      expect(updateBKT(p, false)).toBeLessThan(1)
+      expect(updateBKT(p, false)).toBeGreaterThan(0)
+    }
+  })
+})
+
+describe('clampMastery', () => {
+  it('両端を開区間に丸める', () => {
+    expect(clampMastery(1)).toBeLessThan(1)
+    expect(clampMastery(0)).toBeGreaterThan(0)
+    expect(clampMastery(0.42)).toBe(0.42)
+  })
+  it('NaN は下限に落とす（DB の CHECK 制約違反を防ぐ）', () => {
+    expect(clampMastery(Number.NaN)).toBeGreaterThan(0)
+    expect(clampMastery(Number.NaN)).toBeLessThan(1)
   })
 })
 

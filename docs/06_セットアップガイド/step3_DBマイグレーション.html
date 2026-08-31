@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STEP 3 DB マイグレーション | じゅくAI セットアップガイド</title>
+<style>
+:root{--fg:#191c21;--muted:#5c6470;--line:#d9dee6;--bg:#fff;--soft:#f6f8fa;--soft2:#eef2f7;--accent:#1f5fa9;--code:#0f2b46;
+--warn:#7a4d00;--warnbg:#fff8e8;--warnline:#e6c579;--danger:#96262c;--dangerbg:#fdf1f2;--dangerline:#e3adb1;
+--ok:#1a6444;--okbg:#f0f8f4;--okline:#a5d5bd;--info:#144a73;--infobg:#eef6fc;--infoline:#9dc6e4;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);line-height:1.85;font-size:16px;
+font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,-apple-system,"Segoe UI",sans-serif;}
+.wrap{max-width:940px;margin:0 auto;padding:28px 20px 90px}
+.topbar{border-bottom:1px solid var(--line);background:var(--soft);}
+.topbar .inner{max-width:940px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
+.topbar a{color:var(--accent);text-decoration:none}
+.topbar a:hover{text-decoration:underline}
+.crumb{font-size:13px;color:var(--muted)}
+h1{font-size:27px;line-height:1.45;margin:26px 0 8px;letter-spacing:.01em}
+h2{font-size:21px;margin:44px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--line)}
+h3{font-size:17px;margin:30px 0 8px}
+h4{font-size:15px;margin:22px 0 6px;color:var(--muted)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:1.6em}
+li{margin:5px 0}
+code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13.5px;
+background:var(--soft2);padding:1px 5px;border-radius:3px;word-break:break-all}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:14px 14px;overflow-x:auto;
+font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13px;line-height:1.7;color:var(--code);margin:12px 0}
+pre code{background:none;padding:0;font-size:13px;word-break:normal}
+.codewrap{position:relative}
+.codewrap>pre{padding-right:82px}
+.copy{position:absolute;top:8px;right:8px;font:inherit;font-size:12px;padding:3px 10px;border:1px solid var(--line);
+background:#fff;color:var(--muted);border-radius:4px;cursor:pointer}
+.copy:hover{color:var(--fg);border-color:var(--muted)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--soft2);font-weight:600;white-space:nowrap}
+td code{font-size:12.8px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scroll table{min-width:640px}
+.scroll.wide table{min-width:880px}
+.note,.warnbox,.dangerbox,.okbox{border:1px solid;border-radius:6px;padding:12px 14px;margin:16px 0;font-size:15px}
+.note{border-color:var(--infoline);background:var(--infobg);color:var(--info)}
+.warnbox{border-color:var(--warnline);background:var(--warnbg);color:var(--warn)}
+.dangerbox{border-color:var(--dangerline);background:var(--dangerbg);color:var(--danger)}
+.okbox{border-color:var(--okline);background:var(--okbg);color:var(--ok)}
+.note b,.warnbox b,.dangerbox b,.okbox b{font-weight:700}
+.note p:first-child,.warnbox p:first-child,.dangerbox p:first-child,.okbox p:first-child{margin-top:0}
+.note p:last-child,.warnbox p:last-child,.dangerbox p:last-child,.okbox p:last-child{margin-bottom:0}
+.note code,.warnbox code,.dangerbox code,.okbox code{background:rgba(255,255,255,.7)}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 6px}
+.meta div{flex:1 1 240px;border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--soft)}
+.meta .k{font-size:12px;color:var(--muted);display:block;margin-bottom:2px}
+.meta .v{font-size:15px;font-weight:600;line-height:1.6}
+.meta .v ul{margin:2px 0 0;padding-left:1.3em;font-weight:400;font-size:14px}
+ul.check{list-style:none;padding-left:0}
+ul.check li{margin:6px 0;display:flex;gap:9px;align-items:flex-start}
+ul.check input{margin-top:7px;flex:0 0 auto;width:15px;height:15px}
+ul.check label{cursor:pointer}
+.steps{list-style:none;padding-left:0;margin:20px 0}
+.steps li{border:1px solid var(--line);border-radius:7px;margin:10px 0;padding:0}
+.steps a{display:block;padding:13px 16px;text-decoration:none;color:inherit}
+.steps a:hover{background:var(--soft)}
+.steps .n{display:inline-block;min-width:74px;font-size:12px;color:#fff;background:var(--accent);border-radius:11px;
+padding:1px 9px;text-align:center;margin-right:10px;vertical-align:2px}
+.steps .n.alt{background:#6b7280}
+.steps .t{font-weight:600;font-size:16.5px}
+.steps .d{display:block;color:var(--muted);font-size:14px;margin-top:3px;padding-left:0}
+.steps .tm{float:right;color:var(--muted);font-size:13px;font-weight:400}
+.nav{display:flex;justify-content:space-between;gap:14px;margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:15px}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+.nav span{color:#b6bcc6}
+.ph{background:#fff5d6;border-bottom:1px dotted #b08a19;padding:0 2px;font-weight:600}
+.diagram{font-size:12.5px;line-height:1.55;background:#fff;border:1px solid var(--line)}
+.small{font-size:13.5px;color:var(--muted)}
+.req{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap}
+.req.y{background:#fde8e8;color:#96262c;border:1px solid #e3adb1}
+.req.n{background:#eef2f7;color:#5c6470;border:1px solid #d9dee6}
+.req.r{background:#fff3d9;color:#7a4d00;border:1px solid #e6c579}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+a{color:var(--accent)}
+@media print{
+ .topbar,.nav,.copy{display:none}
+ body{font-size:11.5pt}
+ a{color:#000;text-decoration:none}
+ pre,table,.note,.warnbox,.dangerbox,.okbox{page-break-inside:avoid}
+ h2{page-break-after:avoid}
+}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="inner">
+<span class="crumb"><a href="index.html">目次</a> ／ STEP 3 / 9 — DB マイグレーション</span>
+<span class="crumb"><a href="step4_slackアプリ作成.html">次へ →</a></span>
+</div></div>
+
+<div class="wrap">
+
+<h1>STEP 3 — DB マイグレーション適用</h1>
+<p>ローカルの作業マシンから Supabase CLI で <code>supabase/migrations/</code> の <b>32 本</b>を本番プロジェクトに流し込みます。
+テーブル 16 本・関数 9 本・Storage バケット 1 つ・<code>pgvector</code> 拡張が作られます。</p>
+
+<div class="meta">
+<div><span class="k">所要時間</span><span class="v">約 15 分</span></div>
+<div><span class="k">前提</span><span class="v">Node.js 22 以上 / pnpm 10.6 以上（推奨 11） / STEP 2 完了</span></div>
+<div><span class="k">このステップで手に入るもの</span><span class="v">スキーマが適用された本番 DB</span></div>
+</div>
+
+<h2>3-1. リポジトリを用意して依存をインストール</h2>
+
+<pre><code>git clone &lt;あなたのリポジトリURL&gt; juku-ai-slack
+cd juku-ai-slack
+pnpm install</code></pre>
+
+<div class="warnbox">
+<p><b>pnpm 11 での注意</b>: <code>pnpm install</code> が <code>ERR_PNPM_IGNORED_BUILDS</code> で止まる場合、
+ビルドスクリプト許可リストが読めていません。<code>pnpm-workspace.yaml</code> に
+<code>allowBuilds</code>（pnpm 11 用）と <code>onlyBuiltDependencies</code>（pnpm 10 用）の
+<b>両方</b>が入っていることを確認してください（<code>esbuild</code> / <code>msw</code> / <code>sharp</code> / <code>unrs-resolver</code>）。
+pnpm 10.6 以降は <code>package.json</code> の <code>"pnpm"</code> フィールドを読まないため、この設定はワークスペースファイル側に置いています。</p>
+</div>
+
+<h2>3-2. Supabase CLI にログインしてプロジェクトをリンク</h2>
+
+<p>CLI はリポジトリの devDependency に入っているので、グローバルインストールは不要です（<code>pnpm exec</code> で呼びます）。</p>
+
+<pre><code># ブラウザが開いて認証トークンを発行する
+pnpm exec supabase login
+
+# STEP 2 で控えた Project Ref を指定
+pnpm exec supabase link --project-ref &lt;あなたのProjectRef&gt;</code></pre>
+
+<p><code>link</code> の途中で <b>Database password</b> を聞かれます。STEP 2-1 で控えた DB パスワードを入力してください
+（入力しても画面には表示されません）。</p>
+
+<div class="note">
+<p>パスワードを紛失した場合は <b>Project Settings → Database → Database password → Reset database password</b> で再発行できます。
+再発行しても既存のデータは消えません。</p>
+</div>
+
+<h2>3-3. マイグレーションを適用する</h2>
+
+<pre><code>pnpm exec supabase db push</code></pre>
+
+<p>適用予定の migration 一覧（<code>001</code>〜<code>032</code>）が表示され、確認を求められます。<code>Y</code> で実行してください。</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>主な migration</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td><code>001</code>〜<code>013</code></td><td>基本テーブル（生徒・レポート・チャンネル紐付け・セッション・メッセージ・添付・利用ログ・エラーログ・受信記録・ジョブ）</td></tr>
+<tr><td><code>004</code> / <code>005</code></td><td><code>pgvector</code> 拡張 + <code>report_chunks.embedding vector(1536)</code></td></tr>
+<tr><td><code>014</code> / <code>015</code></td><td>全テーブル RLS 有効化 + 初期ポリシー</td></tr>
+<tr><td><code>020</code> / <code>021</code></td><td>ベクトル検索 RPC <code>match_report_chunks</code>（承認済み・送信済みレポートのみ参照）</td></tr>
+<tr><td><b><code>022</code></b></td><td>Storage バケット <code>attachments</code>（<b>非公開</b>）を作成</td></tr>
+<tr><td><b><code>026</code></b></td><td><b>RLS 強化</b>。<code>authenticated</code> は staff/admin の SELECT のみに。<a href="step2_supabase作成.html#signup">サインアップ無効化とセット</a></td></tr>
+<tr><td><code>029</code></td><td>管理画面の集計 RPC（<code>admin_usage_summary</code> ほか 3 本）</td></tr>
+<tr><td><b><code>031</code></b></td><td><code>kill_switches</code> テーブル + 初期行 <code>ai_responses</code>（<code>enabled = true</code>）</td></tr>
+<tr><td><code>032</code></td><td>ジョブのスイープ／掃除用インデックス</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note">
+<p><b>Cron は使いません。</b>滞留ジョブの回収と古い記録の掃除は、スタッフが <code>/admin/jobs</code> を開いたときと手動ボタンで実行されます（設計判断 DEC-13）。
+<code>pg_cron</code> や Vercel Cron の設定は不要です。</p>
+</div>
+
+<h2>3-4. 適用結果を確認する</h2>
+
+<p>Supabase ダッシュボードの <b>SQL Editor</b> で以下を実行します。</p>
+
+<h3>① テーブルが 16 本あるか</h3>
+<pre><code>select table_name
+from information_schema.tables
+where table_schema = 'public' and table_type = 'BASE TABLE'
+order by table_name;</code></pre>
+<p>期待される 16 本:</p>
+<p class="small"><code>ai_error_logs</code>, <code>ai_usage_logs</code>, <code>attachments</code>, <code>jobs</code>, <code>kill_switches</code>,
+<code>learning_concepts</code>, <code>persons</code>, <code>report_chunks</code>, <code>reports</code>, <code>slack_channel_bindings</code>,
+<code>slack_event_receipts</code>, <code>slack_messages</code>, <code>slack_thread_sessions</code>,
+<code>student_episodic_memories</code>, <code>student_knowledge_states</code>, <code>student_profiles</code></p>
+
+<h3>② pgvector が有効か</h3>
+<pre><code>select extname, extversion from pg_extension where extname = 'vector';</code></pre>
+<p>1 行返れば OK。返らない場合は <code>004_enable_pgvector.sql</code> が流れていません。</p>
+
+<h3>③ attachments バケットが「非公開」で存在するか</h3>
+<pre><code>select id, name, public from storage.buckets where id = 'attachments';</code></pre>
+<p><b><code>public</code> が <code>false</code></b> であることを必ず確認してください。<code>true</code> だと生徒が送った画像が URL を知る誰にでも見えます。</p>
+
+<h3>④ kill_switches の初期行があるか</h3>
+<pre><code>select name, enabled, reason, updated_at from kill_switches;</code></pre>
+<p><code>ai_responses</code> / <code>enabled = true</code> の 1 行が返れば OK。</p>
+
+<div class="note">
+<p>この行が無くても Bot は動きます（読み取れないときは <b>fail-open</b> = 稼働中とみなす設計）。
+「kill switch 自体の障害で全生徒の質問が止まる方が事故として重い」ためです。ただし管理画面からの停止操作を確実にするため、行は作っておいてください。</p>
+</div>
+
+<h3>⑤ RLS が全テーブルで有効か</h3>
+<pre><code>select relname, relrowsecurity
+from pg_class
+where relnamespace = 'public'::regnamespace and relkind = 'r'
+order by relname;</code></pre>
+<p>16 行すべて <code>relrowsecurity = true</code> であることを確認します。</p>
+
+<h3>⑥ 適用済み migration の本数</h3>
+<pre><code>select count(*) from supabase_migrations.schema_migrations;</code></pre>
+<p><b>32</b> になっていれば全部流れています。</p>
+
+<h2>3-5. 【任意】DB 型定義の再生成</h2>
+
+<p><code>src/shared/types/database.types.ts</code> はリポジトリにコミット済みなので、通常は再生成不要です。
+スキーマを変更した場合のみ実行してください。</p>
+
+<pre><code>pnpm supabase:types:linked</code></pre>
+
+<h2>うまくいかないとき</h2>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>症状</th><th>原因</th><th>対処</th></tr></thead>
+<tbody>
+<tr><td><code>failed to connect to postgres</code></td><td>DB パスワードが違う / ネットワーク制限</td><td>パスワードを再確認。社内ネットワークで 5432/6543 が塞がれていないか確認</td></tr>
+<tr><td><code>Cannot find project ref</code></td><td><code>link</code> が終わっていない</td><td><code>pnpm exec supabase link --project-ref ...</code> をやり直す</td></tr>
+<tr><td><code>relation ... already exists</code></td><td>一部の migration を手動で流していた</td><td>まっさらな新規プロジェクトを作り直すのが最短。既存データがあるなら <code>supabase migration repair</code> で適用済みフラグを合わせる</td></tr>
+<tr><td><code>extension "vector" is not available</code></td><td>Postgres のバージョンが古い</td><td>Postgres 15 以上のプロジェクトを作り直す</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>完了チェック</h2>
+<ul class="check">
+<li><input type="checkbox" id="s3-1"><label for="s3-1"><code>pnpm install</code> が成功した</label></li>
+<li><input type="checkbox" id="s3-2"><label for="s3-2"><code>supabase link</code> が成功した</label></li>
+<li><input type="checkbox" id="s3-3"><label for="s3-3"><code>supabase db push</code> で 32 本すべて適用された</label></li>
+<li><input type="checkbox" id="s3-4"><label for="s3-4">テーブル 16 本を確認した</label></li>
+<li><input type="checkbox" id="s3-5"><label for="s3-5"><code>attachments</code> バケットが <code>public = false</code> で存在する</label></li>
+<li><input type="checkbox" id="s3-6"><label for="s3-6"><code>kill_switches</code> に <code>ai_responses</code> 行がある</label></li>
+<li><input type="checkbox" id="s3-7"><label for="s3-7">RLS が全テーブルで有効になっている</label></li>
+</ul>
+
+<div class="nav">
+<a href="step2_supabase作成.html">← 前へ: STEP 2 Supabase プロジェクト作成</a>
+<a href="step4_slackアプリ作成.html">次へ: STEP 4 Slack アプリ作成 →</a>
+</div>
+
+</div>
+
+<script>
+(function(){
+  document.querySelectorAll('pre:not(.nocopy)').forEach(function(pre){
+    var w=document.createElement('div');w.className='codewrap';
+    pre.parentNode.insertBefore(w,pre);w.appendChild(pre);
+    var b=document.createElement('button');b.type='button';b.className='copy';b.textContent='コピー';
+    b.addEventListener('click',function(){
+      var el=pre.querySelector('code');var t=el?el.innerText:pre.innerText;
+      var done=function(ok){b.textContent=ok?'コピーしました':'手動でコピーしてください';
+        setTimeout(function(){b.textContent='コピー';},1600);};
+      if(navigator.clipboard&&window.isSecureContext){
+        navigator.clipboard.writeText(t).then(function(){done(true);},function(){done(false);});
+      }else{
+        try{var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';
+          document.body.appendChild(ta);ta.select();var ok=document.execCommand('copy');
+          document.body.removeChild(ta);done(ok);}catch(e){done(false);}
+      }
+    });
+    w.appendChild(b);
+  });
+  var key='jukuai-setup:'+location.pathname.split('/').pop();
+  document.querySelectorAll('ul.check input[type=checkbox]').forEach(function(cb){
+    var k=key+':'+cb.id;
+    try{if(localStorage.getItem(k)==='1')cb.checked=true;}catch(e){}
+    cb.addEventListener('change',function(){try{localStorage.setItem(k,cb.checked?'1':'0');}catch(e){}});
+  });
+})();
+</script>
+</body>
+</html>

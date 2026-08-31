@@ -2,7 +2,7 @@
 id: FR-10
 title: RAGチャンク検索
 priority: P0
-status: defined
+status: implemented
 related_users: []
 related_screens: [SCR-09]
 version: 1

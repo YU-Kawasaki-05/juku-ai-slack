@@ -84,6 +84,11 @@ documents:
     file: 08_ローンチ計画.md
     title: ローンチ計画
 
+  - id: backup
+    file: 09_バックアップとリストア.md
+    title: バックアップとリストア
+    key_constraint: "Supabase Free は自動バックアップ無し。scripts/backup-db.sh で週次取得し、四半期に1回リストア訓練を行う"
+
 key_decisions:
   - id: TDC-01
     content: "Next.js App Router モノリス（ソロ開発でのコンテキスト集約）"
@@ -95,18 +100,23 @@ key_decisions:
     content: "@implements タグ必須（全機能ファイル）"
     status: confirmed
   - id: TDC-04
-    content: "LLMモデル2段: text=haiku, vision/complex=sonnet"
-    status: provisional
+    content: "LLMモデル2段: 通常=LLM_MODEL_DEFAULT, 画像あり=LLM_MODEL_COMPLEX（プロバイダ非依存）"
+    status: confirmed
   - id: TDC-05
-    content: "Vercel Hobby Cronの制限対策: MVP初期はcron-job.orgで代替"
-    status: provisional
+    content: "Cron は使用しない（DEC-13）。滞留ジョブの回収・古い行の掃除は /admin/jobs 表示時と手動ボタン"
+    status: confirmed
 
+# 正本は src/shared/lib/env.ts の Zod スキーマ。ここに無い変数はアプリから参照されない
 environment_variables:
-  required: 15
-  server_only: [SUPABASE_SERVICE_ROLE_KEY, SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET, ANTHROPIC_API_KEY, OPENAI_API_KEY, LLM_MODEL_DEFAULT, LLM_MODEL_VISION, EMBEDDING_MODEL, ENABLE_AI, VERCEL_CRON_SECRET]
-  public: [NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, NEXT_PUBLIC_APP_URL, SLACK_BOT_USER_ID]
+  required: 6   # 未設定だと env のパースが落ちて起動しない
+  server_only: [SUPABASE_SERVICE_ROLE_KEY, SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET, SLACK_BOT_USER_ID, SLACK_WORKSPACE_URL, SLACK_ALERTS_CHANNEL_ID, SLACK_API_BASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL_DEFAULT, LLM_MODEL_COMPLEX, EMBEDDING_API_KEY, EMBEDDING_BASE_URL, EMBEDDING_MODEL, ANTHROPIC_API_KEY, RESEND_API_KEY, RESEND_FROM_EMAIL]
+  public: [NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY]
+  # 存在しない（旧設計の残骸）: ENABLE_AI, VERCEL_CRON_SECRET, NEXT_PUBLIC_APP_URL,
+  #   LLM_MODEL_VISION, OPENAI_API_KEY, SENTRY_DSN, SENTRY_AUTH_TOKEN
+  # 参照コードなし: ANTHROPIC_API_KEY, RESEND_API_KEY, RESEND_FROM_EMAIL
+  # テスト専用（ループバック宛てのみ有効）: SLACK_API_BASE_URL
 
 cost_estimate:
-  dev: "$5/month"
-  mvp_prod: "$30/month"
-  growth: "$91/month"
+  dev: "$2/month"
+  mvp_prod: "$25/month"
+  growth: "$60/month"

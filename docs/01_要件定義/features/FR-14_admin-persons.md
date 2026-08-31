@@ -132,10 +132,23 @@ Then Botの返答が通常モードに戻っている
 
 ## 実装ステータス（Phase 4 が更新）
 
-- 実装ファイル: `src/features/persons/{schemas/personSchema,lib/getPersons,actions/personActions,components/PersonForm}.ts(x)`, `src/app/admin/persons/{page,new/page,[id]/page}.tsx`, `src/shared/lib/auth/requireStaff.ts`
-- テストファイル: `personSchema.test.ts`
-- 最終確認Sprint: Sprint 5（基本情報の CRUD）
+- 実装ファイル: `src/features/persons/{schemas/personSchema,lib/getPersons,actions/personActions,components/PersonForm}.ts(x)`, `src/app/admin/persons/{page,new/page,[id]/page}.tsx`, `src/features/student-profiles/components/StudentProfileForm.tsx`, `src/shared/lib/auth/requireStaff.ts`
+- テストファイル: `personSchema.test.ts`, `getPersons.test.ts`, `PersonForm.test.tsx`, `e2e/persons.spec.ts`
+- 最終確認Sprint: Sprint 7 / Wave 3（プロフィール編集③・試験期間設定④の実働化）
 - 備考:
   - 生徒の一覧(SCR-03)・新規・詳細/編集(SCR-04 基本情報①②) + 保護者メール・ステータスを実装
-  - **Sprint 6 送り**: SCR-04 のプロフィール編集③・試験期間設定④・利用推移グラフ⑤・月次レポート一覧⑥（グラフは ai_usage_logs/ai_error_logs 集計, recharts）
-  - UI の E2E は要ライブ環境（認証ユーザー + サーバー）。現状は build/型/認証保護のスモークまで
+  - SCR-04 の **プロフィール編集③・試験期間設定④は実装済み**（Wave 3。`StudentProfileForm`）
+  - SCR-03 に試験期間バッジは実装済み（`getExamModePersonIds`）
+  - UI の E2E は認証済み Playwright（`e2e/persons.spec.ts` + `e2e/authenticated.spec.ts`）でカバー
+
+### 部分実装（2026-08-02 リリース前整合の検証結果）
+
+- ⚠️ **未実装（SCR-03）**: 最終利用日時・今月の質問数・最新レポートの状態。
+  一覧の列は「名前 / 学年 / ステータス（+試験期間バッジ）/ 登録日」のみで、
+  `ai_usage_logs` の集計を引いていない（`getPersons` は `persons` 単表 SELECT）。
+  → **AC-14-01 の「各生徒の今月の質問数・最終利用日時が表示される」が未達**。
+- ⚠️ **未実装（SCR-04）**: ⑤利用推移グラフ（過去6ヶ月・指標切替, BR-14-05）、⑥月次レポート一覧。
+- ⚠️ **未実装（保護者メール通知）**: `guardian_email` の保存はできるが送信処理は無い。
+  `RESEND_*` は env スキーマ上 optional で参照コードが 0 件（FR-08 の AI 月次レポートと同時に実装する）。
+- status は主要 AC 未達のため `implemented` → **`defined`** に戻した。
+  残りの表示項目は `docs/05_その他/2026-08-02_Phase2提案.md` の小粒改善で扱う。

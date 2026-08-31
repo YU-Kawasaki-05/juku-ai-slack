@@ -255,3 +255,5 @@ And ai_error_logs に LOW_CONFIDENCE_SKIP が記録される
   - BKT 更新式・忘却減衰・EvaluationSchema・skip凍結・低確信度スキップ・partial=誤答・UPSERT 実装済み
   - Evaluator は 2エージェント構成で返信後に非同期実行（BR-23-07）、構造化出力は prompt+Zod+リトライ（json_schema 非対応プロバイダ対応）
   - **未対応（Sprint 3.5 / 要フォロー）**: 質問時のトピック検出。現状 `getMastery(topic=null)` でモード選択はデフォルト P(0.2)→direct 固定。BKT 値は topic 別に書き込まれるが、次回質問時にその topic を特定してモード選択へ反映する処理は未実装（ドロップバック AC-05-04 も同様に Evaluator 連携が必要）
+  - **Evaluator が direct モードで起動しないのは意図的**（A-8。`EVALUATOR_MODES = ['socratic','confirmation']`）。direct には確認質問が無く、「直前に assistant 発言がある」だけで評価すると通常の質問への回答を誤って採点して BKT を汚染し、毎ターンの LLM コストも 2〜3 倍になる
+  - 結果として、**現状 Evaluator は 1 度も起動しない**（モードが常に direct のため）。BKT のデータ蓄積はトピック検出の実装待ち。実働化は `docs/05_その他/2026-08-02_Phase2提案.md`（FR-05 トピック検出）で扱う

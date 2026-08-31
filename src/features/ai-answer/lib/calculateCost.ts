@@ -3,14 +3,14 @@
  * 入力: model, LlmUsage
  * 出力: 推定コスト（USD, number）
  * 例外: なし（未知モデルは 0 を返す。トークン数自体は別途記録される）
- * 依存: MODEL_PRICING
+ * 依存: findModelPrice（完全一致 → `provider/model` のサフィックス照合）
  * @implements FR-12
  */
-import { MODEL_PRICING } from '@shared/lib/constants'
+import { findModelPrice } from '@shared/lib/constants'
 import type { LlmUsage } from './llm/types'
 
 export function calculateCost(model: string, usage: LlmUsage): number {
-  const pricing = MODEL_PRICING[model]
+  const pricing = findModelPrice(model)
   if (!pricing) {
     // 未知モデル: コストは 0 とする（トークン数は usage ログに残る）
     return 0

@@ -18,6 +18,7 @@ import {
   verifySlackSignature,
   recordEventReceipt,
   deleteReceipt,
+  markReceiptStatus,
   deriveEventFacts,
   stripBotMention,
   shouldReact,
@@ -25,14 +26,54 @@ import {
   slackMessageEventSchema,
 } from '@features/slack-events'
 import { lookupBinding } from '@features/channel-bindings'
-import { findSession } from '@features/thread-sessions'
+import { findSession, getOrCreateSession } from '@features/thread-sessions'
 import { enqueueJob, processJob, type ProcessSlackMessagePayload } from '@features/jobs'
+import type { ServerDb } from '@shared/types/db'
 
 export const runtime = 'nodejs'
+
+/**
+ * A-1: after() 内の AI 処理（LLM 生成 + Slack 投稿 + 後処理）は既定の実行時間上限に収まらない。
+ * kill されると jobs が processing のまま残り、🤔 も消えず生徒には無応答になるため上限を引き上げる。
+ */
+export const maxDuration = 300
 
 /** Response のボディは一度しか読めないため、都度新しいインスタンスを返す */
 function ok(): NextResponse {
   return NextResponse.json({ ok: true })
+}
+
+/**
+ * A-2: after() のコールバックは誰も await しないため、throw すると完全に無音で消える。
+ * 例外を必ず捕まえて ai_error_logs に残す（記録自体の失敗も握りつぶす）。
+ */
+function safeAfter(db: ServerDb, context: string, fn: () => Promise<unknown>): void {
+  after(async () => {
+    try {
+      await fn()
+    } catch (err) {
+      try {
+        await logError(db, {
+          code: 'UNKNOWN_ERROR',
+          severity: 'error',
+          internalMessage: `after(${context}) failed: ${err instanceof Error ? err.message : String(err)}`,
+          rawError: err,
+        })
+      } catch (logErr) {
+        console.error('[slack/events] failed to log after() failure', context, logErr)
+      }
+    }
+  })
+}
+
+/**
+ * 署名検証失敗ログ用の時計ずれ表示。Slack 側との時刻同期ずれと単なる改ざんを切り分けるために残す。
+ * ヘッダは未認証入力なので、数値として解釈できたときだけ秒数（丸め済み）を出す。
+ */
+function describeTimestampSkew(timestamp: string | null): string {
+  const tsNum = Number(timestamp)
+  if (!timestamp || !Number.isFinite(tsNum)) return ''
+  return ` (skew=${Math.round(Date.now() / 1000 - tsNum)}s)`
 }
 
 export async function POST(req: Request): Promise<NextResponse> {
@@ -48,9 +89,24 @@ export async function POST(req: Request): Promise<NextResponse> {
     signingSecret: env.SLACK_SIGNING_SECRET,
   })
   if (!sig.valid) {
-    // 未認証リクエストで DB 書き込みを誘発させないため、DB でなくサーバーログに記録する
-    // （公開エンドポイントのため増幅・コスト増を防ぐ）
     console.warn('[slack/events] signature verification failed:', sig.reason)
+    // BR-11-02: 攻撃・SLACK_SIGNING_SECRET の設定ミス・時計ずれを管理画面から検知できるよう記録する。
+    // severity=error は 07_エラー文言設計 の定義に合わせる。設定ミスなら全イベントが弾かれ
+    // Bot が完全停止するため、既定フィルタで確実に目に入る必要がある。
+    // （公開エンドポイントなのでインターネットからの無差別プローブでも 1 行だけ立つ。
+    //   Bot が動いているかどうかで攻撃・ノイズと設定ミスを切り分ける）
+    // 公開エンドポイントなので dedupeWhileUnresolved で「未解決 1 行」に抑え、
+    // 総当たりで ai_error_logs が埋まる（DB 増幅）のを防ぐ。
+    // 署名検証前なので body は信用できない: 残すのは失敗理由と時計ずれ（数値）だけに限る。
+    const db = createServerClient()
+    safeAfter(db, 'signature-invalid-log', () =>
+      logError(db, {
+        code: 'SLACK_SIGNATURE_INVALID',
+        severity: 'error',
+        internalMessage: `signature verification failed: ${sig.reason}${describeTimestampSkew(timestamp)}`,
+        dedupeWhileUnresolved: true,
+      }),
+    )
     return new NextResponse('invalid signature', { status: 401 })
   }
 
@@ -95,7 +151,7 @@ export async function POST(req: Request): Promise<NextResponse> {
   })
   if (receipt === 'duplicate') {
     // FR-01: SLACK_EVENT_DUPLICATE（severity: info）を記録（Slack への返信はなし）
-    after(() =>
+    safeAfter(db, 'duplicate-log', () =>
       logError(db, {
         code: 'SLACK_EVENT_DUPLICATE',
         severity: 'info',
@@ -112,23 +168,22 @@ export async function POST(req: Request): Promise<NextResponse> {
     const facts = deriveEventFacts(messageEvent, env.SLACK_BOT_USER_ID)
     const hasText = Boolean(facts.text && facts.text.trim())
 
-    // DB 不要の早期 ignore（Bot自身・非file_share subtype・コンテンツなし・直下メンションなし）
-    if (
-      facts.hasBotId ||
-      (facts.subtype && facts.subtype !== 'file_share') ||
-      (!hasText && !facts.hasImage)
-    ) {
+    // DB 不要の早期 ignore（Bot自身・処理対象外 subtype・コンテンツなし・直下メンションなし）
+    if (facts.hasBotId || !facts.isProcessableSubtype || (!hasText && !facts.hasImage)) {
       return ok()
     }
     if (!facts.isThreadReply && !facts.hasMention) {
       return ok()
     }
 
-    // 反応候補: 紐付けとセッション存在を確認
-    const { status: bindingStatus, binding } = await lookupBinding(db, messageEvent.channel)
-    const sessionExists = facts.isThreadReply
-      ? Boolean(await findSession(db, messageEvent.channel, facts.threadTs))
-      : false
+    // 反応候補: 紐付けとセッション存在を確認。
+    // A-7: ACK は 3 秒以内に返す必要があるため、独立した 2 クエリは直列にしない
+    const [bindingResult, existingSession] = await Promise.all([
+      lookupBinding(db, messageEvent.channel),
+      facts.isThreadReply ? findSession(db, messageEvent.channel, facts.threadTs) : null,
+    ])
+    const { status: bindingStatus, binding } = bindingResult
+    const sessionExists = Boolean(existingSession)
 
     const decision = shouldReact({
       hasBotId: facts.hasBotId,
@@ -142,6 +197,22 @@ export async function POST(req: Request): Promise<NextResponse> {
     })
 
     if (decision.action === 'ignore') {
+      // H-6: 退塾生チャンネルは Slack に何も返さない。ただし運用で気づけるよう info だけ残す
+      // （頻度が低い前提。増えるようなら binding 側を inactive にするのが正しい対処）
+      if (decision.reason === 'person_inactive') {
+        safeAfter(db, 'person-inactive-log', async () => {
+          await logError(db, {
+            code: 'PERSON_INACTIVE',
+            severity: 'info',
+            personId: binding?.person_id ?? null,
+            channelId: messageEvent.channel,
+            threadTs: facts.threadTs,
+            messageTs: facts.messageTs,
+            internalMessage: 'person is inactive; bot stayed silent',
+          })
+          await markReceiptStatus(db, event_id, 'skipped')
+        })
+      }
       return ok()
     }
 
@@ -156,7 +227,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       strippedText.length === 0
     ) {
       const unsupportedMsg = getUserFacingMessage('UNSUPPORTED_FILE_TYPE')
-      after(async () => {
+      safeAfter(db, 'unsupported-file', async () => {
         try {
           await postMessage({ channel: messageEvent.channel, text: unsupportedMsg, threadTs: facts.threadTs })
         } catch {
@@ -170,6 +241,7 @@ export async function POST(req: Request): Promise<NextResponse> {
           messageTs: facts.messageTs,
           userFacingMessage: unsupportedMsg,
         })
+        await markReceiptStatus(db, event_id, 'skipped')
       })
       return ok()
     }
@@ -177,7 +249,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     if (decision.action === 'channel_not_bound') {
       // BR-02-05: 紐付けなしはユーザーに案内 + ログ（ACK 後に実行）
       const notBoundMsg = getUserFacingMessage('CHANNEL_NOT_BOUND')
-      after(async () => {
+      safeAfter(db, 'channel-not-bound', async () => {
         try {
           await postMessage({ channel: messageEvent.channel, text: notBoundMsg, threadTs: facts.threadTs })
         } catch {
@@ -191,6 +263,7 @@ export async function POST(req: Request): Promise<NextResponse> {
           messageTs: facts.messageTs,
           userFacingMessage: notBoundMsg,
         })
+        await markReceiptStatus(db, event_id, 'skipped')
       })
       return ok()
     }
@@ -218,19 +291,44 @@ export async function POST(req: Request): Promise<NextResponse> {
           size: f.size ?? null,
           urlPrivate: f.url_private as string,
         })),
+      // 枚数上限で捨てた分。ジョブ側で「n枚は読めなかった」と生徒に伝えるために持ち回す
+      droppedImageCount: facts.droppedImageCount,
+    }
+
+    // A-5: セッション作成をジョブ内から受信ハンドラに前倒しする。
+    // メンション直後〜ジョブ claim 完了までの窓に来たスレッド返信が
+    // 「未登録スレッド」と判定されて無言破棄されるのを防ぐ（AC-02-03）。
+    // executeProcessSlackMessage 側の getOrCreateSession は冪等なのでそのまま残す。
+    if (!existingSession) {
+      await getOrCreateSession(db, {
+        teamId: team_id,
+        channelId: messageEvent.channel,
+        threadTs: facts.threadTs,
+        personId: activeBinding.person_id,
+        reportId: activeBinding.default_report_id,
+        nowIso: new Date().toISOString(),
+      })
     }
 
     // BR-04-01 / AC-04-01: ACK 前にジョブ登録
     const jobId = await enqueueJob(db, payload)
 
     // DEC-13: ACK 後に waitUntil 相当（after）でバックグラウンド処理
-    after(() => processJob(db, jobId))
+    // A-2: claim 失敗などの throw を握りつぶさず記録し、receipt に結果を残す
+    safeAfter(db, 'process-job', async () => {
+      const result = await processJob(db, jobId)
+      await markReceiptStatus(
+        db,
+        event_id,
+        result.status === 'completed' ? 'processed' : result.status === 'skipped' ? 'skipped' : 'failed',
+      )
+    })
 
     return ok()
   } catch (err) {
     // 一過性エラーで質問が恒久消失しないよう receipt を削除し、500 で Slack 再送を促す（H-1）
     await deleteReceipt(db, event_id)
-    after(() =>
+    safeAfter(db, 'request-failure-log', () =>
       logError(db, {
         code: 'UNKNOWN_ERROR',
         severity: 'error',

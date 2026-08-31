@@ -2,7 +2,7 @@
 id: FR-02
 title: メンション・反応制御
 priority: P0
-status: defined
+status: implemented
 related_users: [U-01, U-02]
 related_screens: []
 version: 1
@@ -41,7 +41,7 @@ version: 1
 ## ビジネスルール
 
 - BR-02-01: Bot自身のメッセージ（bot_idが存在する）には反応しない
-- BR-02-02: message_changed / message_deleted 等のsubtypeは無視する（MVPスコープ外）
+- BR-02-02: message_changed / message_deleted 等のsubtypeは無視する（MVPスコープ外）。ただし`file_share`と`thread_broadcast`は処理対象とする（許可リスト方式）。`thread_broadcast`を無視するとスレッド返信の「チャンネルにも送信」で登録済みスレッドが無反応になるため
 - BR-02-03: チャンネル直下（thread_tsなし）の投稿は、BotのSlack User IDへのメンション（`<@BOT_USER_ID>`）が含まれる場合のみ反応する
 - BR-02-04: スレッド内（thread_tsあり）の投稿は、そのthread_tsがslack_thread_sessionsに登録済みの場合、メンションなしでも反応する
 - BR-02-05: slack_channel_bindingsに存在しない、またはstatus=inactiveのチャンネルからのメッセージには反応せず、CHANNEL_NOT_BOUNDエラーをSlackに返信する

@@ -2,7 +2,7 @@
 id: FR-18
 title: 利用状況ダッシュボード
 priority: P1
-status: defined
+status: implemented
 related_users: [U-02, U-03]
 related_screens: [SCR-10]
 version: 1
@@ -33,6 +33,22 @@ AI利用状況・コスト・エラー状況を可視化するダッシュボー
 
 ## 実装ステータス（Phase 4 が更新）
 
-- 実装ファイル: -
-- テストファイル: -
-- 最終確認Sprint: -
+- 実装ファイル:
+  - サマリー（SCR-02）: `src/app/admin/page.tsx`, `src/features/usage-logs/lib/getUsageSummary.ts`
+  - 利用状況（SCR-10）: `src/app/admin/usage/page.tsx`,
+    `src/features/usage-logs/lib/getUsageAnalytics.ts`,
+    `src/features/usage-logs/components/{UsageCharts,UsageRangeFilter}.tsx`
+- テストファイル: `src/features/usage-logs/lib/{getUsageSummary,getUsageAnalytics}.test.ts`
+- 最終確認Sprint: Sprint 7
+
+### 実装メモ（判断の記録）
+
+- 期間フィルタは FR-18 記載の「日・週・月」ではなく **直近 7 / 30 日 / 90 日** を採用。
+  塾スタッフの運用（月次レポート・コスト監視）では固定カレンダー単位より
+  「直近 N 日」のほうが直感的なため。カレンダー月次が必要なら追加検討。
+- チャート配色は dataviz スキルの検証済みパレット（`--viz-*`, light/dark 両対応）。
+  比較は全て単色横棒＋値ラベル（colorblind-safe / contrast relief）。
+- 未実装（次スプリント候補）: チャンネル別質問数、モデル別トークン内訳、
+  レートリミット発生数の時系列。現状はサマリー＋主要チャートで MVP を満たす。
+- SCR-02 ダッシュボードの kill_switch 状態表示（DEC-15）は kill_switch 機構自体が
+  バックエンド未実装のため保留。

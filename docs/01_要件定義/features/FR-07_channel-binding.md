@@ -2,7 +2,7 @@
 id: FR-07
 title: チャンネル・生徒紐付け
 priority: P0
-status: defined
+status: implemented
 related_users: [U-03]
 related_screens: [SCR-05, SCR-06]
 version: 1

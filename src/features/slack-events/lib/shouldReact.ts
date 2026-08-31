@@ -3,18 +3,20 @@
  * 入力: ShouldReactInput（イベント属性 + DB 参照結果）
  * 出力: ReactionDecision（ignore / process / channel_not_bound）
  * 例外: なし
- * 依存: なし（純粋関数。DB 参照は呼び出し側で行い結果を注入）
+ * 依存: eventFacts（処理対象 subtype の許容リスト）。純粋関数で DB 参照は呼び出し側から注入
  * セキュリティ: channel_id ベースの binding 状態のみで判定。channel_name は使わない（BR-07-01）
  * @implements FR-02, AC-02-01, AC-02-02, AC-02-03, AC-02-04, AC-02-05, AC-02-06
  */
 import type { ReactionDecision, ShouldReactInput } from '../types'
+import { isProcessableSubtype } from './eventFacts'
 
 /**
  * 反応制御の判定。
  *
  * 優先順位:
  * 1. Bot 自身のメッセージ → ignore（BR-02-01）
- * 2. subtype 付き（message_changed 等）→ ignore（BR-02-02）。ただし file_share は画像添付なので許容
+ * 2. subtype 付き（message_changed 等）→ ignore（BR-02-02）。
+ *    ただし file_share（画像添付）と thread_broadcast（スレッド返信の「チャンネルにも送信」）は許容
  * 3. テキストも対応画像もなし → ignore（BR-02-06 / BR-06-08）
  * 4. スレッド内返信:
  *    - セッション登録済み → 反応対象（BR-02-04, AC-02-03）。ただし binding が無効なら channel_not_bound
@@ -23,15 +25,16 @@ import type { ReactionDecision, ShouldReactInput } from '../types'
  * 5. チャンネル直下:
  *    - メンションなし → ignore（BR-02-03, AC-02-02）※スタッフ雑談に反応しない
  *    - メンションあり → binding 判定へ
- * 6. binding: active → process / それ以外 → channel_not_bound（BR-02-05, BR-07-03, AC-02-06）
+ * 6. binding: person_inactive → 無言 ignore（H-6。退塾生チャンネルには投稿しない）
+ * 7. binding: active → process / それ以外 → channel_not_bound（BR-02-05, BR-07-03, AC-02-06）
  */
 export function shouldReact(input: ShouldReactInput): ReactionDecision {
   if (input.hasBotId) {
     return { action: 'ignore', reason: 'bot_message' }
   }
 
-  // file_share は画像添付を伴う通常メッセージなので許容。それ以外の subtype は無視
-  if (input.subtype && input.subtype !== 'file_share') {
+  // file_share / thread_broadcast は本文を持つ通常メッセージなので許容。それ以外の subtype は無視
+  if (!isProcessableSubtype(input.subtype)) {
     return { action: 'ignore', reason: `subtype:${input.subtype}` }
   }
 
@@ -51,6 +54,13 @@ export function shouldReact(input: ShouldReactInput): ReactionDecision {
         reason: input.isThreadReply ? 'unregistered_thread_no_mention' : 'channel_no_mention',
       }
     }
+  }
+
+  // H-6: 退塾生のチャンネルは無言で無視する。
+  // 紐付け不備（channel_not_bound）と違い、案内を投稿しても生徒が取れる行動は無く、
+  // 退塾済みチャンネルに Bot が発言し続ける方が事故になる
+  if (input.bindingStatus === 'person_inactive') {
+    return { action: 'ignore', reason: 'person_inactive' }
   }
 
   // ここに来る = 反応候補。紐付け状態を確認（BR-02-05 / BR-07-03）

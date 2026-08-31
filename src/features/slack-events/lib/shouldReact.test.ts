@@ -80,6 +80,32 @@ describe('shouldReact', () => {
     ).toBe('ignore')
   })
 
+  // --- 1-7: thread_broadcast（スレッド返信の「チャンネルにも送信」）---
+  it('登録済みスレッドの thread_broadcast はメンションなしでも process（AC-02-03）', () => {
+    expect(
+      shouldReact({
+        ...base,
+        subtype: 'thread_broadcast',
+        isThreadReply: true,
+        sessionExists: true,
+        hasMention: false,
+      }).action,
+    ).toBe('process')
+  })
+
+  it('未登録スレッドの thread_broadcast は subtype ではなくメンション有無で判定する（AC-02-04）', () => {
+    const d = shouldReact({
+      ...base,
+      subtype: 'thread_broadcast',
+      isThreadReply: true,
+      sessionExists: false,
+      hasMention: false,
+    })
+    expect(d.action).toBe('ignore')
+    // subtype ゲートで先に落とさないこと（落ちていれば reason は subtype:thread_broadcast になる）
+    if (d.action === 'ignore') expect(d.reason).toBe('unregistered_thread_no_mention')
+  })
+
   it('メンションありだが紐付けなし → channel_not_bound（AC-02-06）', () => {
     expect(shouldReact({ ...base, hasMention: true, bindingStatus: 'none' }).action).toBe(
       'channel_not_bound',
@@ -107,5 +133,26 @@ describe('shouldReact', () => {
     expect(
       shouldReact({ ...base, hasBotId: true, hasMention: true, bindingStatus: 'none' }).action,
     ).toBe('ignore')
+  })
+
+  // --- H-6: 退塾生（persons.status != active）---
+  it('生徒が退塾済みなら無言 ignore（案内も投稿しない, H-6）', () => {
+    const d = shouldReact({ ...base, hasMention: true, bindingStatus: 'person_inactive' })
+    expect(d.action).toBe('ignore')
+    if (d.action === 'ignore') expect(d.reason).toBe('person_inactive')
+    // channel_not_bound（案内文言を投稿する分岐）に落ちないこと
+    expect(d.action).not.toBe('channel_not_bound')
+  })
+
+  it('登録済みスレッド内でも退塾生なら無言 ignore（H-6）', () => {
+    const d = shouldReact({
+      ...base,
+      isThreadReply: true,
+      sessionExists: true,
+      hasMention: false,
+      bindingStatus: 'person_inactive',
+    })
+    expect(d.action).toBe('ignore')
+    if (d.action === 'ignore') expect(d.reason).toBe('person_inactive')
   })
 })

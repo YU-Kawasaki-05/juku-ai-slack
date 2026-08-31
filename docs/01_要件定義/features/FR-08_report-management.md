@@ -146,6 +146,14 @@ Then ai_draft レポートのチャンクは検索結果に含まれない
 
 ## 実装ステータス（Phase 4 が更新）
 
-- 実装ファイル: -
-- テストファイル: -
-- 最終確認Sprint: -
+- 実装ファイル（データ層・手動 CRUD のみ）: `src/features/reports/`, `src/app/admin/reports/`（管理画面 CRUD は FR-16 として実装）
+- テストファイル: `reportSchema.test.ts`, `reportActions.test.ts`
+- 最終確認Sprint: Sprint 7（部分）
+
+### 部分実装（Sprint 7 整合性チェックの検証結果）
+
+- ✅ レポートの手動 CRUD・承認（draft/approved）・Embedding 自動再生成は FR-16 として実装済み
+- ⚠️ **未実装**: AC-08-01 AI 月次自動生成（Cron・生成ジョブ・3名分割・#alerts 通知）、
+  AC-08-02 承認後の Slack チャンネル送信（slack_message_ts 保存・送信リトライ）。
+  generated_by_ai は現状 false 固定（BR-08-07 未達）。
+- status は主要 AC 未達のため `defined` を維持。

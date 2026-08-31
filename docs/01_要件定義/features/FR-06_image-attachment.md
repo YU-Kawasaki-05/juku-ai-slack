@@ -2,7 +2,7 @@
 id: FR-06
 title: 画像添付処理
 priority: P0
-status: defined
+status: implemented
 related_users: [U-01, U-02]
 related_screens: []
 version: 1

@@ -75,6 +75,31 @@ describe('downloadSlackFile', () => {
       code: 'IMAGE_TOO_LARGE',
     })
   })
+
+  it('タイムアウト用の AbortSignal を渡す', async () => {
+    const fn = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      type: 'basic',
+      headers: new Headers({ 'content-type': 'image/png' }),
+      arrayBuffer: async () => new Uint8Array([1]).buffer,
+    }))
+    globalThis.fetch = fn as unknown as typeof fetch
+    await downloadSlackFile('https://files.slack.com/x', 'x')
+    const init = (fn.mock.calls[0] as unknown[])[1] as RequestInit
+    expect(init.signal).toBeInstanceOf(AbortSignal)
+  })
+
+  it('タイムアウト（TimeoutError）は SlackFileDownloadFailedError に正規化される', async () => {
+    const timeout = new Error('timed out')
+    timeout.name = 'TimeoutError'
+    globalThis.fetch = vi.fn(async () => {
+      throw timeout
+    }) as unknown as typeof fetch
+    await expect(downloadSlackFile('https://files.slack.com/x', 'x')).rejects.toMatchObject({
+      code: 'SLACK_FILE_DOWNLOAD_FAILED',
+    })
+  })
 })
 
 describe('toDataUrl', () => {

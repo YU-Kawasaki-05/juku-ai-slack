@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STEP 2 Supabase プロジェクト作成 | じゅくAI セットアップガイド</title>
+<style>
+:root{--fg:#191c21;--muted:#5c6470;--line:#d9dee6;--bg:#fff;--soft:#f6f8fa;--soft2:#eef2f7;--accent:#1f5fa9;--code:#0f2b46;
+--warn:#7a4d00;--warnbg:#fff8e8;--warnline:#e6c579;--danger:#96262c;--dangerbg:#fdf1f2;--dangerline:#e3adb1;
+--ok:#1a6444;--okbg:#f0f8f4;--okline:#a5d5bd;--info:#144a73;--infobg:#eef6fc;--infoline:#9dc6e4;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);line-height:1.85;font-size:16px;
+font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,-apple-system,"Segoe UI",sans-serif;}
+.wrap{max-width:940px;margin:0 auto;padding:28px 20px 90px}
+.topbar{border-bottom:1px solid var(--line);background:var(--soft);}
+.topbar .inner{max-width:940px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
+.topbar a{color:var(--accent);text-decoration:none}
+.topbar a:hover{text-decoration:underline}
+.crumb{font-size:13px;color:var(--muted)}
+h1{font-size:27px;line-height:1.45;margin:26px 0 8px;letter-spacing:.01em}
+h2{font-size:21px;margin:44px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--line)}
+h3{font-size:17px;margin:30px 0 8px}
+h4{font-size:15px;margin:22px 0 6px;color:var(--muted)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:1.6em}
+li{margin:5px 0}
+code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13.5px;
+background:var(--soft2);padding:1px 5px;border-radius:3px;word-break:break-all}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:14px 14px;overflow-x:auto;
+font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13px;line-height:1.7;color:var(--code);margin:12px 0}
+pre code{background:none;padding:0;font-size:13px;word-break:normal}
+.codewrap{position:relative}
+.codewrap>pre{padding-right:82px}
+.copy{position:absolute;top:8px;right:8px;font:inherit;font-size:12px;padding:3px 10px;border:1px solid var(--line);
+background:#fff;color:var(--muted);border-radius:4px;cursor:pointer}
+.copy:hover{color:var(--fg);border-color:var(--muted)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--soft2);font-weight:600;white-space:nowrap}
+td code{font-size:12.8px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scroll table{min-width:640px}
+.scroll.wide table{min-width:880px}
+.note,.warnbox,.dangerbox,.okbox{border:1px solid;border-radius:6px;padding:12px 14px;margin:16px 0;font-size:15px}
+.note{border-color:var(--infoline);background:var(--infobg);color:var(--info)}
+.warnbox{border-color:var(--warnline);background:var(--warnbg);color:var(--warn)}
+.dangerbox{border-color:var(--dangerline);background:var(--dangerbg);color:var(--danger)}
+.okbox{border-color:var(--okline);background:var(--okbg);color:var(--ok)}
+.note b,.warnbox b,.dangerbox b,.okbox b{font-weight:700}
+.note p:first-child,.warnbox p:first-child,.dangerbox p:first-child,.okbox p:first-child{margin-top:0}
+.note p:last-child,.warnbox p:last-child,.dangerbox p:last-child,.okbox p:last-child{margin-bottom:0}
+.note code,.warnbox code,.dangerbox code,.okbox code{background:rgba(255,255,255,.7)}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 6px}
+.meta div{flex:1 1 240px;border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--soft)}
+.meta .k{font-size:12px;color:var(--muted);display:block;margin-bottom:2px}
+.meta .v{font-size:15px;font-weight:600;line-height:1.6}
+.meta .v ul{margin:2px 0 0;padding-left:1.3em;font-weight:400;font-size:14px}
+ul.check{list-style:none;padding-left:0}
+ul.check li{margin:6px 0;display:flex;gap:9px;align-items:flex-start}
+ul.check input{margin-top:7px;flex:0 0 auto;width:15px;height:15px}
+ul.check label{cursor:pointer}
+.steps{list-style:none;padding-left:0;margin:20px 0}
+.steps li{border:1px solid var(--line);border-radius:7px;margin:10px 0;padding:0}
+.steps a{display:block;padding:13px 16px;text-decoration:none;color:inherit}
+.steps a:hover{background:var(--soft)}
+.steps .n{display:inline-block;min-width:74px;font-size:12px;color:#fff;background:var(--accent);border-radius:11px;
+padding:1px 9px;text-align:center;margin-right:10px;vertical-align:2px}
+.steps .n.alt{background:#6b7280}
+.steps .t{font-weight:600;font-size:16.5px}
+.steps .d{display:block;color:var(--muted);font-size:14px;margin-top:3px;padding-left:0}
+.steps .tm{float:right;color:var(--muted);font-size:13px;font-weight:400}
+.nav{display:flex;justify-content:space-between;gap:14px;margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:15px}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+.nav span{color:#b6bcc6}
+.ph{background:#fff5d6;border-bottom:1px dotted #b08a19;padding:0 2px;font-weight:600}
+.diagram{font-size:12.5px;line-height:1.55;background:#fff;border:1px solid var(--line)}
+.small{font-size:13.5px;color:var(--muted)}
+.req{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap}
+.req.y{background:#fde8e8;color:#96262c;border:1px solid #e3adb1}
+.req.n{background:#eef2f7;color:#5c6470;border:1px solid #d9dee6}
+.req.r{background:#fff3d9;color:#7a4d00;border:1px solid #e6c579}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+a{color:var(--accent)}
+@media print{
+ .topbar,.nav,.copy{display:none}
+ body{font-size:11.5pt}
+ a{color:#000;text-decoration:none}
+ pre,table,.note,.warnbox,.dangerbox,.okbox{page-break-inside:avoid}
+ h2{page-break-after:avoid}
+}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="inner">
+<span class="crumb"><a href="index.html">目次</a> ／ STEP 2 / 9 — Supabase プロジェクト作成</span>
+<span class="crumb"><a href="step3_DBマイグレーション.html">次へ →</a></span>
+</div></div>
+
+<div class="wrap">
+
+<h1>STEP 2 — Supabase プロジェクト作成</h1>
+<p>DB・認証・画像ストレージをまとめて担当する Supabase を用意します。
+<b>このステップの山場は「サインアップの無効化」</b>です。これを忘れると、誰でもアカウントを作れて生徒の個人情報にアクセスできる状態になります。</p>
+
+<div class="meta">
+<div><span class="k">所要時間</span><span class="v">約 15 分<span class="small">（プロビジョニング待ち含む）</span></span></div>
+<div><span class="k">このステップで手に入るもの（控える）</span><span class="v">
+<ul>
+<li>Project URL（<code>https://xxxx.supabase.co</code>）</li>
+<li>anon public key</li>
+<li>service_role key</li>
+<li>DB パスワード</li>
+<li>Project Ref</li>
+</ul></span></div>
+</div>
+
+<h2>2-1. プロジェクトを作成する</h2>
+
+<ol>
+<li><a href="https://supabase.com/dashboard">Supabase ダッシュボード</a> → <b>New project</b></li>
+<li>Organization は塾ごとに分けるか、自分の Organization 配下に作るかを決める（請求単位になります）</li>
+<li>入力項目:</li>
+</ol>
+
+<div class="scroll">
+<table>
+<thead><tr><th>項目</th><th>設定値</th><th>理由</th></tr></thead>
+<tbody>
+<tr><td>Name</td><td><span class="ph">&lt;塾名&gt;</span>-jukuai</td><td>あとで複数塾を運用したときに識別できるように</td></tr>
+<tr><td>Database Password</td><td>自動生成のものをそのまま使う</td><td><b>この画面を閉じると二度と見られません。必ずメモ</b>（STEP 3 の <code>db push</code> で使います）</td></tr>
+<tr><td>Region</td><td><b>Northeast Asia (Tokyo)</b></td><td>塾も生徒も日本国内。DB のレイテンシは 1 質問で何度も効いてくる</td></tr>
+<tr><td>Postgres Version</td><td><b>17</b>（選択肢があれば最新の 17 系）</td><td>migration は 17 系で動作確認済み。<code>pgvector</code> も同梱</td></tr>
+<tr><td>Plan</td><td><b>Pro</b></td><td><a href="step1_事前準備.html#plan">STEP 1-4</a> の理由（自動停止しない・ストレージ・バックアップ）</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>作成後、プロビジョニングに 2〜3 分かかります。緑色の「Project is ready」になるまで待ちます。</p>
+
+<div class="note">
+<p><b>Project Ref を控える</b>: ダッシュボードの URL <code>https://supabase.com/dashboard/project/<span class="ph">&lt;ここが Project Ref&gt;</span></code> の部分です。
+Project URL <code>https://<span class="ph">&lt;Project Ref&gt;</span>.supabase.co</code> と同じ文字列で、STEP 3 の <code>supabase link --project-ref</code> に使います。</p>
+</div>
+
+<h2>2-2. API キー 3 種を取得する</h2>
+
+<p><b>Project Settings（歯車）→ API</b> を開きます。</p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>ダッシュボード上の名前</th><th>控える環境変数名</th><th>公開範囲</th><th>注意</th></tr></thead>
+<tbody>
+<tr>
+<td><b>Project URL</b></td>
+<td><code>NEXT_PUBLIC_SUPABASE_URL</code></td>
+<td>公開して OK<br><span class="small">（ブラウザに埋め込まれる）</span></td>
+<td>末尾のスラッシュは付けない。<code>https://</code> から始まる URL 形式でないと起動時のバリデーションで落ちる</td>
+</tr>
+<tr>
+<td><b>anon</b> / <b>public</b><br><span class="small">（新しい UI では <code>publishable</code>）</span></td>
+<td><code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code></td>
+<td>公開して OK</td>
+<td>ブラウザ側では<b>ログイン／ログアウトにしか使っていません</b>。DB へは RLS のデフォルト拒否＋staff/admin 限定 SELECT でしか通りません</td>
+</tr>
+<tr>
+<td><b>service_role</b><br><span class="small">（新しい UI では <code>secret</code>）</span></td>
+<td><code>SUPABASE_SERVICE_ROLE_KEY</code></td>
+<td><span class="req y">最重要機密</span></td>
+<td><b>RLS を完全にバイパスします。</b>絶対に <code>NEXT_PUBLIC_</code> を付けない。Slack・チャット・スクショに貼らない</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="dangerbox">
+<p><b><code>SUPABASE_SERVICE_ROLE_KEY</code> が漏れると、全生徒の氏名・保護者メール・会話ログが読み書きし放題になります。</b>
+このキーはサーバー（Vercel の環境変数）にだけ置き、ローカルの <code>.env.local</code> は <code>.gitignore</code> 済みであることを確認してください。
+漏洩が疑われる場合は Supabase ダッシュボードからキーをローテートし、Vercel の環境変数を更新して再デプロイします。</p>
+</div>
+
+<p class="small">アプリ本体（Server Component / Server Action / Slack Webhook）は、すべて service_role クライアントで DB にアクセスします。
+認可はアプリ側の <code>requireStaff</code> / <code>requireAdmin</code> と、Slack の <code>channel_id</code> → 生徒解決で担保する設計です。</p>
+
+<h2 id="signup">2-3. 【必須】サインアップを無効化する</h2>
+
+<div class="dangerbox">
+<p><b>この作業を飛ばすと、RLS の強化（migration 026）が骨抜きになります。</b></p>
+<p>026 で <code>authenticated</code> ロールに残しているのは
+「<code>app_metadata.role</code> が <code>staff</code> または <code>admin</code> のときだけ許す SELECT」だけです。
+セルフサインアップを許すと、誰でも <code>authenticated</code> にはなれてしまいます。
+ロール未設定なら今は読めませんが、<b>「素性の分からない認証済みユーザー」がいくらでも増える</b>状態は、
+ロール付与ミス 1 回で全生徒の PII 流出に直結します。招待制にしてください。</p>
+</div>
+
+<h3>手順</h3>
+<ol>
+<li><b>Authentication</b> → <b>Sign In / Providers</b></li>
+<li><b>Allow new users to sign up</b> を <b>OFF</b> にする</li>
+<li><b>Save</b></li>
+</ol>
+
+<p class="small">migration <code>026_harden_rls_policies.sql</code> のヘッダにも「運用上の必須手順」として同じことが書かれています:
+<code>Supabase Dashboard &gt; Authentication &gt; Sign In / Providers で「Allow new users to sign up」を OFF にすること。</code></p>
+
+<div class="note">
+<p><b>ではどうやって管理ユーザーを作るのか？</b> ダッシュボードから個別に追加します（STEP 7）。
+<b>Authentication → Users → Add user</b> でメールとパスワードを入力し、<b>Auto Confirm User にチェック</b>を入れます。
+その後 SQL で <code>app_metadata.role</code> を付与します。生徒は Slack 経由でしか触らないので、Auth ユーザーは作りません。</p>
+</div>
+
+<h3>確認方法</h3>
+<p>STEP 5 のデプロイ後、<code>https://<span class="ph">&lt;あなたのドメイン&gt;</span>/login</code> にサインアップ用のリンクが無いこと、
+かつ未登録メールでログインを試みても <b>アカウントが作られない</b>ことを確認します
+（このアプリのログイン画面はメール + パスワードのみで、サインアップ UI は最初から存在しません）。</p>
+
+<h2>2-4. URL 設定</h2>
+
+<p><b>Authentication</b> → <b>URL Configuration</b>:</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>項目</th><th>値</th><th>補足</th></tr></thead>
+<tbody>
+<tr><td>Site URL</td><td><code>https://<span class="ph">&lt;あなたのドメイン&gt;</span></code></td><td>STEP 5 で Vercel のドメインが確定してから設定（先に <code>http://localhost:3000</code> でも可）</td></tr>
+<tr><td>Redirect URLs</td><td><code>https://<span class="ph">&lt;あなたのドメイン&gt;</span>/**</code></td><td>パスワードリセットのメールリンク用。使わないなら未設定でも動く</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note">
+<p>このアプリのログインは <code>signInWithPassword</code>（メール + パスワード）だけで、マジックリンクも OAuth も使っていません。
+そのため URL 設定を間違えてもログイン自体は動きます。<b>パスワードリセットを使う場合だけ</b>正しく設定してください。</p>
+</div>
+
+<h2>2-5. 【任意】メール送信の設定</h2>
+<p>Supabase の組み込みメール送信はレート制限が厳しく、パスワードリセットが届かないことがあります。
+塾のスタッフが自分でパスワードを再設定できるようにしたいなら、<b>Project Settings → Authentication → SMTP Settings</b> でカスタム SMTP を設定してください。
+設定しない運用（＝あなたがダッシュボードからパスワードを再発行する）でも問題ありません。</p>
+
+<h2>完了チェック</h2>
+<ul class="check">
+<li><input type="checkbox" id="s2-1"><label for="s2-1">プロジェクトを Tokyo リージョン / Postgres 17 / Pro プランで作成した</label></li>
+<li><input type="checkbox" id="s2-2"><label for="s2-2">DB パスワードと Project Ref を控えた</label></li>
+<li><input type="checkbox" id="s2-3"><label for="s2-3">Project URL / anon key / service_role key の 3 つを控えた</label></li>
+<li><input type="checkbox" id="s2-4"><label for="s2-4"><b>Allow new users to sign up を OFF にした</b></label></li>
+<li><input type="checkbox" id="s2-5"><label for="s2-5">service_role key を安全な場所（パスワードマネージャ等）に保管した</label></li>
+</ul>
+
+<div class="nav">
+<a href="step1_事前準備.html">← 前へ: STEP 1 事前準備</a>
+<a href="step3_DBマイグレーション.html">次へ: STEP 3 DB マイグレーション →</a>
+</div>
+
+</div>
+
+<script>
+(function(){
+  document.querySelectorAll('pre:not(.nocopy)').forEach(function(pre){
+    var w=document.createElement('div');w.className='codewrap';
+    pre.parentNode.insertBefore(w,pre);w.appendChild(pre);
+    var b=document.createElement('button');b.type='button';b.className='copy';b.textContent='コピー';
+    b.addEventListener('click',function(){
+      var el=pre.querySelector('code');var t=el?el.innerText:pre.innerText;
+      var done=function(ok){b.textContent=ok?'コピーしました':'手動でコピーしてください';
+        setTimeout(function(){b.textContent='コピー';},1600);};
+      if(navigator.clipboard&&window.isSecureContext){
+        navigator.clipboard.writeText(t).then(function(){done(true);},function(){done(false);});
+      }else{
+        try{var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';
+          document.body.appendChild(ta);ta.select();var ok=document.execCommand('copy');
+          document.body.removeChild(ta);done(ok);}catch(e){done(false);}
+      }
+    });
+    w.appendChild(b);
+  });
+  var key='jukuai-setup:'+location.pathname.split('/').pop();
+  document.querySelectorAll('ul.check input[type=checkbox]').forEach(function(cb){
+    var k=key+':'+cb.id;
+    try{if(localStorage.getItem(k)==='1')cb.checked=true;}catch(e){}
+    cb.addEventListener('change',function(){try{localStorage.setItem(k,cb.checked?'1':'0');}catch(e){}});
+  });
+})();
+</script>
+</body>
+</html>

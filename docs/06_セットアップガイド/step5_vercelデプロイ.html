@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STEP 5 Vercel デプロイ | じゅくAI セットアップガイド</title>
+<style>
+:root{--fg:#191c21;--muted:#5c6470;--line:#d9dee6;--bg:#fff;--soft:#f6f8fa;--soft2:#eef2f7;--accent:#1f5fa9;--code:#0f2b46;
+--warn:#7a4d00;--warnbg:#fff8e8;--warnline:#e6c579;--danger:#96262c;--dangerbg:#fdf1f2;--dangerline:#e3adb1;
+--ok:#1a6444;--okbg:#f0f8f4;--okline:#a5d5bd;--info:#144a73;--infobg:#eef6fc;--infoline:#9dc6e4;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);line-height:1.85;font-size:16px;
+font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,-apple-system,"Segoe UI",sans-serif;}
+.wrap{max-width:940px;margin:0 auto;padding:28px 20px 90px}
+.topbar{border-bottom:1px solid var(--line);background:var(--soft);}
+.topbar .inner{max-width:940px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
+.topbar a{color:var(--accent);text-decoration:none}
+.topbar a:hover{text-decoration:underline}
+.crumb{font-size:13px;color:var(--muted)}
+h1{font-size:27px;line-height:1.45;margin:26px 0 8px;letter-spacing:.01em}
+h2{font-size:21px;margin:44px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--line)}
+h3{font-size:17px;margin:30px 0 8px}
+h4{font-size:15px;margin:22px 0 6px;color:var(--muted)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:1.6em}
+li{margin:5px 0}
+code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13.5px;
+background:var(--soft2);padding:1px 5px;border-radius:3px;word-break:break-all}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:14px 14px;overflow-x:auto;
+font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13px;line-height:1.7;color:var(--code);margin:12px 0}
+pre code{background:none;padding:0;font-size:13px;word-break:normal}
+.codewrap{position:relative}
+.codewrap>pre{padding-right:82px}
+.copy{position:absolute;top:8px;right:8px;font:inherit;font-size:12px;padding:3px 10px;border:1px solid var(--line);
+background:#fff;color:var(--muted);border-radius:4px;cursor:pointer}
+.copy:hover{color:var(--fg);border-color:var(--muted)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--soft2);font-weight:600;white-space:nowrap}
+td code{font-size:12.8px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scroll table{min-width:640px}
+.scroll.wide table{min-width:880px}
+.note,.warnbox,.dangerbox,.okbox{border:1px solid;border-radius:6px;padding:12px 14px;margin:16px 0;font-size:15px}
+.note{border-color:var(--infoline);background:var(--infobg);color:var(--info)}
+.warnbox{border-color:var(--warnline);background:var(--warnbg);color:var(--warn)}
+.dangerbox{border-color:var(--dangerline);background:var(--dangerbg);color:var(--danger)}
+.okbox{border-color:var(--okline);background:var(--okbg);color:var(--ok)}
+.note b,.warnbox b,.dangerbox b,.okbox b{font-weight:700}
+.note p:first-child,.warnbox p:first-child,.dangerbox p:first-child,.okbox p:first-child{margin-top:0}
+.note p:last-child,.warnbox p:last-child,.dangerbox p:last-child,.okbox p:last-child{margin-bottom:0}
+.note code,.warnbox code,.dangerbox code,.okbox code{background:rgba(255,255,255,.7)}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 6px}
+.meta div{flex:1 1 240px;border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--soft)}
+.meta .k{font-size:12px;color:var(--muted);display:block;margin-bottom:2px}
+.meta .v{font-size:15px;font-weight:600;line-height:1.6}
+.meta .v ul{margin:2px 0 0;padding-left:1.3em;font-weight:400;font-size:14px}
+ul.check{list-style:none;padding-left:0}
+ul.check li{margin:6px 0;display:flex;gap:9px;align-items:flex-start}
+ul.check input{margin-top:7px;flex:0 0 auto;width:15px;height:15px}
+ul.check label{cursor:pointer}
+.steps{list-style:none;padding-left:0;margin:20px 0}
+.steps li{border:1px solid var(--line);border-radius:7px;margin:10px 0;padding:0}
+.steps a{display:block;padding:13px 16px;text-decoration:none;color:inherit}
+.steps a:hover{background:var(--soft)}
+.steps .n{display:inline-block;min-width:74px;font-size:12px;color:#fff;background:var(--accent);border-radius:11px;
+padding:1px 9px;text-align:center;margin-right:10px;vertical-align:2px}
+.steps .n.alt{background:#6b7280}
+.steps .t{font-weight:600;font-size:16.5px}
+.steps .d{display:block;color:var(--muted);font-size:14px;margin-top:3px;padding-left:0}
+.steps .tm{float:right;color:var(--muted);font-size:13px;font-weight:400}
+.nav{display:flex;justify-content:space-between;gap:14px;margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:15px}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+.nav span{color:#b6bcc6}
+.ph{background:#fff5d6;border-bottom:1px dotted #b08a19;padding:0 2px;font-weight:600}
+.diagram{font-size:12.5px;line-height:1.55;background:#fff;border:1px solid var(--line)}
+.small{font-size:13.5px;color:var(--muted)}
+.req{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap}
+.req.y{background:#fde8e8;color:#96262c;border:1px solid #e3adb1}
+.req.n{background:#eef2f7;color:#5c6470;border:1px solid #d9dee6}
+.req.r{background:#fff3d9;color:#7a4d00;border:1px solid #e6c579}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+a{color:var(--accent)}
+@media print{
+ .topbar,.nav,.copy{display:none}
+ body{font-size:11.5pt}
+ a{color:#000;text-decoration:none}
+ pre,table,.note,.warnbox,.dangerbox,.okbox{page-break-inside:avoid}
+ h2{page-break-after:avoid}
+}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="inner">
+<span class="crumb"><a href="index.html">目次</a> ／ STEP 5 / 9 — Vercel デプロイ</span>
+<span class="crumb"><a href="step6_slackイベント購読.html">次へ →</a></span>
+</div></div>
+
+<div class="wrap">
+
+<h1>STEP 5 — Vercel デプロイ</h1>
+<p>アプリを本番ドメインに載せます。<b>環境変数を 1 つでも形式ミスすると、Slack 連携も管理画面もまとめて 500 になります</b>（後述）。
+表を見ながら慎重に入れてください。</p>
+
+<div class="meta">
+<div><span class="k">所要時間</span><span class="v">約 20 分</span></div>
+<div><span class="k">前提</span><span class="v">STEP 2・3・4 完了。全ての値が手元にある</span></div>
+<div><span class="k">このステップで手に入るもの（控える）</span><span class="v">本番ドメイン<br><code>https://&lt;あなたのドメイン&gt;</code></span></div>
+</div>
+
+<h2>5-1. リポジトリをインポートする</h2>
+
+<ol>
+<li><a href="https://vercel.com/new">https://vercel.com/new</a> → GitHub アカウントを連携</li>
+<li>このリポジトリを選んで <b>Import</b></li>
+<li>設定を確認:</li>
+</ol>
+
+<div class="scroll">
+<table>
+<thead><tr><th>項目</th><th>値</th><th>備考</th></tr></thead>
+<tbody>
+<tr><td>Framework Preset</td><td><b>Next.js</b></td><td>自動検出される</td></tr>
+<tr><td>Root Directory</td><td><code>./</code></td><td>リポジトリ直下</td></tr>
+<tr><td>Build Command</td><td>（既定のまま）</td><td><code>next build</code></td></tr>
+<tr><td>Install Command</td><td>（既定のまま）</td><td><code>pnpm-lock.yaml</code> があるので pnpm が自動選択される</td></tr>
+<tr><td>Node.js Version</td><td><b>22.x</b></td><td>Project Settings → General → Node.js Version</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="warnbox">
+<p><b>プランの確認</b>: Hobby プランでは Serverless Function の最大実行時間がプラン上限に切り詰められます。
+<code>/api/slack/events</code> は <code>maxDuration = 300</code>（5 分）を宣言しており、LLM 生成が長引いたときに
+これが必要です。切り詰められると <b>🤔 が付いたまま回答が返らず、ジョブが <code>processing</code> のまま残ります</b>。
+Pro プランを推奨します（<a href="step1_事前準備.html#plan">STEP 1-4</a>）。</p>
+</div>
+
+<h2 id="envtable">5-2. 環境変数を設定する</h2>
+
+<p><b>Import 画面の Environment Variables</b>（またはデプロイ後の <b>Project Settings → Environment Variables</b>）で設定します。
+Environment は最低限 <b>Production</b> にチェック。Preview デプロイも使うなら Preview にも入れてください。</p>
+
+<div class="dangerbox">
+<p><b>最重要の落とし穴: 使わない変数は「空文字で登録」せず、行ごと作らないでください。</b></p>
+<p>環境変数は起動時に Zod で一括検証しています。<code>*_BASE_URL</code> や <code>NEXT_PUBLIC_SUPABASE_URL</code> は
+<b>URL 形式</b>、<code>RESEND_FROM_EMAIL</code> は<b>メール形式</b>でないと検証に失敗し、
+<code>Missing or invalid env vars: ...</code> を投げて<b>アプリ全体（Slack Webhook 含む）が 500 になります</b>。
+「任意」の変数でも、<b>空文字で存在している状態は「未設定」ではなく「不正な値」</b>として扱われます。</p>
+</div>
+
+<h3>必須（6 個）— これが無いとアプリが起動しない</h3>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>変数名</th><th>値の取得元</th><th>例</th><th>注意</th></tr></thead>
+<tbody>
+<tr>
+<td><code>NEXT_PUBLIC_SUPABASE_URL</code></td>
+<td>Supabase → Settings → API → Project URL（STEP 2-2）</td>
+<td><code>https://abcdefghijkl.supabase.co</code></td>
+<td><b>URL 形式必須</b>。末尾スラッシュを付けない。<b>ビルド時にブラウザ側へ埋め込まれる</b>ので、変更したら再デプロイが必要</td>
+</tr>
+<tr>
+<td><code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code></td>
+<td>同上 → anon / public</td>
+<td><code>eyJhbGciOiJIUzI1NiIs...</code></td>
+<td><b>ビルド時埋め込み</b>。ブラウザから見えるのは設計どおり（ログイン・ログアウトにしか使わない）</td>
+</tr>
+<tr>
+<td><code>SUPABASE_SERVICE_ROLE_KEY</code></td>
+<td>同上 → service_role</td>
+<td><code>eyJhbGciOiJIUzI1NiIs...</code></td>
+<td><span class="req y">Sensitive 推奨</span> <b>RLS を完全バイパス。</b>絶対に <code>NEXT_PUBLIC_</code> を付けない</td>
+</tr>
+<tr>
+<td><code>SLACK_BOT_TOKEN</code></td>
+<td>STEP 4-4</td>
+<td><code>xoxb-1234567890-...</code></td>
+<td><span class="req y">Sensitive 推奨</span> 前後の空白に注意</td>
+</tr>
+<tr>
+<td><code>SLACK_SIGNING_SECRET</code></td>
+<td>STEP 4-5</td>
+<td><code>a1b2c3d4e5f6...</code>（32 桁）</td>
+<td><span class="req y">Sensitive 推奨</span> <b>未設定だと <code>/api/slack/events</code> が 500 になり、STEP 6 で Verified になりません</b></td>
+</tr>
+<tr>
+<td><code>SLACK_BOT_USER_ID</code></td>
+<td>STEP 4-6（<code>auth.test</code> の <code>user_id</code>）</td>
+<td><code>U01ABCDEFGH</code></td>
+<td><b><code>U</code> 始まり。</b><code>B</code> 始まりの Bot ID を入れると Bot が永久に無反応</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<h3>AI 回答に必要（4 個）— 未設定だと Bot は反応するが回答できない</h3>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>変数名</th><th>値の取得元</th><th>例</th><th>注意</th></tr></thead>
+<tbody>
+<tr>
+<td><code>LLM_API_KEY</code></td>
+<td>選んだ LLM プロバイダの管理画面</td>
+<td><code>sk-...</code> / <code>sk-or-v1-...</code></td>
+<td><span class="req y">Sensitive 推奨</span> 未設定だと <code>AI_RESPONSE_FAILED</code></td>
+</tr>
+<tr>
+<td><code>LLM_BASE_URL</code></td>
+<td>STEP 1-1 の表</td>
+<td><code>https://api.openai.com/v1</code></td>
+<td><b>URL 形式必須</b>。OpenAI は <code>/v1</code> まで、DeepSeek は <code>https://api.deepseek.com</code></td>
+</tr>
+<tr>
+<td><code>LLM_MODEL_DEFAULT</code></td>
+<td>STEP 1-1</td>
+<td><code>gpt-4o-mini</code></td>
+<td>未設定だと <code>ConfigurationError</code>。<b>リトライしても直らない</b>失敗になる。<a href="step1_事前準備.html#pricing"><code>MODEL_PRICING</code> に登録済みか確認</a></td>
+</tr>
+<tr>
+<td><code>LLM_MODEL_COMPLEX</code></td>
+<td>STEP 1-1</td>
+<td><code>gpt-4o</code></td>
+<td><span class="req r">画像対応するなら必須</span> 画像付き質問だけこちらを使う。未設定だと画像は LLM に送らずテキストのみで回答し、生徒に「画像は読み取れなかった」旨を添える（運用者向けには <code>IMAGE_MODEL_NOT_CONFIGURED</code> をエラーログに残す）</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<h3>RAG（レポート参照）に必要（3 個）</h3>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>変数名</th><th>値の取得元</th><th>例</th><th>注意</th></tr></thead>
+<tbody>
+<tr>
+<td><code>EMBEDDING_API_KEY</code></td>
+<td>Embedding プロバイダの管理画面</td>
+<td><code>sk-...</code></td>
+<td><span class="req y">Sensitive 推奨</span> LLM と同じキーでも別キーでもよい</td>
+</tr>
+<tr>
+<td><code>EMBEDDING_BASE_URL</code></td>
+<td>STEP 1-2</td>
+<td><code>https://api.openai.com/v1</code></td>
+<td><b>URL 形式必須</b></td>
+</tr>
+<tr>
+<td><code>EMBEDDING_MODEL</code></td>
+<td>STEP 1-2</td>
+<td><code>text-embedding-3-small</code></td>
+<td><b>1536 次元のモデルのみ。</b>違う次元だと保存時に <code>embedding dimension mismatch</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<p class="small">3 つとも未設定なら RAG は静かに無効化されます（<code>EmbeddingNotConfiguredError</code>、severity=info、エラーログに残らない）。
+<b>1 つでも欠けると同じく無効</b>になるので、設定するなら 3 つセットで入れてください。</p>
+
+<h3>任意（3 個）</h3>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>変数名</th><th>値の取得元</th><th>例</th><th>未設定時の挙動</th></tr></thead>
+<tbody>
+<tr>
+<td><code>SLACK_WORKSPACE_URL</code></td>
+<td>STEP 4-6（<code>auth.test</code> の <code>url</code>）</td>
+<td><code>https://your-juku.slack.com</code></td>
+<td>管理画面のエラー詳細・ジョブ一覧の「Slack で開く」リンクが出ず、ID 表示にフォールバックする。<b>URL 形式必須</b></td>
+</tr>
+<tr>
+<td><code>SLACK_ALERTS_CHANNEL_ID</code></td>
+<td>STEP 7 で作る運用チャンネル（例 <code>#jukuai-alerts</code>）の ID</td>
+<td><code>C01ABCDEFGH</code></td>
+<td>AI 応答の停止・再開時の Slack 通知が飛ばない（<b>停止・再開の操作自体は成功する</b>）。設定する場合は<b>そのチャンネルに Bot を招待</b>しておくこと</td>
+</tr>
+<tr>
+<td><code>ANTHROPIC_API_KEY</code></td>
+<td>—</td>
+<td>—</td>
+<td><b>設定不要。</b>Anthropic 直アダプタ用の予約変数だが、<code>@anthropic-ai/sdk</code> は依存から外してあるため現状は使えない。Claude を使うなら OpenRouter 経由（<code>LLM_*</code>）で</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<h3>設定してはいけない / 不要（3 個）</h3>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>変数名</th><th>扱い</th><th>理由</th></tr></thead>
+<tbody>
+<tr>
+<td><code>SLACK_API_BASE_URL</code></td>
+<td><span class="req y">本番では設定しない</span></td>
+<td>受け入れテストでモックサーバーへ向けるための差し替え口。ループバック（<code>localhost</code> / <code>127.0.0.1</code> / <code>::1</code>）以外を指定しても無視されるが、本番に置く理由がない</td>
+</tr>
+<tr>
+<td><code>RESEND_API_KEY</code></td>
+<td><span class="req n">不要</span></td>
+<td><b>コード上の利用箇所はゼロ。</b>将来の保護者メール通知（FR-08）用の予約。設定しなくても全機能が動く</td>
+</tr>
+<tr>
+<td><code>RESEND_FROM_EMAIL</code></td>
+<td><span class="req n">不要</span></td>
+<td>同上。<b>設定するならメール形式必須</b>（不正な値だとアプリ全体が 500 になる）</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="note">
+<p><b>変数は全部で 19 個</b>（必須 6 / AI 4 / RAG 3 / 任意 3 / 不要 3）。
+一般的な構成では <b>13 個</b>（必須 6 + AI 4 + RAG 3）を設定し、必要に応じて
+<code>SLACK_WORKSPACE_URL</code> と <code>SLACK_ALERTS_CHANNEL_ID</code> を足して 15 個になります。</p>
+</div>
+
+<h3><code>NEXT_PUBLIC_</code> の扱い（重要）</h3>
+<div class="warnbox">
+<p><code>NEXT_PUBLIC_</code> で始まる 2 つは <b>ビルド時にバンドルへ埋め込まれます</b>。
+Vercel のダッシュボードで値を書き換えても、<b>再デプロイしない限り反映されません</b>
+（「値は変えたのにログインできない」の典型原因）。
+変更したら <b>Deployments → 最新 → Redeploy</b> を実行してください。
+なお <code>Use existing Build Cache</code> のチェックは外した方が確実です。</p>
+</div>
+
+<h3>参考: <code>.env.example</code> との対応</h3>
+<p>リポジトリの <code>.env.example</code> がローカル開発用の雛形です。ローカルで動かす場合は
+<code>cp .env.example .env.local</code> して同じ値を入れます（<code>.env.local</code> は <code>.gitignore</code> 済み）。</p>
+
+<h2>5-3. デプロイする</h2>
+
+<ol>
+<li><b>Deploy</b> をクリック</li>
+<li>ビルドログを見る（2〜4 分）</li>
+</ol>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>ビルドが失敗したら</th><th>原因</th><th>対処</th></tr></thead>
+<tbody>
+<tr><td><code>Missing or invalid env vars: ...</code></td><td>その変数の形式が不正、または空文字で登録されている</td><td>メッセージに出ている変数名を修正。使わないなら<b>削除</b>する</td></tr>
+<tr><td><code>ERR_PNPM_IGNORED_BUILDS</code></td><td><code>pnpm-workspace.yaml</code> の許可リストが読めていない</td><td><code>allowBuilds</code> と <code>onlyBuiltDependencies</code> の両方があるか確認（<a href="step3_DBマイグレーション.html">STEP 3-1</a>）</td></tr>
+<tr><td>型エラー</td><td>DB スキーマと <code>database.types.ts</code> の不一致</td><td><code>pnpm supabase:types:linked</code> で再生成してコミット</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>5-4. 本番ドメインを控える</h2>
+
+<p>デプロイ完了画面、または <b>Project → Domains</b> に表示される
+<code>https://<span class="ph">&lt;プロジェクト名&gt;</span>.vercel.app</code> が本番ドメインです。<b>控えてください。</b></p>
+
+<div class="warnbox">
+<p><b>Slack の Request URL には、必ずこの「本番（Production）ドメイン」を使ってください。</b>
+デプロイごとに変わるプレビュー URL（<code>xxx-git-branch-team.vercel.app</code>）を登録すると、次のデプロイで壊れます。
+独自ドメインを当てる予定があるなら、先に設定してからその URL を使う方が手戻りがありません。</p>
+</div>
+
+<h2>5-5. 動作確認: /login が表示されるか</h2>
+
+<ol>
+<li>ブラウザで <code>https://<span class="ph">&lt;あなたのドメイン&gt;</span>/login</code> を開く</li>
+<li>「メールアドレス」「パスワード」の入力欄があるログイン画面が出れば OK</li>
+<li><code>https://<span class="ph">&lt;あなたのドメイン&gt;</span>/</code> を開くと <code>/admin</code> にリダイレクト → 未ログインなので <code>/login</code> に飛ばされる、という挙動も確認</li>
+</ol>
+
+<div class="okbox">
+<p>ログイン画面に<b>サインアップのリンクが無い</b>ことも確認してください。このアプリにサインアップ UI は存在しません
+（管理ユーザーは Supabase ダッシュボードから作ります → STEP 7）。</p>
+</div>
+
+<h3>この時点でログインはまだできません</h3>
+<p>Auth ユーザーをまだ作っていないためです。STEP 7 で作成します。ここでは<b>画面が出ること</b>だけ確認できれば十分です。</p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>症状</th><th>原因</th><th>対処</th></tr></thead>
+<tbody>
+<tr><td>500 エラーページ</td><td>環境変数の形式不正</td><td>Vercel → Deployments → 該当デプロイ → <b>Runtime Logs</b> で <code>Missing or invalid env vars</code> を確認</td></tr>
+<tr><td>404</td><td>Root Directory の設定ミス</td><td>Project Settings → General → Root Directory を <code>./</code> に</td></tr>
+<tr><td>画面は出るがログイン時に <code>Failed to fetch</code></td><td><code>NEXT_PUBLIC_SUPABASE_URL</code> が誤り、または再デプロイしていない</td><td>値を直して <b>キャッシュを使わずに Redeploy</b></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>5-6. Supabase の Site URL を更新する</h2>
+<p>ドメインが確定したので、STEP 2-4 で仮置きした値を更新します。</p>
+<ul>
+<li>Supabase → <b>Authentication → URL Configuration → Site URL</b> = <code>https://<span class="ph">&lt;あなたのドメイン&gt;</span></code></li>
+</ul>
+
+<h2>完了チェック</h2>
+<ul class="check">
+<li><input type="checkbox" id="s5-1"><label for="s5-1">Vercel にリポジトリをインポートした（Node 22.x / Pro プラン）</label></li>
+<li><input type="checkbox" id="s5-2"><label for="s5-2">必須 6 個の環境変数を設定した</label></li>
+<li><input type="checkbox" id="s5-3"><label for="s5-3">LLM 4 個・Embedding 3 個を設定した</label></li>
+<li><input type="checkbox" id="s5-4"><label for="s5-4">使わない変数を<b>空文字で登録していない</b></label></li>
+<li><input type="checkbox" id="s5-5"><label for="s5-5">シークレット系を Sensitive にした</label></li>
+<li><input type="checkbox" id="s5-6"><label for="s5-6">デプロイが成功した</label></li>
+<li><input type="checkbox" id="s5-7"><label for="s5-7">本番ドメインを控えた</label></li>
+<li><input type="checkbox" id="s5-8"><label for="s5-8"><code>/login</code> が表示された</label></li>
+<li><input type="checkbox" id="s5-9"><label for="s5-9">Supabase の Site URL を本番ドメインに更新した</label></li>
+</ul>
+
+<div class="nav">
+<a href="step4_slackアプリ作成.html">← 前へ: STEP 4 Slack アプリ作成</a>
+<a href="step6_slackイベント購読.html">次へ: STEP 6 Slack イベント購読 →</a>
+</div>
+
+</div>
+
+<script>
+(function(){
+  document.querySelectorAll('pre:not(.nocopy)').forEach(function(pre){
+    var w=document.createElement('div');w.className='codewrap';
+    pre.parentNode.insertBefore(w,pre);w.appendChild(pre);
+    var b=document.createElement('button');b.type='button';b.className='copy';b.textContent='コピー';
+    b.addEventListener('click',function(){
+      var el=pre.querySelector('code');var t=el?el.innerText:pre.innerText;
+      var done=function(ok){b.textContent=ok?'コピーしました':'手動でコピーしてください';
+        setTimeout(function(){b.textContent='コピー';},1600);};
+      if(navigator.clipboard&&window.isSecureContext){
+        navigator.clipboard.writeText(t).then(function(){done(true);},function(){done(false);});
+      }else{
+        try{var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';
+          document.body.appendChild(ta);ta.select();var ok=document.execCommand('copy');
+          document.body.removeChild(ta);done(ok);}catch(e){done(false);}
+      }
+    });
+    w.appendChild(b);
+  });
+  var key='jukuai-setup:'+location.pathname.split('/').pop();
+  document.querySelectorAll('ul.check input[type=checkbox]').forEach(function(cb){
+    var k=key+':'+cb.id;
+    try{if(localStorage.getItem(k)==='1')cb.checked=true;}catch(e){}
+    cb.addEventListener('change',function(){try{localStorage.setItem(k,cb.checked?'1':'0');}catch(e){}});
+  });
+})();
+</script>
+</body>
+</html>

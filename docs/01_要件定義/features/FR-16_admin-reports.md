@@ -2,7 +2,7 @@
 id: FR-16
 title: レポート管理（管理画面）
 priority: P0
-status: defined
+status: implemented
 related_users: [U-02, U-03]
 related_screens: [SCR-07, SCR-08, SCR-09]
 version: 1
@@ -61,6 +61,6 @@ Then 「Embedding再生成が必要です」という警告が表示される
 
 ## 実装ステータス（Phase 4 が更新）
 
-- 実装ファイル: -
-- テストファイル: -
-- 最終確認Sprint: -
+- 実装ファイル: `src/features/reports/{schemas/reportSchema,lib/getReports,actions/reportActions}.ts`, `src/features/reports/components/{ReportForm,ReportsFilter,MarkdownContent,RebuildEmbeddingsButton}.tsx`, `src/app/admin/reports/{page,new/page,[id]/page,[id]/edit/page}.tsx`
+- テストファイル: `src/features/reports/schemas/reportSchema.test.ts`
+- 最終確認Sprint: Sprint 6
