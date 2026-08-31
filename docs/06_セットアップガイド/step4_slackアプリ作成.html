@@ -198,11 +198,13 @@ a{color:var(--accent)}
   name: じゅくAI
   description: 生徒ごとのチャンネルで学習の質問に答える AI アシスタント
   background_color: "#2b3a55"
-  long_description: 生徒ごとの Slack チャンネルで、学習レポートや過去のやり取りを踏まえて質問に答える AI 学習支援ボットです。メンションまたはスレッド返信に反応し、処理中は :thinking_face: を付けます。
+  # `:thinking_face:` のようにコロンの後にスペースが続く文字列は、
+  # YAML がキーと値の区切りと解釈してエラーになる。必ず引用符で囲む
+  long_description: "生徒ごとの Slack チャンネルで、学習レポートや過去のやり取りを踏まえて質問に答える AI 学習支援ボットです。チャンネル内でメンションされたとき、または登録済みスレッドへの返信に反応します。処理中は :thinking_face: を付け、回答が終わると外します。数式や問題の写真を添付して質問することもできます。管理画面から生徒ごとのプロフィールや試験期間を設定でき、回答の粒度を調整できます。"
 
 features:
   bot_user:
-    display_name: じゅくAI
+    display_name: juku-ai
     always_online: true
 
 oauth_config:

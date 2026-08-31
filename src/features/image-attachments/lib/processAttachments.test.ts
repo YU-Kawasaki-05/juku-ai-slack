@@ -322,7 +322,7 @@ function jpegWithExif(totalBytes: number, exifPayload: number): Uint8Array {
 async function realJpeg(
   width: number,
   height: number,
-  exif?: Parameters<sharp.Sharp['withExif']>[0],
+  exif?: Parameters<ReturnType<typeof sharp>['withExif']>[0],
 ): Promise<Uint8Array> {
   const channels = 3
   const raw = Buffer.alloc(width * height * channels)

@@ -15,6 +15,13 @@
 import sharp from 'sharp'
 import { MAX_IMAGE_LONG_EDGE } from '@shared/lib/constants'
 
+/**
+ * sharp のパイプライン型。
+ * sharp 0.35 で `sharp.Sharp` の名前空間参照が default import 経由では解決できなくなったため、
+ * 戻り値型から導出する。この書き方なら型の内部構造が変わっても追随不要。
+ */
+type SharpPipeline = ReturnType<typeof sharp>
+
 export interface ResizeImageResult {
   /** 縮小後のバイト列。縮小しなかった場合は入力と同一インスタンス */
   bytes: Uint8Array
@@ -81,7 +88,7 @@ export async function resizeImage(bytes: Uint8Array, mimetype: string): Promise<
 }
 
 /** 形式は変換しない（JPEG→JPEG / PNG→PNG / WebP→WebP） */
-function encodeSameFormat(pipeline: sharp.Sharp, mimetype: string): sharp.Sharp {
+function encodeSameFormat(pipeline: SharpPipeline, mimetype: string): SharpPipeline {
   switch (mimetype) {
     case 'image/jpeg':
       // chromaSubsampling 4:4:4 … 赤ペンの添削線など色付きの細線が滲まないようにする
