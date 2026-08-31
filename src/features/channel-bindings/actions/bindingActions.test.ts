@@ -27,7 +27,7 @@ function fd(entries: Record<string, string>): FormData {
   return f
 }
 
-const adminOk = () => vi.mocked(requireAdmin).mockResolvedValue({ userId: 'u1', email: 'a@b.com' })
+const adminOk = () => vi.mocked(requireAdmin).mockResolvedValue({ userId: 'u1', email: 'a@b.com', role: 'admin' })
 
 beforeEach(() => vi.clearAllMocks())
 

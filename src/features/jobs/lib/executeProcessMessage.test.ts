@@ -200,6 +200,20 @@ describe('executeProcessSlackMessage', () => {
     expect(mocks.getStudentProfile).toHaveBeenCalledWith(db, payload.personId)
   })
 
+  it('学年は system に載せるが、氏名・生徒 ID はプロンプトに出さない', async () => {
+    mocks.getStudentProfile.mockResolvedValue({
+      profileText: '学年: 中学3年\n要約: 文章題でつまずきやすい',
+      examMode: false,
+    })
+    await executeProcessSlackMessage(db, payload)
+
+    const call = mocks.generate.mock.calls[0][0]
+    expect(call.system).toContain('学年: 中学3年')
+    // 生徒 ID（UUID）は LLM にとって無意味でトークンを消費するだけなので載せない。
+    // 氏名も getStudentProfile が select しないため、プロンプト全体のどこにも現れない
+    expect(JSON.stringify([call.system, call.messages])).not.toContain(payload.personId)
+  })
+
   it('AC-09-03: プロフィール未登録でもエラーにせず回答する（BR-09-04）', async () => {
     mocks.getStudentProfile.mockResolvedValue({ profileText: null, examMode: false })
     await expect(executeProcessSlackMessage(db, payload)).resolves.toBeUndefined()
@@ -667,6 +681,52 @@ describe('executeProcessSlackMessage', () => {
     const text = mocks.postMessage.mock.calls[0][0].text as string
     expect(text).toContain('一緒に整理しよう')
     expect(text).toContain('画像を読み取れない')
+  })
+
+  it('LLM_MODEL_COMPLEX 未設定なら画像は LLM に渡さない（非Visionモデルへの image_url で全滅させない, #1）', async () => {
+    const restore = withoutVisionModel()
+    try {
+      mocks.processAttachments.mockResolvedValue({
+        dataUrls: ['data:image/png;base64,AAA'],
+        errorCodes: [],
+        skippedForTotalSize: 0,
+      })
+      await executeProcessSlackMessage(db, imgPayload)
+    } finally {
+      restore()
+    }
+
+    // 質問はテキストのみ（image content part を含む配列にしない）
+    const lastMsg = mocks.generate.mock.calls[0][0].messages.at(-1)
+    expect(lastMsg.content).toBe('二次方程式がわからない')
+    // 生徒が画像を送った事実は利用量ログ側には残す（管理画面の「画像あり」絞り込み用）
+    expect(mocks.logUsage.mock.calls[0][1].hasImage).toBe(true)
+  })
+
+  it('画像のみ + LLM_MODEL_COMPLEX 未設定は LLM を呼ばず、文章で送り直す案内を返す（#1）', async () => {
+    const restore = withoutVisionModel()
+    try {
+      mocks.processAttachments.mockResolvedValue({
+        dataUrls: ['data:image/png;base64,AAA'],
+        errorCodes: [],
+        skippedForTotalSize: 0,
+      })
+      await executeProcessSlackMessage(db, imageOnlyPayload)
+    } finally {
+      restore()
+    }
+
+    // 画像を落とすと材料が残らない。空プロンプトで課金しない
+    expect(mocks.generate).not.toHaveBeenCalled()
+    expect(mocks.logUsage).not.toHaveBeenCalled()
+    expect(mocks.postMessage).toHaveBeenCalledOnce()
+    expect(mocks.postMessage.mock.calls[0][0].text).toBe(
+      getUserFacingMessage('IMAGE_MODEL_NOT_CONFIGURED'),
+    )
+    // 運用者向けの痕跡はこの分岐でも残す
+    expect(
+      mocks.logError.mock.calls.some((c) => c[1].code === 'IMAGE_MODEL_NOT_CONFIGURED'),
+    ).toBe(true)
   })
 
   it('画像が無いメッセージでは LLM_MODEL_COMPLEX 未設定でも記録も案内もしない（誤検知防止）', async () => {

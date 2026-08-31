@@ -14,3 +14,14 @@ onlyBuiltDependencies:
   - msw
   - sharp
   - unrs-resolver
+
+# next が postcss@8.4.31 を固定依存しており、そのままでは pnpm audit の
+# postcss 脆弱性（sourceMappingURL 経由の任意 .map 読み取り / </style> XSS）が残る。
+# postcss 8.5.x は 8.4 と API 互換なのでツリー全体を patched 版へ引き上げる。
+
+# sharp <0.35.0 は libvips の CVE-2026-33327 / 33328 ほかの影響下にある。
+# 生徒が送る画像（信頼できない入力）を処理する経路なので必ず patched 版を使う。
+# next も sharp を依存に持つため、ツリー全体を override で引き上げる。
+overrides:
+  postcss: ^8.5.26
+  sharp: ^0.35.4

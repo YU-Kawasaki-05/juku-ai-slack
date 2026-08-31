@@ -31,6 +31,7 @@ describe('requireStaffPage', () => {
     await expect(requireStaffPage()).resolves.toEqual({
       userId: 'user-1',
       email: 'staff@example.com',
+      role: 'staff',
     })
     expect(redirect).not.toHaveBeenCalled()
   })

@@ -137,7 +137,7 @@ a{color:var(--accent)}
 <thead><tr><th>環境変数</th><th>いつ使われるか</th><th>未設定だと</th></tr></thead>
 <tbody>
 <tr><td><code>LLM_MODEL_DEFAULT</code></td><td>通常の質問すべて。スレッド要約・生徒回答の評価（BKT）にもこれを使う</td><td><b>回答不可</b>。<code>ConfigurationError（LLM_MODEL_DEFAULT が未設定です）</code>でジョブが失敗する（リトライしても直らない）</td></tr>
-<tr><td><code>LLM_MODEL_COMPLEX</code></td><td><b>画像が添付された質問のみ</b></td><td><code>LLM_MODEL_DEFAULT</code> にフォールバックする。Vision 非対応モデルだと画像が黙って無視されるので、画像対応するなら必ず設定する</td></tr>
+<tr><td><code>LLM_MODEL_COMPLEX</code></td><td><b>画像が添付された質問のみ</b></td><td>画像は LLM に送らずテキストのみで回答する。生徒には「画像は読み取れなかった」旨を添え、運用者向けには <code>IMAGE_MODEL_NOT_CONFIGURED</code> をエラーログに残す。画像対応するなら設定する</td></tr>
 </tbody>
 </table>
 </div>
@@ -322,12 +322,13 @@ Bot はレポートを参照せずに回答します。エラーログには積�
 <li><b>質問文の上限</b>: 6,000 文字を超える質問は LLM 呼び出し前に打ち切り（<code>MAX_QUESTION_CHARS</code>）</li>
 <li><b>出力上限</b>: 回答 1,200 トークン / 要約 400 トークン</li>
 <li><b>画像の上限</b>: 1 枚 20MB・1 メッセージ 3 枚・合計 8MB まで</li>
+<li><b>画像の解像度上限</b>: 長辺 2048px を超える画像は送信前に自動縮小（<code>MAX_IMAGE_LONG_EDGE</code>）。画像のトークン数はピクセル数に比例するため、これが 1 枚あたりのコストの天井になります（縮小しない画像は一切加工しません）</li>
 <li><b>緊急停止</b>: 管理画面から AI 応答を即停止できる（デプロイ不要 → <a href="step9_運用ガイド.html#kill">STEP 9</a>）</li>
 <li><b>再試行での二重課金なし</b>: 生成済みの回答本文は保存され、リトライ時は配信のみやり直す</li>
 </ul>
 
 <h3>画像付き質問は別枠で高い</h3>
-<p>画像は base64 化して <code>LLM_MODEL_COMPLEX</code> に送ります。1 枚あたり数百〜1,500 入力トークン相当が上乗せされ、さらに Vision 対応モデルは単価が高めです。
+<p>画像は base64 化して <code>LLM_MODEL_COMPLEX</code> に送ります。長辺 2048px にキャップした状態で 1 枚あたり最大 約 5,000 入力トークン相当が上乗せされ、さらに Vision 対応モデルは単価が高めです。
 画像利用が多い想定なら、テキストは安いモデル・画像は <code>gpt-4o</code> という組み合わせが現実的です。</p>
 
 <h2>完了チェック</h2>

@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 jobs:
   lint-typecheck:
@@ -54,11 +54,67 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
 
+  # PR では全 86 件ではなく代表 3 spec（権限境界 / Slack フロー / コスト制御）だけを回す。
+  # 全件は main への push で回す（下の e2e ジョブ）。docs/02_外部設計/06_テスト戦略.md 5章の方針。
+  # fullsuite と同じくローカル Supabase + .env.test.example なので secrets 不要 = fork からの PR でも動く。
+  e2e-smoke:
+    name: E2E Smoke
+    runs-on: ubuntu-latest
+    # pull_request では github.ref が refs/pull/N/merge になるためブランチ名で判定できない。
+    # 対象ブランチの絞り込みは on.pull_request.branches 側で済んでいるので event_name だけ見る。
+    if: github.event_name == 'pull_request'
+    env:
+      # smoke 対象。増減させるときはここだけ直せば存在チェックと実行の両方に効く
+      SMOKE_SPECS: >-
+        e2e/permissions.spec.ts
+        e2e/acceptance/slack-flow.spec.ts
+        e2e/acceptance/kill-switch-rate-limit.spec.ts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      # playwright は存在しないパスを渡しても「No tests found」にならず黙って無視する。
+      # spec のリネームで smoke が静かに縮むのを防ぐため、実行前にパスを検証する。
+      - name: Verify smoke spec paths
+        # SMOKE_SPECS は空白区切りの1文字列なので、単語分割する bash に固定する
+        shell: bash
+        run: |
+          for spec in $SMOKE_SPECS; do
+            test -f "$spec" || { echo "::error::smoke spec not found: $spec"; exit 1; }
+          done
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Start local Supabase
+        run: pnpm exec supabase start
+      - name: Apply migrations + seed
+        run: pnpm exec supabase db reset
+      # webServer が古いビルドを掴まないよう毎回ビルドする（pnpm test:e2e の前半と同じ）
+      - name: Build
+        run: node scripts/with-test-env.mjs next build
+      - name: Run E2E smoke
+        shell: bash
+        run: pnpm test:e2e:nobuild $SMOKE_SPECS
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-smoke
+          path: playwright-report/
+          retention-days: 7
+      - name: Stop local Supabase
+        if: always()
+        run: pnpm exec supabase stop --project-id juku-ai-slack
+
   # E2E は本番 Supabase ではなくローカル Supabase（supabase/config.toml の 5434x 帯）に対して回す。
   # env は .env.test.example が既定で読み込まれる（ローカル固定の anon/service_role とダミー Slack 値）。
   # そのため secrets は不要で、実行結果がコミット内容だけで決まる。
+  # main への push（＝マージ）でだけ全件回す fullsuite。PR 側は上の e2e-smoke。
   e2e:
-    name: E2E Tests
+    name: E2E Fullsuite
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:

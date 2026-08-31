@@ -55,6 +55,20 @@ describe('停止・レート制限の文言（F-1 / F-2）', () => {
   })
 })
 
+describe('IMAGE_MODEL_NOT_CONFIGURED の生徒向け文言（#1）', () => {
+  it('画像だけの質問には文章で送り直すよう促す（内部事情は出さない）', () => {
+    const msg = getUserFacingMessage('IMAGE_MODEL_NOT_CONFIGURED')
+    expect(msg).not.toBe(USER_FACING_MESSAGES['UNKNOWN_ERROR'])
+    expect(msg).toContain('画像を読み取れない')
+    expect(msg).toContain('文章')
+    expect(msg).not.toMatch(/LLM_MODEL|env|model|vision/i)
+  })
+
+  it('生徒に返す文言なのでサイレントではない', () => {
+    expect(isSilentError('IMAGE_MODEL_NOT_CONFIGURED')).toBe(false)
+  })
+})
+
 describe('buildImageNotice（#5: 読めなかった画像の案内）', () => {
   it('読めなかった画像が無ければ何も添えない', () => {
     expect(buildImageNotice({ unreadCount: 0, readCount: 2, visionModelMissing: false })).toBe('')

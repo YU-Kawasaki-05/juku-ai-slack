@@ -21,12 +21,12 @@ beforeEach(() => vi.clearAllMocks())
 describe('requireStaff', () => {
   it('app_metadata.role = staff なら StaffContext を返す', async () => {
     mockGetUser({ id: 'u1', email: 'staff@example.com', app_metadata: { role: 'staff' } })
-    await expect(requireStaff()).resolves.toEqual({ userId: 'u1', email: 'staff@example.com' })
+    await expect(requireStaff()).resolves.toEqual({ userId: 'u1', email: 'staff@example.com', role: 'staff' })
   })
 
   it('admin は staff の上位なので通す', async () => {
     mockGetUser({ id: 'u2', email: 'admin@example.com', app_metadata: { role: 'admin' } })
-    await expect(requireStaff()).resolves.toEqual({ userId: 'u2', email: 'admin@example.com' })
+    await expect(requireStaff()).resolves.toEqual({ userId: 'u2', email: 'admin@example.com', role: 'admin' })
   })
 
   it('未認証は unauthorized', async () => {

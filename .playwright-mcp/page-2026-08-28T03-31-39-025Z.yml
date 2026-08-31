@@ -1,0 +1,153 @@
+- generic [active] [ref=f5e1]:
+  - generic [ref=f5e2]:
+    - link "メインコンテンツへスキップ" [ref=f5e3] [cursor=pointer]:
+      - /url: "#admin-main"
+    - complementary [ref=f5e4]:
+      - generic [ref=f5e5]: じゅくAI
+      - navigation "メインナビゲーション" [ref=f5e10]:
+        - link "ダッシュボード" [ref=f5e11] [cursor=pointer]:
+          - /url: /admin
+        - link "生徒管理" [ref=f5e17] [cursor=pointer]:
+          - /url: /admin/persons
+        - link "チャンネル設定" [ref=f5e23] [cursor=pointer]:
+          - /url: /admin/channels
+        - link "レポート" [ref=f5e27] [cursor=pointer]:
+          - /url: /admin/reports
+        - link "会話ログ" [ref=f5e31] [cursor=pointer]:
+          - /url: /admin/conversations
+        - link "エラーログ" [ref=f5e35] [cursor=pointer]:
+          - /url: /admin/errors
+        - link "ジョブ" [ref=f5e38] [cursor=pointer]:
+          - /url: /admin/jobs
+        - link "利用状況" [ref=f5e42] [cursor=pointer]:
+          - /url: /admin/usage
+    - generic [ref=f5e45]:
+      - banner [ref=f5e46]:
+        - navigation "パンくずリスト" [ref=f5e47]:
+          - list [ref=f5e48]:
+            - listitem [ref=f5e49]:
+              - link "ダッシュボード" [ref=f5e50] [cursor=pointer]:
+                - /url: /admin
+            - listitem [ref=f5e51]:
+              - generic [ref=f5e54]: 利用状況
+        - generic [ref=f5e55]:
+          - button "テーマを切り替える" [ref=f5e56]
+          - button "e2e-admin@example.test" [ref=f5e63]
+      - main [ref=f5e71]:
+        - generic [ref=f5e73]:
+          - generic [ref=f5e74]:
+            - generic [ref=f5e75]:
+              - heading "利用状況" [level=1] [ref=f5e76]
+              - paragraph [ref=f5e77]: AI 利用量・コスト・エラーの推移（日本時間で集計）
+            - group "集計期間" [ref=f5e78]:
+              - button "7日" [ref=f5e79]
+              - button "30日" [pressed] [ref=f5e80]
+              - button "90日" [ref=f5e81]
+          - generic [ref=f5e82]:
+            - generic [ref=f5e83]:
+              - generic [ref=f5e84]: 質問数
+              - generic [ref=f5e89]:
+                - paragraph [ref=f5e90]: "0"
+                - paragraph [ref=f5e91]: 直近30日
+            - generic [ref=f5e92]:
+              - generic [ref=f5e93]: コスト
+              - generic [ref=f5e98]:
+                - paragraph [ref=f5e99]: $0.0000
+                - paragraph [ref=f5e100]: AI API 推定利用額
+            - generic [ref=f5e101]:
+              - generic [ref=f5e102]: 総トークン
+              - generic [ref=f5e109]:
+                - paragraph [ref=f5e110]: "0"
+                - paragraph [ref=f5e111]: 入力 0 / 出力 0
+            - generic [ref=f5e112]:
+              - generic [ref=f5e113]: 画像付き質問
+              - generic [ref=f5e119]:
+                - paragraph [ref=f5e120]: "0"
+                - paragraph [ref=f5e121]: 全体の 0%
+          - generic [ref=f5e122]:
+            - generic [ref=f5e123]:
+              - generic [ref=f5e124]:
+                - generic [ref=f5e125]:
+                  - generic [ref=f5e126]:
+                    - generic [ref=f5e127]: 日別 質問数
+                    - group "日別 質問数の表示切替" [ref=f5e131]:
+                      - button "グラフ" [pressed] [ref=f5e132]
+                      - button "表" [ref=f5e133]
+                  - paragraph [ref=f5e134]: 生徒からの質問件数の推移
+                - application [ref=f5e138]:
+                  - generic [ref=f5e142]:
+                    - generic [ref=f5e143]:
+                      - generic [ref=f5e144]: 7/30
+                      - generic [ref=f5e146]: 8/3
+                      - generic [ref=f5e148]: 8/7
+                      - generic [ref=f5e150]: 8/11
+                      - generic [ref=f5e152]: 8/15
+                      - generic [ref=f5e154]: 8/19
+                      - generic [ref=f5e156]: 8/23
+                      - generic [ref=f5e158]: 8/28
+                    - generic [ref=f5e160]:
+                      - generic [ref=f5e161]: "0"
+                      - generic [ref=f5e163]: "1"
+                      - generic [ref=f5e165]: "2"
+                      - generic [ref=f5e167]: "3"
+                      - generic [ref=f5e169]: "4"
+              - generic [ref=f5e171]:
+                - generic [ref=f5e172]:
+                  - generic [ref=f5e173]:
+                    - generic [ref=f5e174]: 日別 コスト
+                    - group "日別 コストの表示切替" [ref=f5e178]:
+                      - button "グラフ" [pressed] [ref=f5e179]
+                      - button "表" [ref=f5e180]
+                  - paragraph [ref=f5e181]: AI API の推定利用額（USD）
+                - application [ref=f5e185]:
+                  - generic [ref=f5e189]:
+                    - generic [ref=f5e190]:
+                      - generic [ref=f5e191]: 8/1
+                      - generic [ref=f5e193]: 8/5
+                      - generic [ref=f5e195]: 8/9
+                      - generic [ref=f5e197]: 8/13
+                      - generic [ref=f5e199]: 8/18
+                      - generic [ref=f5e201]: 8/23
+                      - generic [ref=f5e203]: 8/28
+                    - generic [ref=f5e205]:
+                      - generic [ref=f5e206]: $0.0000
+                      - generic [ref=f5e208]: $1.00
+                      - generic [ref=f5e210]: $2.00
+                      - generic [ref=f5e212]: $3.00
+                      - generic [ref=f5e214]: $4.00
+            - generic [ref=f5e216]:
+              - generic [ref=f5e217]:
+                - generic [ref=f5e219]:
+                  - generic [ref=f5e220]: モデル別 利用回数
+                  - group "モデル別 利用回数の表示切替" [ref=f5e223]:
+                    - button "グラフ" [pressed] [ref=f5e224]
+                    - button "表" [ref=f5e225]
+                - generic [ref=f5e226]: この期間の利用はありません
+              - generic [ref=f5e228]:
+                - generic [ref=f5e230]:
+                  - generic [ref=f5e231]: 生徒別 質問数（上位10）
+                  - group "生徒別 質問数（上位10）の表示切替" [ref=f5e237]:
+                    - button "グラフ" [pressed] [ref=f5e238]
+                    - button "表" [ref=f5e239]
+                - generic [ref=f5e240]: この期間の利用はありません
+            - generic [ref=f5e242]:
+              - generic [ref=f5e243]:
+                - generic [ref=f5e244]:
+                  - generic [ref=f5e245]: エラーコード別 発生数
+                  - group "エラーコード別 発生数の表示切替" [ref=f5e248]:
+                    - button "グラフ" [pressed] [ref=f5e249]
+                    - button "表" [ref=f5e250]
+                - paragraph [ref=f5e251]: この期間に記録されたエラーの内訳
+              - application [ref=f5e255]:
+                - generic [ref=f5e259]:
+                  - generic [ref=f5e260]:
+                    - generic [ref=f5e261]: "0"
+                    - generic [ref=f5e263]: "1"
+                    - generic [ref=f5e265]: "2"
+                    - generic [ref=f5e267]: "3"
+                    - generic [ref=f5e269]: "4"
+                  - generic [ref=f5e271]: SLACK_SIGNATURE_INVALID
+    - region "Notifications (F8)":
+      - list
+  - alert [ref=f5e274]
+  - generic [ref=f5e275]: SLACK_SIGNATURE_INVALID

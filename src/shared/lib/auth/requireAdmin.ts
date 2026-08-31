@@ -26,5 +26,5 @@ export async function requireAdmin(): Promise<StaffContext> {
   if (user.app_metadata?.role !== 'admin') {
     throw new Error('forbidden')
   }
-  return { userId: user.id, email: user.email ?? '' }
+  return { userId: user.id, email: user.email ?? '', role: 'admin' }
 }

@@ -32,8 +32,14 @@ const STATUS_LABELS: Record<string, string> = {
   ai_draft: 'AI下書き',
   draft: '下書き',
   approved: '承認済み',
-  sent: '送信済み',
 }
+
+/**
+ * フィルタに出す状態。'sent'（送信済み）は除く。この状態を書き込むのは生徒チャンネルへの
+ * Slack 送信（FR-08 / AC-08-02）だけで、その処理が未実装のため該当レポートが存在せず、
+ * 選ぶと常に 0 件になる。FR-08 実装時に REPORT_STATUSES へ戻す
+ */
+const FILTER_STATUSES = REPORT_STATUSES.filter((s) => s !== 'sent')
 
 /** 月入力の URL 同期を遅らせる時間（ms）。打鍵ごとにサーバー往復させない */
 const MONTH_DEBOUNCE_MS = 300
@@ -131,7 +137,7 @@ export function ReportsFilter({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">すべての状態</SelectItem>
-            {REPORT_STATUSES.map((s) => (
+            {FILTER_STATUSES.map((s) => (
               <SelectItem key={s} value={s}>
                 {STATUS_LABELS[s] ?? s}
               </SelectItem>

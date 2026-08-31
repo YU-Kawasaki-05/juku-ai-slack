@@ -1,0 +1,62 @@
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e2]:
+    - link "メインコンテンツへスキップ" [ref=f1e3] [cursor=pointer]:
+      - /url: "#admin-main"
+    - complementary [ref=f1e4]:
+      - generic [ref=f1e5]: じゅくAI
+      - navigation "メインナビゲーション" [ref=f1e10]:
+        - link "ダッシュボード" [ref=f1e11] [cursor=pointer]:
+          - /url: /admin
+        - link "生徒管理" [ref=f1e17] [cursor=pointer]:
+          - /url: /admin/persons
+        - link "チャンネル設定" [ref=f1e23] [cursor=pointer]:
+          - /url: /admin/channels
+        - link "レポート" [ref=f1e27] [cursor=pointer]:
+          - /url: /admin/reports
+        - link "会話ログ" [ref=f1e31] [cursor=pointer]:
+          - /url: /admin/conversations
+        - link "エラーログ" [ref=f1e35] [cursor=pointer]:
+          - /url: /admin/errors
+        - link "ジョブ" [ref=f1e38] [cursor=pointer]:
+          - /url: /admin/jobs
+        - link "利用状況" [ref=f1e42] [cursor=pointer]:
+          - /url: /admin/usage
+    - generic [ref=f1e45]:
+      - banner [ref=f1e46]:
+        - navigation "パンくずリスト" [ref=f1e47]:
+          - list [ref=f1e48]:
+            - listitem [ref=f1e49]:
+              - link "ダッシュボード" [ref=f1e50] [cursor=pointer]:
+                - /url: /admin
+            - listitem [ref=f1e51]:
+              - generic [ref=f1e54]: 生徒管理
+        - generic [ref=f1e55]:
+          - button "テーマを切り替える" [ref=f1e56]
+          - button "e2e-admin@example.test" [ref=f1e63]
+      - main [ref=f1e71]:
+        - generic [ref=f1e73]:
+          - generic [ref=f1e74]:
+            - generic [ref=f1e75]:
+              - heading "生徒管理" [level=1] [ref=f1e76]
+              - paragraph [ref=f1e77]: Bot を利用する生徒の登録と管理（全 1 名）
+            - link "新規生徒" [ref=f1e78] [cursor=pointer]:
+              - /url: /admin/persons/new
+          - table [ref=f1e82]:
+            - rowgroup [ref=f1e83]:
+              - row [ref=f1e84]:
+                - columnheader "名前" [ref=f1e85]
+                - columnheader "学年" [ref=f1e86]
+                - columnheader "ステータス" [ref=f1e87]
+                - columnheader "登録日" [ref=f1e88]
+            - rowgroup [ref=f1e89]:
+              - row [ref=f1e90]:
+                - cell "テスト太郎（たろう）" [ref=f1e91]:
+                  - link "テスト太郎" [ref=f1e92] [cursor=pointer]:
+                    - /url: /admin/persons/00000000-0000-0000-0000-000000000001
+                  - generic [ref=f1e93]: （たろう）
+                - cell "中2" [ref=f1e94]
+                - cell "有効" [ref=f1e95]
+                - cell "2026/08/27" [ref=f1e99]
+    - region "Notifications (F8)":
+      - list
+  - alert [ref=f1e100]

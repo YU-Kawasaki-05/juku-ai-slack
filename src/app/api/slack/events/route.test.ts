@@ -1,6 +1,6 @@
 /** @file
  * 検証: Slack Webhook ルートのオーケストレーション（署名→検証→重複→反応制御→ジョブ登録）
- * @verifies AC-01-01, AC-01-02, AC-01-03, AC-01-04, AC-02-01, AC-02-02, AC-02-06, A-1, A-2, A-5, A-7
+ * @verifies AC-01-01, AC-01-02, AC-01-03, AC-01-04, AC-01-05, AC-02-01, AC-02-02, AC-02-03, AC-02-04, AC-02-06, BR-02-02, BR-11-02, A-1, A-2, A-5, A-7
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createHmac } from 'node:crypto'
@@ -99,20 +99,57 @@ describe('POST /api/slack/events', () => {
     expect(mocks.enqueueJob).not.toHaveBeenCalled()
   })
 
-  it('署名不正は 401、ジョブ登録なし、DB 書き込みもしない（AC-01-03）', async () => {
+  it('署名不正は 401、ジョブ登録なし、イベント本文由来の DB 書き込みもしない（AC-01-03）', async () => {
     const res = await POST(signedRequest(messageEvent(), { badSig: true }))
     expect(res.status).toBe(401)
     expect(mocks.enqueueJob).not.toHaveBeenCalled()
-    // 未認証リクエストで DB 書き込みを誘発しない（セキュリティ: 増幅防止）
+    // 未認証リクエストの本文で receipt を作らない（セキュリティ: 増幅防止）
     expect(mocks.recordEventReceipt).not.toHaveBeenCalled()
+    // 記録は ACK 後（after）に回すので、応答までに DB を待たない
     expect(mocks.logError).not.toHaveBeenCalled()
   })
 
-  it('タイムスタンプ超過は 401（AC-01-05）', async () => {
+  it('署名不正を SLACK_SIGNATURE_INVALID(error) で記録し、未解決1行に抑える（BR-11-02）', async () => {
+    await POST(signedRequest(messageEvent(), { badSig: true }))
+    await flushAfter()
+    expect(mocks.logError).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        code: 'SLACK_SIGNATURE_INVALID',
+        severity: 'error',
+        // 総当たりで ai_error_logs が埋まらないこと（DB 増幅防止）
+        dedupeWhileUnresolved: true,
+      }),
+    )
+    const params = mocks.logError.mock.calls[0][1]
+    expect(params.internalMessage).toContain('signature_mismatch')
+    // 署名検証前の body は信用できないため、本文・チャンネルは残さない
+    expect(params.internalMessage).not.toContain('質問')
+    expect(params.channelId).toBeUndefined()
+  })
+
+  it('署名ヘッダ欠落も 401 + missing_headers で記録（BR-11-02）', async () => {
+    const res = await POST(
+      new Request('http://localhost/api/slack/events', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(messageEvent()),
+      }),
+    )
+    expect(res.status).toBe(401)
+    await flushAfter()
+    expect(mocks.logError.mock.calls[0][1].internalMessage).toContain('missing_headers')
+  })
+
+  it('タイムスタンプ超過は 401、ログには時計ずれを残す（AC-01-05）', async () => {
     const old = Math.floor(Date.now() / 1000) - 400
     const res = await POST(signedRequest(messageEvent(), { ts: old }))
     expect(res.status).toBe(401)
     expect(mocks.enqueueJob).not.toHaveBeenCalled()
+    await flushAfter()
+    expect(mocks.logError.mock.calls[0][1].internalMessage).toMatch(
+      /timestamp_expired \(skew=\d+s\)/,
+    )
   })
 
   it('メンションあり + active 紐付け → ジョブ登録して 200（AC-01-02, AC-02-01）', async () => {
@@ -288,6 +325,79 @@ describe('POST /api/slack/events', () => {
     const payload = mocks.enqueueJob.mock.calls[0][1]
     expect(payload.files).toHaveLength(3)
     expect(payload.droppedImageCount).toBe(2)
+  })
+
+  // --- 1-7: subtype=thread_broadcast（スレッド返信の「チャンネルにも送信」）---
+  it('登録済みスレッドの thread_broadcast はメンションなしでもジョブ登録する（AC-02-03）', async () => {
+    mocks.findSession.mockResolvedValue({ id: 's1' })
+    const res = await POST(
+      signedRequest(
+        messageEvent({
+          subtype: 'thread_broadcast',
+          ts: '200.2',
+          thread_ts: '100.1',
+          text: 'ここまでありがとう。もう1問いい？',
+          root: { type: 'message', ts: '100.1', user: 'U1', text: '<@U_BOT> 最初の質問' },
+        }),
+      ),
+    )
+    expect(res.status).toBe(200)
+    expect(mocks.enqueueJob).toHaveBeenCalledOnce()
+    const payload = mocks.enqueueJob.mock.calls[0][1]
+    expect(payload.threadTs).toBe('100.1')
+    expect(payload.messageTs).toBe('200.2')
+  })
+
+  it('thread_broadcast の root が Bot でも本文は生徒のものとして処理する', async () => {
+    mocks.findSession.mockResolvedValue({ id: 's1' })
+    const res = await POST(
+      signedRequest(
+        messageEvent({
+          subtype: 'thread_broadcast',
+          ts: '200.2',
+          thread_ts: '100.1',
+          text: 'もう1問いい？',
+          root: { type: 'message', ts: '100.1', bot_id: 'B1', text: '前回の回答' },
+        }),
+      ),
+    )
+    expect(res.status).toBe(200)
+    expect(mocks.enqueueJob).toHaveBeenCalledOnce()
+  })
+
+  it('画像付き thread_broadcast も payload.files に積む（FR-06）', async () => {
+    mocks.findSession.mockResolvedValue({ id: 's1' })
+    await POST(
+      signedRequest(
+        messageEvent({
+          subtype: 'thread_broadcast',
+          ts: '200.2',
+          thread_ts: '100.1',
+          text: 'これも見て',
+          files: [{ id: 'F1', mimetype: 'image/png', url_private: 'https://slack/F1', name: 'q.png' }],
+        }),
+      ),
+    )
+    const payload = mocks.enqueueJob.mock.calls[0][1]
+    expect(payload.files).toHaveLength(1)
+  })
+
+  it('未登録スレッドの thread_broadcast はメンションがなければ無視（AC-02-04）', async () => {
+    mocks.findSession.mockResolvedValue(null)
+    const res = await POST(
+      signedRequest(
+        messageEvent({ subtype: 'thread_broadcast', ts: '200.2', thread_ts: '100.1', text: '雑談' }),
+      ),
+    )
+    expect(res.status).toBe(200)
+    expect(mocks.enqueueJob).not.toHaveBeenCalled()
+  })
+
+  it('処理対象外 subtype（message_changed）は DB も引かずに無視（BR-02-02）', async () => {
+    const res = await POST(signedRequest(messageEvent({ subtype: 'message_changed' })))
+    expect(res.status).toBe(200)
+    expect(mocks.lookupBinding).not.toHaveBeenCalled()
+    expect(mocks.enqueueJob).not.toHaveBeenCalled()
   })
 
   // --- A-1 ---

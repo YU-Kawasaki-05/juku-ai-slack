@@ -211,8 +211,12 @@ export async function executeProcessSlackMessage(
   // 画像がある質問は Vision 対応モデルを使う（BR-05-15）。未設定ならデフォルトにフォールバック
   const visionModelMissing = imageDataUrls.length > 0 && !env.LLM_MODEL_COMPLEX
   const useModel = imageDataUrls.length > 0 ? (env.LLM_MODEL_COMPLEX ?? model) : model
+  // #1: Vision 未設定のときは画像を LLM に渡さない。多くのプロバイダは非 Vision モデルへの
+  // image_url 付きリクエストを 400 で拒否するため、そのまま送ると画像付き質問の回答自体が
+  // 全滅する（設定不備なのでリトライでも直らない）。テキストだけで回答し、案内を末尾に添える
+  const promptImageDataUrls = visionModelMissing ? [] : imageDataUrls
   if (visionModelMissing) {
-    // この状態では画像が事実上無視される。console.warn だけだと運用者に届かず
+    // 画像を渡せない状態。console.warn だけだと運用者に届かず
     // 「画像を送っても読んでくれない」の原因に到達できないので DB にも痕跡を残す。
     // ただし設定を直すまで画像付き質問のたびに起きるため、未解決の同一ログがある間は積まない
     // （B-8 と同じログ洪水対策。解決済みにしても直っていなければ次の発生で再び1行積まれる）
@@ -225,11 +229,23 @@ export async function executeProcessSlackMessage(
       messageTs: payload.messageTs,
       internalMessage:
         `LLM_MODEL_COMPLEX が未設定のため、画像付きの質問を ${model}（LLM_MODEL_DEFAULT）で処理しました。` +
-        'Vision 非対応モデルでは画像が無視され、生徒には「画像を読み取れない」旨を添えて回答しています。' +
+        '非 Vision モデルは image_url 付きリクエストを 400 で拒否しうるため、画像は LLM に渡していません。' +
+        '文章がある質問はテキストのみで回答し「画像を読み取れない」旨を添え、画像だけの質問は文章で送り直すよう案内しています。' +
         '対処: 環境変数 LLM_MODEL_COMPLEX に Vision 対応モデルを設定して再デプロイしてください。' +
         'このログは未解決の同一ログがある間は再記録しません（解決済みにすると再発時に再び記録されます）。',
       dedupeWhileUnresolved: true,
     })
+
+    // 画像だけの質問は、画像を落とすと LLM に渡す材料が何も残らない（空の user メッセージになる）。
+    // 意味のある回答は返らないので課金せず、文章で送り直してもらうよう案内して終了する
+    if (!question) {
+      await postMessage({
+        channel: payload.channelId,
+        text: getUserFacingMessage('IMAGE_MODEL_NOT_CONFIGURED'),
+        threadTs: payload.threadTs,
+      })
+      return
+    }
   }
 
   // FR-20: 要約カバレッジの利用。person 不一致（チャンネル再割当て）時は別生徒の要約を使わない（BR-05-11）
@@ -300,7 +316,7 @@ export async function executeProcessSlackMessage(
     history,
     ragChunks,
     knowledgeSummary,
-    imageDataUrls,
+    imageDataUrls: promptImageDataUrls,
     threadSummary,
     model: useModel,
   })

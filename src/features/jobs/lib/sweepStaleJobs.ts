@@ -3,10 +3,10 @@
  * 入力: Supabase クライアント（Service Role）, 基準時刻
  * 出力: 回収件数 / 削除件数
  * 例外: DB エラーは上位に伝播（呼び出し側でベストエフォート化する）
- * 依存: jobs, slack_event_receipts, ai_error_logs（logError）
- * 副作用: jobs の failed 化 + JOB_TIMEOUT のエラーログ記録、期限切れ行の DELETE
+ * 依存: jobs, slack_event_receipts, ai_error_logs（logError）, Slack reactions.remove
+ * 副作用: jobs の failed 化 + JOB_TIMEOUT のエラーログ記録、🤔 リアクションの除去、期限切れ行の DELETE
  * セキュリティ: Service Role 前提のサーバー専用処理。payload は Zod 検証してからログに載せる
- * @implements FR-04（AC-04-03 の後始末）, A-1, A-14
+ * @implements FR-04（AC-04-03 の後始末）, A-1, A-14, AC-01-06
  *
  * 実行タイミング: DEC-13 により Vercel Cron / pg_cron は使わない。
  *   管理画面 /admin/jobs の表示時にベストエフォートで自動実行し、加えて手動実行ボタンを置く。
@@ -17,11 +17,13 @@
 import type { ServerDb } from '@shared/types/db'
 import { queryError } from '@shared/lib/supabase/queryError'
 import { logError } from '@features/error-logs'
+import { removeReaction } from '@shared/lib/slack/client'
 import {
   JOB_PENDING_TIMEOUT_MIN,
   JOB_PROCESSING_TIMEOUT_MIN,
   JOB_RETENTION_DAYS,
   RECEIPT_RETENTION_DAYS,
+  THINKING_REACTION,
 } from '@shared/lib/constants'
 import { processSlackMessagePayloadSchema } from '../types'
 
@@ -63,13 +65,15 @@ interface StaleJobRow {
   attempt_count: number
 }
 
-/** payload から通知先の手がかりを取り出す（不正 payload でも回収自体は止めない） */
-function jobTarget(payload: unknown): {
+interface JobTarget {
   personId: string | null
   channelId: string | null
   threadTs: string | null
   messageTs: string | null
-} {
+}
+
+/** payload から通知先の手がかりを取り出す（不正 payload でも回収自体は止めない） */
+function jobTarget(payload: unknown): JobTarget {
   const parsed = processSlackMessagePayloadSchema.safeParse(payload)
   if (!parsed.success) return { personId: null, channelId: null, threadTs: null, messageTs: null }
   return {
@@ -77,6 +81,24 @@ function jobTarget(payload: unknown): {
     channelId: parsed.data.channelId,
     threadTs: parsed.data.threadTs,
     messageTs: parsed.data.messageTs,
+  }
+}
+
+/**
+ * 🤔 を外す（AC-01-06）。processJob の finally は after() が実行時間上限で kill されると走らないため、
+ * 回収時にここで落とさないとリアクションが永久に残り、生徒には「まだ考え中」に見え続ける。
+ * Slack 障害やトークン未設定でスイープ全体を止めないよう、失敗はサイレントに握る（BR-01-06）。
+ */
+async function clearThinkingReaction(target: JobTarget): Promise<void> {
+  if (!target.channelId || !target.messageTs) return
+  try {
+    await removeReaction({
+      channel: target.channelId,
+      timestamp: target.messageTs,
+      name: THINKING_REACTION,
+    })
+  } catch {
+    // 回収自体は成立させる（🤔 が残っても jobs は failed として可視化される）
   }
 }
 
@@ -104,6 +126,8 @@ async function failStaleJob(
   const limitMin =
     fromStatus === 'processing' ? JOB_PROCESSING_TIMEOUT_MIN : JOB_PENDING_TIMEOUT_MIN
 
+  const target = jobTarget(row.payload)
+
   await logError(db, {
     code: 'JOB_TIMEOUT',
     severity: 'error',
@@ -113,8 +137,11 @@ async function failStaleJob(
     // 生徒への再通知はスイーパからは行わない。kill される直前に投稿済みの可能性があり、
     // ここで詫び文言を送ると二重返信になるため、再実行は管理画面（配信済み判定つき）に委ねる
     retryable: true,
-    ...jobTarget(row.payload),
+    ...target,
   })
+
+  // pending 側は claim 前＝🤔 を付ける前に止まっているので除去対象は processing だけ
+  if (fromStatus === 'processing') await clearThinkingReaction(target)
   return true
 }
 

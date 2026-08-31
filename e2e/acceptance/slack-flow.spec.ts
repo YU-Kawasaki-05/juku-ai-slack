@@ -105,6 +105,11 @@ test('AT-30 メンション質問がジョブ経由で LLM に渡り、生成回
   const llm = await waitForMockCalls(request, { kind: 'llm', contains: marker })
   expect(llm).toHaveLength(1)
 
+  // PII 最小化: 学年（persons.grade）はプロンプトに載せるが、氏名と生徒 ID は載せない
+  expect(llm[0].raw).toContain('学年: 中2')
+  expect(llm[0].raw).not.toContain(person.name)
+  expect(llm[0].raw).not.toContain(person.id)
+
   // 生成回答が Slack に投稿される（= 全経路の到達点）
   const posts = await waitForMockCalls(request, { kind: 'slack', method: 'chat.postMessage', channel: channelId })
   expect(postedTexts(posts)[0]).toContain('モックLLMの回答です')

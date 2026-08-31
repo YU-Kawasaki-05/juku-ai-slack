@@ -225,7 +225,7 @@ Environment は最低限 <b>Production</b> にチェック。Preview デプロ�
 <td><code>LLM_MODEL_COMPLEX</code></td>
 <td>STEP 1-1</td>
 <td><code>gpt-4o</code></td>
-<td><span class="req r">画像対応するなら必須</span> 画像付き質問だけこちらを使う。未設定だと <code>LLM_MODEL_DEFAULT</code> にフォールバックし、Vision 非対応なら画像が黙って無視される</td>
+<td><span class="req r">画像対応するなら必須</span> 画像付き質問だけこちらを使う。未設定だと画像は LLM に送らずテキストのみで回答し、生徒に「画像は読み取れなかった」旨を添える（運用者向けには <code>IMAGE_MODEL_NOT_CONFIGURED</code> をエラーログに残す）</td>
 </tr>
 </tbody>
 </table>

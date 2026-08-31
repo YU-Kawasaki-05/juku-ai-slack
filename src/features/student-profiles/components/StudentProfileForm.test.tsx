@@ -83,6 +83,12 @@ describe('StudentProfileForm（初期値）', () => {
     expect(screen.getByLabelText(/最終日/)).toBeEnabled()
   })
 
+  it('入力内容が AI に送られること・氏名を書かないことを明示する', () => {
+    setup()
+    expect(screen.getByText(/そのまま AI に送信されます/)).toBeInTheDocument()
+    expect(screen.getByText(/生徒の氏名は書かないでください/)).toBeInTheDocument()
+  })
+
   it('確認質問なしの direct 応答に変わることを説明する（BR-05-08 の平易な説明）', () => {
     setup()
     expect(screen.getByText(/確認の質問をはさまず/)).toBeInTheDocument()

@@ -9,6 +9,9 @@ export const USER_FACING_MESSAGES: Record<string, string> = {
   IMAGE_TOO_LARGE: '画像が少し大きすぎたみたい。圧縮してもう一度送ってみてね！',
   IMAGE_PROCESSING_FAILED:
     '画像の処理がうまくいかなかったけど、テキストの内容で回答するね。',
+  // #1: Vision 対応モデル未設定 + 画像だけの質問（文章が無いと回答の材料が残らない）
+  IMAGE_MODEL_NOT_CONFIGURED:
+    'ごめん、いまは画像を読み取れないんだ :bow: 聞きたいことを文章でも送ってくれたら答えるよ！',
   AI_RATE_LIMITED:
     'いま少し混み合ってるみたいで、すぐ答えられないや :sweat: 1〜2分後にもう一度送ってみてね！',
   AI_TIMEOUT:
@@ -44,6 +47,7 @@ export const SILENT_ERROR_CODES = new Set([
  * 回答自体は必ず返すので「止める」文言にはしない。別メッセージにせず本文に足すのは、
  * 1ジョブ1配信（A-3）を崩さず、会話ログにも「画像を読めなかった」証跡が残るため。
  * 添えるのは常に1行だけ: Vision 未設定なら個別の失敗理由を並べても生徒が取れる行動は変わらない。
+ * visionModelMissing のとき呼び出し側は画像を LLM に渡さないので、「文章の内容から答えた」は実態どおり。
  */
 export function buildImageNotice(params: {
   /** 読み込めなかった枚数（DL/形式/サイズ失敗 + 枚数上限で捨てた分） */
