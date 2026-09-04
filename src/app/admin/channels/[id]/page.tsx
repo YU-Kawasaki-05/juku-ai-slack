@@ -8,7 +8,6 @@ import { createServerClient } from '@shared/lib/supabase/serverClient'
 import { getBinding } from '@features/channel-bindings'
 import { BindingEditForm } from '@features/channel-bindings/components/BindingEditForm'
 import { isUuid } from '../../searchParams'
-import { ChannelAdminOnlyNotice, hasChannelAdminAccess } from '../adminOnly'
 
 export const metadata: Metadata = { title: 'チャンネル紐付けの編集' }
 
@@ -18,8 +17,6 @@ export default async function BindingDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  // EP-07: admin 限定。存在判定より先に弾く（404 かどうかも権限が無い相手には返さない）
-  if (!(await hasChannelAdminAccess())) return <ChannelAdminOnlyNotice />
   // UUID でない ID をそのままクエリすると Postgres 22P02 で 500 になるため事前に 404 に倒す（H-5）
   if (!isUuid(id)) notFound()
   const binding = await getBinding(createServerClient(), id)
