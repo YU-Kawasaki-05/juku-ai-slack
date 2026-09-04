@@ -1,7 +1,8 @@
 /** @file
  * 検証: レポートフォームの暗黙 submit が「承認して保存」にならないこと（H-2）、二重送信防止（H-9）、
- *   Slack 送信（AC-08-02）が未実装であることを踏まえた文言・表示
- * @verifies FR-16, H-2, H-9, AC-08-02
+ *   Slack 送信（AC-08-02）が未実装であることを踏まえた文言・表示、
+ *   本文が RAG 経由で AI に渡ることの注意書き（FR-10）
+ * @verifies FR-16, FR-10, H-2, H-9, AC-08-02
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
@@ -138,5 +139,23 @@ describe('ReportForm（AC-08-02 未実装: Slack 送信と誤認させない）'
     render(<ReportForm action={vi.fn()} report={{ ...report, status: 'sent' }} />)
 
     expect(screen.queryByText(/Slack 送信済み/)).not.toBeInTheDocument()
+  })
+})
+
+// 承認済み本文は chunkReport → match_report_chunks → buildPrompt の抜粋として外部 LLM に渡る。
+// プロフィール欄と同じ注意書きが無いと、氏名の抜け穴になる
+describe('ReportForm（本文が AI に渡ることの注意書き）', () => {
+  it('編集時に本文が AI の回答に使われることと氏名を書かない注意を出す', () => {
+    render(<ReportForm action={vi.fn()} report={report} />)
+
+    const notice = screen.getByText(/本文は AI の回答に使われます/)
+    expect(notice).toBeInTheDocument()
+    expect(notice).toHaveTextContent(/生徒や講師の氏名は書かないでください/)
+  })
+
+  it('新規作成時にも同じ注意書きを出す', () => {
+    render(<ReportForm action={vi.fn()} persons={[{ id: 'p1', name: '山田太郎' }]} />)
+
+    expect(screen.getByText(/本文は AI の回答に使われます/)).toBeInTheDocument()
   })
 })

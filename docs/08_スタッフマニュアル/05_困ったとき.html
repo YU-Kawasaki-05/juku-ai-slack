@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第5章 困ったとき</title>
+<style>
+:root{--fg:#191c21;--muted:#5c6470;--line:#d9dee6;--bg:#fff;--soft:#f6f8fa;--soft2:#eef2f7;--accent:#1f5fa9;--code:#0f2b46;
+--warn:#7a4d00;--warnbg:#fff8e8;--warnline:#e6c579;--danger:#96262c;--dangerbg:#fdf1f2;--dangerline:#e3adb1;
+--ok:#1a6444;--okbg:#f0f8f4;--okline:#a5d5bd;--info:#144a73;--infobg:#eef6fc;--infoline:#9dc6e4;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);line-height:1.85;font-size:16px;
+font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,-apple-system,"Segoe UI",sans-serif;}
+.wrap{max-width:940px;margin:0 auto;padding:28px 20px 90px}
+.topbar{border-bottom:1px solid var(--line);background:var(--soft);}
+.topbar .inner{max-width:940px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
+.topbar a{color:var(--accent);text-decoration:none}
+.topbar a:hover{text-decoration:underline}
+.crumb{font-size:13px;color:var(--muted)}
+h1{font-size:27px;line-height:1.45;margin:26px 0 8px;letter-spacing:.01em}
+h2{font-size:21px;margin:44px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--line)}
+h3{font-size:17px;margin:30px 0 8px}
+h4{font-size:15px;margin:22px 0 6px;color:var(--muted)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:1.6em}
+li{margin:5px 0}
+code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13.5px;
+background:var(--soft2);padding:1px 5px;border-radius:3px;word-break:break-all}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:14px 14px;overflow-x:auto;
+font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13px;line-height:1.7;color:var(--code);margin:12px 0}
+pre code{background:none;padding:0;font-size:13px;word-break:normal}
+.codewrap{position:relative}
+.codewrap>pre{padding-right:82px}
+.copy{position:absolute;top:8px;right:8px;font:inherit;font-size:12px;padding:3px 10px;border:1px solid var(--line);
+background:#fff;color:var(--muted);border-radius:4px;cursor:pointer}
+.copy:hover{color:var(--fg);border-color:var(--muted)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--soft2);font-weight:600;white-space:nowrap}
+td code{font-size:12.8px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scroll table{min-width:640px}
+.scroll.wide table{min-width:880px}
+.note,.warnbox,.dangerbox,.okbox{border:1px solid;border-radius:6px;padding:12px 14px;margin:16px 0;font-size:15px}
+.note{border-color:var(--infoline);background:var(--infobg);color:var(--info)}
+.warnbox{border-color:var(--warnline);background:var(--warnbg);color:var(--warn)}
+.dangerbox{border-color:var(--dangerline);background:var(--dangerbg);color:var(--danger)}
+.okbox{border-color:var(--okline);background:var(--okbg);color:var(--ok)}
+.note b,.warnbox b,.dangerbox b,.okbox b{font-weight:700}
+.note p:first-child,.warnbox p:first-child,.dangerbox p:first-child,.okbox p:first-child{margin-top:0}
+.note p:last-child,.warnbox p:last-child,.dangerbox p:last-child,.okbox p:last-child{margin-bottom:0}
+.note code,.warnbox code,.dangerbox code,.okbox code{background:rgba(255,255,255,.7)}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 6px}
+.meta div{flex:1 1 240px;border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--soft)}
+.meta .k{font-size:12px;color:var(--muted);display:block;margin-bottom:2px}
+.meta .v{font-size:15px;font-weight:600;line-height:1.6}
+.meta .v ul{margin:2px 0 0;padding-left:1.3em;font-weight:400;font-size:14px}
+ul.check{list-style:none;padding-left:0}
+ul.check li{margin:6px 0;display:flex;gap:9px;align-items:flex-start}
+ul.check input{margin-top:7px;flex:0 0 auto;width:15px;height:15px}
+ul.check label{cursor:pointer}
+.steps{list-style:none;padding-left:0;margin:20px 0}
+.steps li{border:1px solid var(--line);border-radius:7px;margin:10px 0;padding:0}
+.steps a{display:block;padding:13px 16px;text-decoration:none;color:inherit}
+.steps a:hover{background:var(--soft)}
+.steps .n{display:inline-block;min-width:74px;font-size:12px;color:#fff;background:var(--accent);border-radius:11px;
+padding:1px 9px;text-align:center;margin-right:10px;vertical-align:2px}
+.steps .n.alt{background:#6b7280}
+.steps .t{font-weight:600;font-size:16.5px}
+.steps .d{display:block;color:var(--muted);font-size:14px;margin-top:3px;padding-left:0}
+.steps .tm{float:right;color:var(--muted);font-size:13px;font-weight:400}
+.nav{display:flex;justify-content:space-between;gap:14px;margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:15px}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+.nav span{color:#b6bcc6}
+.ph{background:#fff5d6;border-bottom:1px dotted #b08a19;padding:0 2px;font-weight:600}
+.diagram{font-size:12.5px;line-height:1.55;background:#fff;border:1px solid var(--line)}
+.small{font-size:13.5px;color:var(--muted)}
+.req{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap}
+.req.y{background:#fde8e8;color:#96262c;border:1px solid #e3adb1}
+.req.n{background:#eef2f7;color:#5c6470;border:1px solid #d9dee6}
+.req.r{background:#fff3d9;color:#7a4d00;border:1px solid #e6c579}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+a{color:var(--accent)}
+@media print{
+ .topbar,.nav,.copy{display:none}
+ body{font-size:11.5pt}
+ a{color:#000;text-decoration:none}
+ pre,table,.note,.warnbox,.dangerbox,.okbox{page-break-inside:avoid}
+ h2{page-break-after:avoid}
+}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="inner">
+<span class="crumb"><a href="index.html">目次</a> ／ 第 5 章 / 7 — 困ったとき</span>
+<span class="crumb"><a href="06_このアプリでできること.html">次へ →</a></span>
+</div></div>
+
+<div class="wrap">
+
+<h1>第 5 章 — 困ったとき</h1>
+
+<div class="note">
+<p><b>この章で分かること</b></p>
+<ul>
+<li>生徒に返った文面から原因を当てる方法</li>
+<li>症状別の対処表</li>
+<li><b>開発者に連絡すべきかどうかの判断基準</b></li>
+<li>連絡するときに伝えること（そのまま使える型）</li>
+</ul>
+</div>
+
+<h2 id="firstaid">5-1. まず、生徒に返った文面を見る</h2>
+
+<p>原因を当てるいちばんの近道は、<b>生徒の画面に何が表示されたかを見ること</b>です。
+生徒に「どんな返事が返ってきた？」と聞くか、<a href="02_毎日の確認.html#conv">会話ログ</a>でそのやり取りを開いてください。</p>
+
+<p>文面ごとの原因と対処は <a href="02_毎日の確認.html#noresponse">第 2 章 2-4</a> の表にまとめてあります。
+そこで解決しないものが、この章の対象です。</p>
+
+<h2 id="symptoms">5-2. 症状別の対処表</h2>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>症状</th><th>考えられること</th><th>自分でできる対処</th><th>開発者に連絡</th></tr></thead>
+<tbody>
+
+<tr>
+<td><b>まったく反応しない</b><br>（🤔 も付かない）</td>
+<td>Bot の招待漏れ ／ メンションなし ／ 生徒が「無効」</td>
+<td><a href="02_毎日の確認.html#noresponse">2-4 の A の表</a>を上から確認する</td>
+<td>1〜4 をすべて確認しても直らないとき</td>
+</tr>
+
+<tr>
+<td><b>案内文だけが返る</b><br>「まだBotの設定が完了していないみたい」</td>
+<td>紐付けが無い、または紐付けのステータスが「無効」</td>
+<td>チャンネル設定で紐付けを登録する／ステータスを <b>有効</b> にする（<a href="03_生徒の登録と管理.html#binding">3-7</a>）</td>
+<td>紐付けが正しくあるのに出続けるとき</td>
+</tr>
+
+<tr>
+<td><b>回答が遅い</b>（1 分以上）</td>
+<td>処理が詰まっている ／ 質問が重い</td>
+<td><b>ジョブ</b> を開いて「失敗」があれば <b>再実行</b>（<a href="02_毎日の確認.html#jobs">2-5</a>）</td>
+<td>「処理中」が 10 分以上、または「待機中」が 15 分以上残っているとき</td>
+</tr>
+
+<tr>
+<td><b>🤔 が付いたまま残っている</b></td>
+<td>処理が途中で止まった</td>
+<td>ジョブから <b>再実行</b>。回答が届けば 🤔 も外れます</td>
+<td>再実行しても回答が届かないとき</td>
+</tr>
+
+<tr>
+<td><b>別の生徒として回答されている</b></td>
+<td><b>紐付けの間違い</b></td>
+<td><b>すぐ下の 5-3 を見てください（最優先）</b></td>
+<td><span class="req y">必ず連絡</span></td>
+</tr>
+
+<tr>
+<td><b>レポートの内容を踏まえてくれない</b></td>
+<td>レポートが未承認 ／ AI 参照対象がオフ ／ 変換が未完了</td>
+<td>レポート一覧で <b>承認済み</b> ＋ <b>✓ 対象</b>、詳細で <b>最終 Embedding</b> に日時が入っているか確認（<a href="04_月次レポート.html#check">4-4</a>）</td>
+<td>「Embedding 再生成」を押しても「未生成」のままのとき</td>
+</tr>
+
+<tr>
+<td><b>回答が浅い／学年に合わない</b></td>
+<td>AI 用プロフィールが空、または内容が具体的でない</td>
+<td>AI 用プロフィールを具体的に書き直す（<a href="03_生徒の登録と管理.html#profile">3-2</a>）。学年欄が空でないかも確認</td>
+<td>—（設定で直せます）</td>
+</tr>
+
+<tr>
+<td><b>説明が長すぎる／短すぎる</b></td>
+<td>説明のしかたが生徒に合っていない</td>
+<td>AI 用プロフィールの「学習スタイル・説明トーン」に書く（例：<code>要点を先に短く伝えると読んでもらえる</code>）</td>
+<td>—</td>
+</tr>
+
+<tr>
+<td><b>写真を無視される</b></td>
+<td>形式・サイズが対象外 ／ 枚数が多い ／ 画像を読む設定が入っていない</td>
+<td>生徒に案内：<b>jpg / png、1 枚 20MB 以下、1 回 3 枚まで</b>。PDF・Word・スクリーンショット以外の形式は読めません</td>
+<td>回答の末尾に「いまは画像を読み取れないみたい」と付く場合（<b>設定の問題です</b>）</td>
+</tr>
+
+<tr>
+<td><b>管理画面が開けない／エラー画面が出る</b></td>
+<td>アプリ側の不具合</td>
+<td>いったんログインし直す。別のページは開けるか確認する</td>
+<td><span class="req y">必ず連絡</span></td>
+</tr>
+
+<tr>
+<td><b>ログインできない</b></td>
+<td>パスワード違い ／ アカウント未作成 ／ 権限が未設定</td>
+<td>パスワード再設定を試す</td>
+<td>「権限がありません」と出る場合（アカウントの設定が必要です）</td>
+</tr>
+
+<tr>
+<td><b>左メニューに「チャンネル設定」が無い</b></td>
+<td>ログイン権限が切り替わっていない</td>
+<td>いったんログアウトして入り直す</td>
+<td>それでも出ないとき</td>
+</tr>
+
+<tr>
+<td><b>コストが $0.00 のまま増えない</b></td>
+<td>料金の計算に必要な情報が登録されていない</td>
+<td>利用状況の画面に黄色い注意が出ていないか見る（質問数が増えているのにコストが 0 なら異常）</td>
+<td><span class="req y">必ず連絡</span></td>
+</tr>
+
+<tr>
+<td><b>コストが急に増えた</b></td>
+<td>使われ方が変わった ／ 想定外の使い方</td>
+<td><b>利用状況</b> で期間を絞り、生徒別の内訳を見る。特定の生徒に偏っていないか確認</td>
+<td>普段の 3 倍以上なら連絡（必要なら管理者に緊急停止を依頼）</td>
+</tr>
+
+<tr>
+<td><b>生徒が選択肢に出てこない</b></td>
+<td>その生徒のステータスが「無効」</td>
+<td>生徒管理でステータスを <b>有効</b> に戻す</td>
+<td>—</td>
+</tr>
+
+</tbody>
+</table>
+</div>
+
+<h2 id="wrongperson">5-3. 別の生徒として回答されているとき（最優先）</h2>
+
+<div class="dangerbox">
+<p><b>これは個人情報の事故です。見つけたらすぐ止めてください。</b>
+「誰の質問か」はチャンネル ID だけで決まるため、紐付けが間違っていると
+他の生徒のプロフィールとレポートを使って回答してしまいます。</p>
+</div>
+
+<ol>
+<li><b>管理者に連絡して、緊急停止（AI応答を停止）してもらう</b>（<a href="07_安全のしくみ.html#stop">第 7 章 7-1</a>）<br>
+<span class="small">管理者が不在で連絡がつかないときは、そのチャンネルの紐付けのステータスを <b>無効</b> にすれば、そのチャンネルだけは止まります</span></li>
+<li><b>チャンネル設定</b> の一覧を開き、<b>チャンネル ID と生徒の対応を全件</b>確認する</li>
+<li>間違っている紐付けは、<b>ステータスを無効にしてから、正しい組み合わせで作り直す</b>（<a href="03_生徒の登録と管理.html#binding">3-7</a>）</li>
+<li><b>会話ログ</b>で、いつからその状態だったか・どの会話が影響を受けたかを確認する</li>
+<li><b>開発者と塾の責任者に報告する</b>（誰の情報が、誰に、いつから見えたか）</li>
+<li>AI応答を再開し、該当チャンネルで正しい生徒として答えることを確認する</li>
+</ol>
+
+<h2 id="call">5-4. 開発者に連絡すべきかの判断基準</h2>
+
+<h3>すぐ連絡する（緊急）</h3>
+<div class="dangerbox">
+<ul>
+<li><b>別の生徒として回答された</b>（個人情報の事故）</li>
+<li><b>全生徒が反応しない</b>（1 人ではなく全員）</li>
+<li><b>管理画面が開けない</b>／ログインできる人が誰もいない</li>
+<li><code>AI_RESPONSE_FAILED</code> が<b>連続して</b>出ている</li>
+<li>未対応エラーが<b>1 日で 10 件以上</b>たまった</li>
+<li><b>コストが普段の 3 倍以上</b>に増えた</li>
+<li>ジョブの「処理中」が 10 分以上、「待機中」が 15 分以上たまっている</li>
+</ul>
+</div>
+
+<h3>その日のうちに連絡する</h3>
+<ul>
+<li>「Embedding 再生成」を押しても「未生成」のまま（レポートが AI に読まれていない）</li>
+<li>回答の末尾に「いまは画像を読み取れないみたい」が付き続ける</li>
+<li>コストが <code>$0.00</code> のまま増えない（質問は来ているのに）</li>
+<li>同じエラーコードが 1 日に 5 件以上</li>
+<li>第 2 章・第 3 章の手順をすべて試したのに反応しないチャンネルがある</li>
+</ul>
+
+<h3>様子見でよい（連絡不要）</h3>
+<ul>
+<li><code>AI_TIMEOUT</code> / <code>AI_RATE_LIMITED</code> が<b>単発で</b>出た（自動でやり直されます）</li>
+<li><code>THREAD_SUMMARY_FAILED</code> / <code>EVALUATOR_FAILED</code>（回答は生徒に届いています）</li>
+<li>深刻度が <b>情報</b> のログ（正常な動作の記録です）</li>
+<li><code>UNSUPPORTED_FILE_TYPE</code> / <code>IMAGE_TOO_LARGE</code>（生徒への案内で解決します）</li>
+<li><code>RATE_LIMITED</code>（1 時間に 10 回の上限。仕様です）</li>
+</ul>
+
+<h3>まず自分で試すこと（連絡の前に）</h3>
+<ul>
+<li>Bot がチャンネルに入っているか（<code>/invite @じゅくAI</code> のやり直し）</li>
+<li>紐付けがあるか／ステータスが有効か</li>
+<li>生徒のステータスが有効か</li>
+<li>緊急停止されたままになっていないか（ダッシュボードのカードの色）</li>
+<li>ジョブに「失敗」がないか（あれば <b>再実行</b>）</li>
+</ul>
+
+<h2 id="template">5-5. 連絡するときに伝えること</h2>
+
+<p>次の内容がそろっていると、原因の切り分けが一気に進みます。コピーして使ってください。</p>
+
+<pre class="nocopy"><code>【いつ】       2026年9月4日 10:15 ごろ
+【誰の質問か】 山田太郎（中学3年）
+【どのチャンネル】 #study-taro
+【何が起きたか】 質問しても回答が返ってこない。🤔 も付かない
+【生徒に返った文面】 （何も返らなかった / 下記のとおり）
+  「うまく処理できなかったみたい :sweat_smile: もう一度試してみて。」
+【エラーログ】  コード: AI_RESPONSE_FAILED
+                発生日時: 2026-09-04 10:15
+                内部エラー詳細: （詳細画面の内容をそのまま貼る）
+【自分で試したこと】
+  ・Bot はチャンネルに入っている（インテグレーションで確認）
+  ・紐付けは有効、生徒も有効
+  ・ジョブに失敗が1件あり、再実行したが同じ結果
+【急ぎ度】 生徒が待っているので急ぎ / 明日でも可</code></pre>
+
+<div class="note">
+<p><b>エラーログの「内部エラー詳細」は、そのままコピーして貼ってください。</b>
+意味が分からなくて構いません。開発者にとってはここがいちばんの手がかりです。
+画面のスクリーンショットを添えるのも有効です。</p>
+</div>
+
+<h2 id="dont">5-6. やってはいけないこと</h2>
+
+<div class="dangerbox">
+<ul>
+<li><b>生徒を削除する</b> → 会話ログ・レポート・実績が追えなくなります。<b>「無効」にしてください</b>（<a href="03_生徒の登録と管理.html#leave">3-8</a>）</li>
+<li><b>チャンネル ID を確認せずに紐付けを作り直す</b> → 別の生徒の情報で回答する事故につながります</li>
+<li><b>緊急停止したまま忘れる</b> → 全生徒が使えない状態が続きます。毎日ダッシュボードを見てください</li>
+<li><b>AI 用プロフィールやレポート本文に生徒の氏名を書く</b> → 外部の AI サービスに氏名が渡ります（<a href="07_安全のしくみ.html#privacy">7-3</a>）</li>
+<li><b>レポートを承認したことを「生徒に送った」と思い込む</b> → 自動送信はされません（<a href="06_このアプリでできること.html#cannot">第 6 章</a>）</li>
+<li><b>同じ質問を生徒に何度も送り直させる</b> → 1 時間 10 回の上限に当たって、余計に使えなくなります</li>
+</ul>
+</div>
+
+<div class="nav">
+<a href="04_月次レポート.html">← 第 4 章 月次レポート</a>
+<a href="index.html">目次</a>
+<a href="06_このアプリでできること.html">第 6 章 このアプリでできること →</a>
+</div>
+
+</div>
+
+<script>
+/* チェックボックスの状態をこのブラウザに保存する（外部通信はしない） */
+(function(){
+  var key='jukuai-manual:'+location.pathname.split('/').pop();
+  document.querySelectorAll('ul.check input[type=checkbox]').forEach(function(cb){
+    var k=key+':'+cb.id;
+    try{if(localStorage.getItem(k)==='1')cb.checked=true;}catch(e){}
+    cb.addEventListener('change',function(){try{localStorage.setItem(k,cb.checked?'1':'0');}catch(e){}});
+  });
+})();
+</script>
+</body>
+</html>

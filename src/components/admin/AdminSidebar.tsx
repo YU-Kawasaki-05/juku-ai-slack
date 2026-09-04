@@ -16,15 +16,24 @@ import {
   GraduationCap,
   MessagesSquare,
   ListChecks,
+  type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const nav = [
+interface NavItem {
+  href: string
+  label: string
+  icon: LucideIcon
+  /** admin だけに出す項目。現在は該当なし（残す判断: admin 限定画面が増えたときの出し分け口） */
+  adminOnly?: boolean
+}
+
+const nav: NavItem[] = [
   { href: '/admin', label: 'ダッシュボード', icon: LayoutDashboard },
   { href: '/admin/persons', label: '生徒管理', icon: Users },
-  // チャンネル紐付けは admin 限定（EP-07）。staff に出すと開いた先で断られるだけなので隠す。
-  // 認可は画面側の hasChannelAdminAccess と Server Action の requireAdmin が担う（ここは表示のみ）
-  { href: '/admin/channels', label: 'チャンネル設定', icon: Link2, adminOnly: true },
+  // 生徒チャンネルの紐付けは各スタッフが行う運用（EP-07〜09 は staff 可）。
+  // 認可は Server Action の requireStaff が担う（ここは表示のみ）
+  { href: '/admin/channels', label: 'チャンネル設定', icon: Link2 },
   { href: '/admin/reports', label: 'レポート', icon: FileText },
   { href: '/admin/conversations', label: '会話ログ', icon: MessagesSquare },
   { href: '/admin/errors', label: 'エラーログ', icon: AlertCircle },

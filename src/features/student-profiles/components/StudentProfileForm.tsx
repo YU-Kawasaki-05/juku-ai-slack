@@ -73,7 +73,7 @@ export function StudentProfileForm({
           )}
 
           {/* 自由記述はそのまま外部 LLM に渡る。氏名を書かせないための注意書き（学年は persons.grade から自動で入る） */}
-          <Alert>
+          <Alert role="note">
             <Info className="h-4 w-4" aria-hidden="true" />
             <AlertDescription>
               ここに入力した内容はそのまま AI に送信されます。

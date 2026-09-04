@@ -42,12 +42,16 @@ export async function createPerson(name: string, grade = '中2'): Promise<Create
  * 生徒とその従属データを消す。
  * report_chunks は reports の ON DELETE CASCADE、default_report_id は ON DELETE SET NULL
  * なので、reports → slack_channel_bindings → persons の順で足りる。
+ * ai_error_logs.person_id は ON DELETE 指定が無い FK（migration 011）なので、
+ * 残っていると persons の削除が黙って失敗しテストデータが溜まる。
+ * 紐付けの作成・更新は操作ログ（CHANNEL_BINDING_CREATED/UPDATED）をここに書くため必ず消す。
  */
 export async function deletePersons(ids: string[]): Promise<void> {
   if (ids.length === 0) return
   const db = adminDb()
   await db.from('reports').delete().in('person_id', ids)
   await db.from('slack_channel_bindings').delete().in('person_id', ids)
+  await db.from('ai_error_logs').delete().in('person_id', ids)
   await db.from('persons').delete().in('id', ids)
 }
 
