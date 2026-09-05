@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第4章 月次レポート</title>
+<style>
+:root{--fg:#191c21;--muted:#5c6470;--line:#d9dee6;--bg:#fff;--soft:#f6f8fa;--soft2:#eef2f7;--accent:#1f5fa9;--code:#0f2b46;
+--warn:#7a4d00;--warnbg:#fff8e8;--warnline:#e6c579;--danger:#96262c;--dangerbg:#fdf1f2;--dangerline:#e3adb1;
+--ok:#1a6444;--okbg:#f0f8f4;--okline:#a5d5bd;--info:#144a73;--infobg:#eef6fc;--infoline:#9dc6e4;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);line-height:1.85;font-size:16px;
+font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,-apple-system,"Segoe UI",sans-serif;}
+.wrap{max-width:940px;margin:0 auto;padding:28px 20px 90px}
+.topbar{border-bottom:1px solid var(--line);background:var(--soft);}
+.topbar .inner{max-width:940px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
+.topbar a{color:var(--accent);text-decoration:none}
+.topbar a:hover{text-decoration:underline}
+.crumb{font-size:13px;color:var(--muted)}
+h1{font-size:27px;line-height:1.45;margin:26px 0 8px;letter-spacing:.01em}
+h2{font-size:21px;margin:44px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--line)}
+h3{font-size:17px;margin:30px 0 8px}
+h4{font-size:15px;margin:22px 0 6px;color:var(--muted)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:1.6em}
+li{margin:5px 0}
+code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13.5px;
+background:var(--soft2);padding:1px 5px;border-radius:3px;word-break:break-all}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:14px 14px;overflow-x:auto;
+font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13px;line-height:1.7;color:var(--code);margin:12px 0}
+pre code{background:none;padding:0;font-size:13px;word-break:normal}
+.codewrap{position:relative}
+.codewrap>pre{padding-right:82px}
+.copy{position:absolute;top:8px;right:8px;font:inherit;font-size:12px;padding:3px 10px;border:1px solid var(--line);
+background:#fff;color:var(--muted);border-radius:4px;cursor:pointer}
+.copy:hover{color:var(--fg);border-color:var(--muted)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--soft2);font-weight:600;white-space:nowrap}
+td code{font-size:12.8px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scroll table{min-width:640px}
+.scroll.wide table{min-width:880px}
+.note,.warnbox,.dangerbox,.okbox{border:1px solid;border-radius:6px;padding:12px 14px;margin:16px 0;font-size:15px}
+.note{border-color:var(--infoline);background:var(--infobg);color:var(--info)}
+.warnbox{border-color:var(--warnline);background:var(--warnbg);color:var(--warn)}
+.dangerbox{border-color:var(--dangerline);background:var(--dangerbg);color:var(--danger)}
+.okbox{border-color:var(--okline);background:var(--okbg);color:var(--ok)}
+.note b,.warnbox b,.dangerbox b,.okbox b{font-weight:700}
+.note p:first-child,.warnbox p:first-child,.dangerbox p:first-child,.okbox p:first-child{margin-top:0}
+.note p:last-child,.warnbox p:last-child,.dangerbox p:last-child,.okbox p:last-child{margin-bottom:0}
+.note code,.warnbox code,.dangerbox code,.okbox code{background:rgba(255,255,255,.7)}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 6px}
+.meta div{flex:1 1 240px;border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--soft)}
+.meta .k{font-size:12px;color:var(--muted);display:block;margin-bottom:2px}
+.meta .v{font-size:15px;font-weight:600;line-height:1.6}
+.meta .v ul{margin:2px 0 0;padding-left:1.3em;font-weight:400;font-size:14px}
+ul.check{list-style:none;padding-left:0}
+ul.check li{margin:6px 0;display:flex;gap:9px;align-items:flex-start}
+ul.check input{margin-top:7px;flex:0 0 auto;width:15px;height:15px}
+ul.check label{cursor:pointer}
+.steps{list-style:none;padding-left:0;margin:20px 0}
+.steps li{border:1px solid var(--line);border-radius:7px;margin:10px 0;padding:0}
+.steps a{display:block;padding:13px 16px;text-decoration:none;color:inherit}
+.steps a:hover{background:var(--soft)}
+.steps .n{display:inline-block;min-width:74px;font-size:12px;color:#fff;background:var(--accent);border-radius:11px;
+padding:1px 9px;text-align:center;margin-right:10px;vertical-align:2px}
+.steps .n.alt{background:#6b7280}
+.steps .t{font-weight:600;font-size:16.5px}
+.steps .d{display:block;color:var(--muted);font-size:14px;margin-top:3px;padding-left:0}
+.steps .tm{float:right;color:var(--muted);font-size:13px;font-weight:400}
+.nav{display:flex;justify-content:space-between;gap:14px;margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:15px}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+.nav span{color:#b6bcc6}
+.ph{background:#fff5d6;border-bottom:1px dotted #b08a19;padding:0 2px;font-weight:600}
+.diagram{font-size:12.5px;line-height:1.55;background:#fff;border:1px solid var(--line)}
+.small{font-size:13.5px;color:var(--muted)}
+.req{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap}
+.req.y{background:#fde8e8;color:#96262c;border:1px solid #e3adb1}
+.req.n{background:#eef2f7;color:#5c6470;border:1px solid #d9dee6}
+.req.r{background:#fff3d9;color:#7a4d00;border:1px solid #e6c579}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+a{color:var(--accent)}
+/* 画面キャプチャ（figure + img + figcaption）。枠線・角丸・中央寄せで本文と馴染ませる */
+figure.shot{margin:20px 0 24px}
+figure.shot img{display:block;width:100%;max-width:100%;margin:0 auto;border:1px solid var(--line);
+border-radius:7px;background:var(--bg);box-shadow:0 1px 3px rgba(16,32,56,.07)}
+/* 要素だけを切り出したキャプチャは実寸を超えて拡大しない（にじみを防ぐ） */
+figure.shot.sm img{max-width:576px}
+figure.shot figcaption{margin-top:8px;font-size:13px;line-height:1.65;color:var(--muted);text-align:center}
+@media print{
+ .topbar,.nav,.copy{display:none}
+ body{font-size:11.5pt}
+ a{color:#000;text-decoration:none}
+ pre,table,.note,.warnbox,.dangerbox,.okbox,figure.shot{page-break-inside:avoid}
+ figure.shot img{box-shadow:none}
+ h2{page-break-after:avoid}
+}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="inner">
+<span class="crumb"><a href="index.html">目次</a> ／ 第 4 章 / 7 — 月次レポート</span>
+<span class="crumb"><a href="05_困ったとき.html">次へ →</a></span>
+</div></div>
+
+<div class="wrap">
+
+<h1>第 4 章 — 月次レポート</h1>
+
+<div class="note">
+<p><b>この章で分かること</b></p>
+<ul>
+<li>月次レポートが AI の回答にどう効くか</li>
+<li>登録して「承認」するまでの手順</li>
+<li><b>AI が本当に読める状態になったかの確認方法</b></li>
+</ul>
+</div>
+
+<h2 id="what">4-1. 月次レポートとは</h2>
+
+<p>生徒ごと・月ごとの学習記録です。スタッフが手で書きます。
+<b>承認</b>すると、それ以降の回答で AI がこのレポートを参照するようになります。</p>
+
+<pre class="diagram nocopy"><code>  スタッフがレポートを書く
+        ↓
+  「承認して保存」を押す
+        ↓
+  AI が読める形に変換される（自動・数秒〜）
+        ↓
+  生徒が質問する
+        ↓
+  質問に関係のある部分だけがレポートから探し出され、
+  AI の回答に使われる
+        ↓
+  「今月のレポートを見る限り、〜が課題だったね」のように、
+  どこから持ってきた情報かが分かる形で答えに現れる</code></pre>
+
+<div class="warnbox">
+<p><b>「承認」しても、生徒や保護者には自動で送られません。</b>
+承認は「AI がこのレポートを読めるようにする」という意味だけです。
+生徒・保護者への配布は、これまでどおり塾の方法（面談・紙・メールなど）で行ってください
+（<a href="06_このアプリでできること.html#cannot">第 6 章「今はできないこと」</a>）。</p>
+</div>
+
+<h2 id="create">4-2. 登録の手順</h2>
+
+<p><b>レポート</b>（開くと「レポート管理」）→ 右上の <b>新規レポート</b>。</p>
+
+<figure class="shot">
+<img src="images/04-report-new-form.png" alt="新規レポート作成のフォーム。上段に「生徒（選択式）」と「対象月（月の入力）」、次に「タイトル」、その下に「AI 参照対象にする」のチェックボックス、続いて「本文（Markdown）」の見出しの右に「編集」「プレビュー」の切替ボタン、大きな本文入力欄。最下部に「承認して保存」「下書き保存」「キャンセル」のボタンが並んでいる">
+<figcaption>新規レポートの作成フォーム。入力例はサンプルです。<b>生徒</b>と<b>対象月</b>はあとから変更できません</figcaption>
+</figure>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>入力欄</th><th>必須</th><th>入れる値</th></tr></thead>
+<tbody>
+<tr><td><b>生徒</b></td><td><span class="req y">必須</span></td><td>対象の生徒。<b>あとから変更できません</b></td></tr>
+<tr><td><b>対象月</b></td><td><span class="req y">必須</span></td><td>どの月のレポートか。<b>あとから変更できません</b></td></tr>
+<tr><td><b>タイトル</b></td><td><span class="req y">必須</span></td><td>例：<code>2026年6月 学習レポート</code></td></tr>
+<tr><td><b>AI 参照対象にする</b></td><td>—</td><td><b>最初からオンになっています。</b>オンのまま承認すると AI が読めるようになります</td></tr>
+<tr><td><b>本文</b></td><td><span class="req n">任意</span></td><td>その月の学習内容。箇条書きで十分です</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>本文の書き方</h3>
+
+<p>本文欄の右上に <b>編集</b> / <b>プレビュー</b> の切り替えがあります。<b>プレビュー</b>を押すと仕上がりが確認できます。</p>
+
+<p>行頭に記号を付けると、見出しや箇条書きになります（覚える必要はありません。ふつうの文章でも大丈夫です）。</p>
+
+<pre class="nocopy"><code># 2026年6月 学習レポート
+
+## 今月やったこと
+- 数学：二次方程式（解の公式まで）
+- 英語：不定詞、関係代名詞の導入
+
+## できるようになったこと
+- 解の公式を使った計算はほぼ正確にできる
+
+## 次の課題
+- 文章題で式を立てる部分。「何を x にするか」で止まることが多い
+- 英語は長文になると単語で詰まる</code></pre>
+
+<h3>2 つの保存ボタン</h3>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>ボタン</th><th>意味</th><th>AI は読むか</th></tr></thead>
+<tbody>
+<tr><td><b>下書き保存</b></td><td>書きかけの状態で保存する</td><td><span class="req y">読みません</span></td></tr>
+<tr><td><b>承認して保存</b></td><td>内容を確定して、AI が読める状態にする</td><td><span class="req n">読みます</span>（AI 参照対象がオンのとき）</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>画面の下にはこう書かれています。</p>
+
+<div class="okbox">
+<p>「承認して保存」すると、AI 参照対象がオンのレポートは Bot が回答時に参照するようになります（生徒への Slack 送信は行いません）</p>
+</div>
+
+<p class="small">本文の途中で <b>Enter</b> キーを押しても、うっかり「承認」されることはありません（下書き保存として扱われます）。
+書きかけの内容が AI に読まれてしまうのを防ぐためです。</p>
+
+<h2 id="content">4-3. 何を書くと AI に効くか</h2>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>効きにくい書き方</th><th>効く書き方</th></tr></thead>
+<tbody>
+<tr><td><code>よく頑張りました。この調子で続けましょう。</code></td>
+<td><code>二次方程式の計算は安定。文章題は「何を x にするか」で止まることが多い。</code></td></tr>
+<tr><td><code>数学：教科書 p.40〜52</code></td>
+<td><code>数学：二次方程式（解の公式まで）。因数分解に戻ると解ける問題もあるので、両方の見分けが課題。</code></td></tr>
+<tr><td><code>英語の成績が上がりました。</code></td>
+<td><code>英語：不定詞の 3 用法は見分けられるようになった。関係代名詞は導入したばかりで、まだ自分では書けない。</code></td></tr>
+</tbody>
+</table>
+</div>
+
+<p>ポイントは <b>「何をやったか」＋「どこまでできて、どこで止まるか」</b> です。
+AI はこれを読んで「この生徒はここまで来ている」と判断して回答を組み立てます。</p>
+
+<div class="warnbox">
+<p><b>本文にも生徒の氏名は書かないでください。</b>
+承認したレポートは、<b>質問に関係する部分が抜き出されて AI に渡ります</b>。
+そのとき氏名が書いてあれば、氏名も一緒に渡ってしまいます。
+生徒を指すときは <b>「本人」「この生徒」</b> と書いてください。
+タイトルも <code>2026年6月 学習レポート</code> のように、氏名を入れない形にしておくと安全です
+（誰のレポートかは「生徒」欄で分かります）。</p>
+</div>
+
+<h2 id="check">4-4. AI が読める状態になったかの確認</h2>
+
+<p>承認するとすぐに、<b>AI が探せる形への変換</b>が自動で始まります。
+これが終わっていないと、レポートは回答に使われません。<b>必ず確認してください。</b></p>
+
+<div class="note">
+<p><b>用語の補足：Embedding（エンベディング）</b><br>
+管理画面に出てくる言葉です。<b>「AI が過去のレポートの中から、質問に関係のある部分を探せるようにする下準備」</b>のことです。
+文章を AI が比べやすい形に置き換える処理で、レポートを保存すると自動で走ります。
+スタッフが中身を知る必要はありませんが、<b>「これが終わっていないと AI はレポートを読めない」</b>ことだけ覚えてください。</p>
+</div>
+
+<h3>確認する場所</h3>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>場所</th><th>正常な表示</th></tr></thead>
+<tbody>
+<tr><td>レポート一覧の <b>状態</b> 列</td><td><b>承認済み</b>（緑）</td></tr>
+<tr><td>レポート一覧の <b>AI参照</b> 列</td><td><b>✓ 対象</b>（緑）。<b>対象外</b>なら AI は読みません</td></tr>
+<tr><td>レポート詳細の <b>最終 Embedding</b></td><td><b>日時が入っている</b>。<b>未生成</b> のままなら AI はまだ読めません</td></tr>
+</tbody>
+</table>
+</div>
+
+<figure class="shot">
+<img src="images/04-reports-list.png" alt="レポート管理の一覧画面。生徒・対象月・タイトル・状態・AI参照・更新日の列が並び、3 件のレポートが表示されている。緑色の「承認済み」バッジの行では AI参照の欄が緑色の「✓ 対象」、灰色の「下書き」バッジの行では AI参照が「対象外」になっている">
+<figcaption>レポート一覧。<b>承認済み</b>（緑）かつ AI参照が <b>✓ 対象</b> の行だけが Bot に読まれます（表示内容はサンプルです）</figcaption>
+</figure>
+
+<figure class="shot">
+<img src="images/04-report-detail-status.png" alt="レポート詳細ページの上部。見出しにレポートのタイトル、その下に生徒名と対象月。右上に「Embedding 再生成」と「編集」のボタン。その下の帯に「状態: 承認済み」「AI参照: ✓ 対象」「最終 Embedding: 2026/08/31 12:18」「更新日時: 2026/08/31 12:15」が横並びで表示されている">
+<figcaption>レポート詳細の上部の帯。<b>最終 Embedding に日時が入っている</b>のが正常な状態です</figcaption>
+</figure>
+
+<h3>黄色い警告が出たとき</h3>
+
+<p>レポート詳細に次の警告が出ることがあります。</p>
+
+<div class="warnbox">
+<p><b>Embedding 再生成が必要です</b></p>
+<p>本文が更新されてから AI 参照データ（Embedding）が再生成されていません。
+「Embedding 再生成」を実行すると最新の内容が Bot の回答に反映されます</p>
+</div>
+
+<p>この場合、<b>ページ右上の「Embedding 再生成」ボタンを押してください。</b>
+押すと変換がやり直され、警告が消えて「最終 Embedding」の日時が新しくなります。</p>
+
+<figure class="shot">
+<img src="images/04-report-embedding-warning.png" alt="レポート詳細ページの上部。黄色い枠の警告に「Embedding 再生成が必要です — 本文が更新されてから AI 参照データ（Embedding）が再生成されていません」と表示され、その右上に「Embedding 再生成」ボタンがある。下の帯では最終 Embedding の日時が更新日時より古くなっている">
+<figcaption>黄色い警告が出ている状態。右上の <b>Embedding 再生成</b> を押すと警告が消え、最終 Embedding の日時が新しくなります</figcaption>
+</figure>
+
+<p>また、保存した直後に次のような通知が出ることがあります。</p>
+
+<div class="warnbox">
+<p><b>保存しました（AI 参照データは未更新）</b><br>
+Embedding の自動再生成に失敗しました。詳細ページから手動で再生成してください</p>
+</div>
+
+<p>この場合も、そのレポートの詳細ページを開いて <b>Embedding 再生成</b> を押します。</p>
+
+<div class="dangerbox">
+<p><b>再生成を押しても「最終 Embedding」が「未生成」のままの場合は、開発者に連絡してください。</b>
+レポートを書いても AI が読めていない状態が続いてしまいます（<a href="05_困ったとき.html#call">第 5 章</a>）。</p>
+</div>
+
+<h2 id="monthly">4-5. 毎月の段取り（目安）</h2>
+
+<ul class="check">
+<li><input type="checkbox" id="m-1"><label for="m-1">月初に、前月ぶんのレポートを生徒ごとに書く</label></li>
+<li><input type="checkbox" id="m-2"><label for="m-2"><b>承認して保存</b> を押した（AI 参照対象はオン）</label></li>
+<li><input type="checkbox" id="m-3"><label for="m-3">一覧で <b>承認済み</b> ＋ <b>✓ 対象</b> になっているか確認した</label></li>
+<li><input type="checkbox" id="m-4"><label for="m-4">詳細で <b>最終 Embedding</b> に日時が入っているか確認した</label></li>
+<li><input type="checkbox" id="m-5"><label for="m-5">利用状況を開いて、その月の質問数とコストを確認した</label></li>
+</ul>
+
+<div class="note">
+<p><b>レポートを直したときも同じです。</b>本文を編集して保存すると、AI 用の変換が自動でやり直されます。
+編集ページには「保存時に AI 参照データ（Embedding）が自動的に再生成されます」と書かれています。
+念のため、保存後に <b>最終 Embedding</b> の日時が新しくなっているか見てください。</p>
+</div>
+
+<p class="small">レポートは何ヶ月ぶんでも積み重ねられます。過去のレポートも承認されていれば参照対象です。
+その中から、質問に関係のある部分だけが選ばれて使われます。</p>
+
+<div class="nav">
+<a href="03_生徒の登録と管理.html">← 第 3 章 生徒の登録と管理</a>
+<a href="index.html">目次</a>
+<a href="05_困ったとき.html">第 5 章 困ったとき →</a>
+</div>
+
+</div>
+
+<script>
+/* チェックボックスの状態をこのブラウザに保存する（外部通信はしない） */
+(function(){
+  var key='jukuai-manual:'+location.pathname.split('/').pop();
+  document.querySelectorAll('ul.check input[type=checkbox]').forEach(function(cb){
+    var k=key+':'+cb.id;
+    try{if(localStorage.getItem(k)==='1')cb.checked=true;}catch(e){}
+    cb.addEventListener('change',function(){try{localStorage.setItem(k,cb.checked?'1':'0');}catch(e){}});
+  });
+})();
+</script>
+</body>
+</html>

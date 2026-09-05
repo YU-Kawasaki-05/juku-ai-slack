@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第6章 このアプリでできること</title>
+<style>
+:root{--fg:#191c21;--muted:#5c6470;--line:#d9dee6;--bg:#fff;--soft:#f6f8fa;--soft2:#eef2f7;--accent:#1f5fa9;--code:#0f2b46;
+--warn:#7a4d00;--warnbg:#fff8e8;--warnline:#e6c579;--danger:#96262c;--dangerbg:#fdf1f2;--dangerline:#e3adb1;
+--ok:#1a6444;--okbg:#f0f8f4;--okline:#a5d5bd;--info:#144a73;--infobg:#eef6fc;--infoline:#9dc6e4;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);line-height:1.85;font-size:16px;
+font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,-apple-system,"Segoe UI",sans-serif;}
+.wrap{max-width:940px;margin:0 auto;padding:28px 20px 90px}
+.topbar{border-bottom:1px solid var(--line);background:var(--soft);}
+.topbar .inner{max-width:940px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
+.topbar a{color:var(--accent);text-decoration:none}
+.topbar a:hover{text-decoration:underline}
+.crumb{font-size:13px;color:var(--muted)}
+h1{font-size:27px;line-height:1.45;margin:26px 0 8px;letter-spacing:.01em}
+h2{font-size:21px;margin:44px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--line)}
+h3{font-size:17px;margin:30px 0 8px}
+h4{font-size:15px;margin:22px 0 6px;color:var(--muted)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:1.6em}
+li{margin:5px 0}
+code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13.5px;
+background:var(--soft2);padding:1px 5px;border-radius:3px;word-break:break-all}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:14px 14px;overflow-x:auto;
+font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13px;line-height:1.7;color:var(--code);margin:12px 0}
+pre code{background:none;padding:0;font-size:13px;word-break:normal}
+.codewrap{position:relative}
+.codewrap>pre{padding-right:82px}
+.copy{position:absolute;top:8px;right:8px;font:inherit;font-size:12px;padding:3px 10px;border:1px solid var(--line);
+background:#fff;color:var(--muted);border-radius:4px;cursor:pointer}
+.copy:hover{color:var(--fg);border-color:var(--muted)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--soft2);font-weight:600;white-space:nowrap}
+td code{font-size:12.8px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scroll table{min-width:640px}
+.scroll.wide table{min-width:880px}
+.note,.warnbox,.dangerbox,.okbox{border:1px solid;border-radius:6px;padding:12px 14px;margin:16px 0;font-size:15px}
+.note{border-color:var(--infoline);background:var(--infobg);color:var(--info)}
+.warnbox{border-color:var(--warnline);background:var(--warnbg);color:var(--warn)}
+.dangerbox{border-color:var(--dangerline);background:var(--dangerbg);color:var(--danger)}
+.okbox{border-color:var(--okline);background:var(--okbg);color:var(--ok)}
+.note b,.warnbox b,.dangerbox b,.okbox b{font-weight:700}
+.note p:first-child,.warnbox p:first-child,.dangerbox p:first-child,.okbox p:first-child{margin-top:0}
+.note p:last-child,.warnbox p:last-child,.dangerbox p:last-child,.okbox p:last-child{margin-bottom:0}
+.note code,.warnbox code,.dangerbox code,.okbox code{background:rgba(255,255,255,.7)}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 6px}
+.meta div{flex:1 1 240px;border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--soft)}
+.meta .k{font-size:12px;color:var(--muted);display:block;margin-bottom:2px}
+.meta .v{font-size:15px;font-weight:600;line-height:1.6}
+.meta .v ul{margin:2px 0 0;padding-left:1.3em;font-weight:400;font-size:14px}
+ul.check{list-style:none;padding-left:0}
+ul.check li{margin:6px 0;display:flex;gap:9px;align-items:flex-start}
+ul.check input{margin-top:7px;flex:0 0 auto;width:15px;height:15px}
+ul.check label{cursor:pointer}
+.steps{list-style:none;padding-left:0;margin:20px 0}
+.steps li{border:1px solid var(--line);border-radius:7px;margin:10px 0;padding:0}
+.steps a{display:block;padding:13px 16px;text-decoration:none;color:inherit}
+.steps a:hover{background:var(--soft)}
+.steps .n{display:inline-block;min-width:74px;font-size:12px;color:#fff;background:var(--accent);border-radius:11px;
+padding:1px 9px;text-align:center;margin-right:10px;vertical-align:2px}
+.steps .n.alt{background:#6b7280}
+.steps .t{font-weight:600;font-size:16.5px}
+.steps .d{display:block;color:var(--muted);font-size:14px;margin-top:3px;padding-left:0}
+.steps .tm{float:right;color:var(--muted);font-size:13px;font-weight:400}
+.nav{display:flex;justify-content:space-between;gap:14px;margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:15px}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+.nav span{color:#b6bcc6}
+.ph{background:#fff5d6;border-bottom:1px dotted #b08a19;padding:0 2px;font-weight:600}
+.diagram{font-size:12.5px;line-height:1.55;background:#fff;border:1px solid var(--line)}
+.small{font-size:13.5px;color:var(--muted)}
+.req{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap}
+.req.y{background:#fde8e8;color:#96262c;border:1px solid #e3adb1}
+.req.n{background:#eef2f7;color:#5c6470;border:1px solid #d9dee6}
+.req.r{background:#fff3d9;color:#7a4d00;border:1px solid #e6c579}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+a{color:var(--accent)}
+/* 画面キャプチャ（figure + img + figcaption）。枠線・角丸・中央寄せで本文と馴染ませる */
+figure.shot{margin:20px 0 24px}
+figure.shot img{display:block;width:100%;max-width:100%;margin:0 auto;border:1px solid var(--line);
+border-radius:7px;background:var(--bg);box-shadow:0 1px 3px rgba(16,32,56,.07)}
+/* 要素だけを切り出したキャプチャは実寸を超えて拡大しない（にじみを防ぐ） */
+figure.shot.sm img{max-width:576px}
+figure.shot figcaption{margin-top:8px;font-size:13px;line-height:1.65;color:var(--muted);text-align:center}
+@media print{
+ .topbar,.nav,.copy{display:none}
+ body{font-size:11.5pt}
+ a{color:#000;text-decoration:none}
+ pre,table,.note,.warnbox,.dangerbox,.okbox,figure.shot{page-break-inside:avoid}
+ figure.shot img{box-shadow:none}
+ h2{page-break-after:avoid}
+}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="inner">
+<span class="crumb"><a href="index.html">目次</a> ／ 第 6 章 / 7 — このアプリでできること</span>
+<span class="crumb"><a href="07_安全のしくみ.html">次へ →</a></span>
+</div></div>
+
+<div class="wrap">
+
+<h1>第 6 章 — このアプリでできること</h1>
+
+<div class="note">
+<p><b>この章で分かること</b></p>
+<ul>
+<li>じゅくAI ができること（機能の紹介）</li>
+<li><b>今はできないこと</b>（期待のずれを防ぐため、正直に書いています）</li>
+<li>保護者・講師に説明するときの言い方</li>
+</ul>
+<p>この章は<b>アプリの紹介</b>も兼ねています。新しく入ったスタッフや、外部に説明するときに使ってください。</p>
+</div>
+
+<h2 id="summary">6-1. ひとことで言うと</h2>
+
+<div class="okbox">
+<p><b>じゅくAI は「Slack の中にいる、その生徒専用の学習相談相手」です。</b>
+生徒が自分のチャンネルで質問すると、<b>学年・スタッフが書いた学習メモ・承認済みの月次レポート・
+これまでのやり取り</b>を踏まえて答えます。質問は写真でもできます。
+答えを丸写しさせるのではなく、考え方から説明する方針で作られています。</p>
+</div>
+
+<h2 id="can">6-2. できること</h2>
+
+<h3>① その生徒に合わせた回答</h3>
+<p>スタッフが書いた <b>AI 用プロフィール</b>（全体要約・学習スタイル・得意・苦手・指導上の注意）と <b>学年</b> を、
+<b>毎回の回答で</b>参照します。同じ質問でも、中 1 の生徒と高 3 の生徒には違う深さで答えます。
+「答えをすぐ出さないでほしい」といった指導方針も反映されます。</p>
+<p class="small">→ 質を上げる方法は <a href="03_生徒の登録と管理.html#profile">第 3 章 3-2</a></p>
+
+<h3>② 過去のレポートを踏まえた回答</h3>
+<p>承認済みの月次レポートの中から、<b>その質問に関係のある部分だけ</b>を探し出して回答に使います。
+回答には「今月のレポートを見る限り〜」のように、<b>どこから持ってきた情報かが分かる形</b>で現れます。</p>
+<p class="small">→ 使えるようにする手順は <a href="04_月次レポート.html">第 4 章</a></p>
+
+<h3>③ 写真での質問</h3>
+<p>数式・問題・ノートの写真を送って質問できます。手で打ち直す必要がありません。</p>
+<div class="scroll wide">
+<table>
+<thead><tr><th>項目</th><th>条件</th></tr></thead>
+<tbody>
+<tr><td>形式</td><td>jpg（jpeg）・png・webp</td></tr>
+<tr><td>枚数</td><td><b>1 回のメッセージに 3 枚まで</b>（4 枚目以降は使われず、回答にその旨が添えられます）</td></tr>
+<tr><td>サイズ</td><td>1 枚 20MB まで</td></tr>
+<tr><td>読めないもの</td><td>PDF・Word・Excel・音声・動画</td></tr>
+</tbody>
+</table>
+</div>
+<p class="small">写真を送ると、撮影場所などの埋め込み情報を取り除いてから処理します（<a href="07_安全のしくみ.html#photo">第 7 章 7-4</a>）。</p>
+
+<h3>④ スレッドでの継続的なやり取り</h3>
+<p>一度じゅくAI が答えたスレッドの中では、<b><code>@じゅくAI</code> を付けずに</b>会話を続けられます。
+「そこがまだ分からない」「じゃあこの場合は？」と自然に続けられます。
+やり取りが長くなった場合は、<b>前半を自動で要約</b>して文脈を保ちます（話が最初から分からなくなることはありません）。</p>
+
+<h3>⑤ 試験期間中の切り替え</h3>
+<p>試験期間を設定した生徒には、その期間だけ<b>確認の質問をはさまず、要点をすばやく伝える</b>回答に切り替わります。
+最終日を過ぎれば自動で元に戻ります。</p>
+<p class="small">→ <a href="03_生徒の登録と管理.html#exam">第 3 章 3-3</a>（設定は任意です）</p>
+
+<h3>⑥ 丸写しを避ける方針</h3>
+<p>「伴走者」としてふるまうよう作られています。</p>
+<ul>
+<li>評価者・採点者としては話しません（「評価」「採点」という言葉を使いません）</li>
+<li>成績や能力を強く断定しません（「〜が苦手」ではなく「〜でつまずくことが多そう」）</li>
+<li>1 回の返信で生徒に投げかける質問は<b>多くても 1 つ</b>まで</li>
+<li>中高生が話しやすい語調で話します</li>
+<li>写真が読めないときに、推測で断定しません</li>
+</ul>
+
+<h3>⑦ 使われ方とコストが見える</h3>
+<div class="scroll wide">
+<table>
+<thead><tr><th>画面</th><th>見えるもの</th></tr></thead>
+<tbody>
+<tr><td><b>ダッシュボード</b></td><td>今日の質問数 / 今月のコスト / 未対応エラー / 生徒数 / 最近のエラー</td></tr>
+<tr><td><b>利用状況</b></td><td>期間を選んで、質問数・コスト・使用量・画像付き質問の割合と、その推移</td></tr>
+<tr><td><b>会話ログ</b></td><td>生徒と Bot のやり取りの全記録（生徒・期間・画像・エラーで絞り込み可）</td></tr>
+<tr><td><b>エラーログ</b></td><td>失敗した処理と、生徒に返した文面、対応記録</td></tr>
+<tr><td><b>ジョブ</b></td><td>質問の処理が詰まっていないか</td></tr>
+</tbody>
+</table>
+</div>
+
+<figure class="shot">
+<img src="images/06-usage.png" alt="利用状況の画面。右上に 7日・30日・90日の期間切替。質問数 220、コスト $1.45、総トークン 1.7M、画像付き質問 31 の 4 つの数値カードが横並びになり、その下に「日別 質問数」「日別 コスト」の折れ線グラフ、「モデル別 利用回数」「生徒別 質問数（上位10）」「エラーコード別 発生数」の横棒グラフが並んでいる">
+<figcaption>利用状況の画面。期間を切り替えて、質問数・コスト・使用量とその推移を見られます（数値・生徒名はサンプルです）</figcaption>
+</figure>
+
+<h3>⑧ 危ないときに止められる</h3>
+<p>管理者はボタン 1 つで<b>全生徒への AI 回答を即座に止められます</b>。止めている間は AI が呼ばれないので、費用も止まります。
+→ <a href="07_安全のしくみ.html#stop">第 7 章 7-1</a></p>
+
+<h3>⑨ 使いすぎの歯止め</h3>
+<p>生徒 1 人あたり <b>1 時間に 10 回</b>までという上限が入っています。
+特定の生徒の使いすぎで費用が膨らむことを防ぎます。→ <a href="07_安全のしくみ.html#limit">第 7 章 7-2</a></p>
+
+<h2 id="cannot">6-3. 今はできないこと</h2>
+
+<div class="warnbox">
+<p>ここは<b>期待のずれを防ぐために正直に書いています</b>。
+「できるはず」と思って待っていると業務が止まるので、下記は<b>人の手で行う前提</b>で運用してください。</p>
+</div>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>できないこと</th><th>現状どうするか</th></tr></thead>
+<tbody>
+
+<tr>
+<td><b>月次レポートの AI 自動生成</b><br>
+<span class="small">「その月の会話から AI がレポートの下書きを作る」機能はありません</span></td>
+<td><b>スタッフが手で書きます。</b>書いたレポートを承認すれば AI はきちんと参照します
+（AI が書いたものと参照データとしては同じ扱いです）。→ <a href="04_月次レポート.html">第 4 章</a></td>
+</tr>
+
+<tr>
+<td><b>承認したレポートの生徒への自動送信</b><br>
+<span class="small">承認しても Slack には投稿されません</span></td>
+<td>生徒・保護者への配布は、これまでどおり塾の方法（面談・紙・メールなど）で行ってください</td>
+</tr>
+
+<tr>
+<td><b>保護者へのメール通知</b><br>
+<span class="small">生徒情報に「保護者メール」欄はありますが、メールを送る機能はまだありません</span></td>
+<td>保護者メールは<b>記録用</b>として保存されるだけです。連絡は従来の方法で</td>
+</tr>
+
+<tr>
+<td><b>対話的に導く問いかけ（ソクラテス式）</b><br>
+<span class="small">「まず自分で考えてみよう」と確認の質問を返す進め方は、いまは動きません</span></td>
+<td><b>現在はどの生徒にも「直接説明する」形で回答します。</b>
+概念をやさしく説明し、例題を示す進め方です。
+考え方から説明する方針（丸写しを避ける）は効いていますが、問いかけて導く形にはなりません</td>
+</tr>
+
+<tr>
+<td><b>エラーが起きたときの自動通知</b><br>
+<span class="small">エラーが出ても Slack に通知は飛びません</span></td>
+<td><b>だから毎日ダッシュボードを見る運用が必要です。</b>
+自動通知があるのは緊急停止の操作だけです。→ <a href="02_毎日の確認.html">第 2 章</a></td>
+</tr>
+
+<tr>
+<td><b>生徒一覧での「最終利用日時」「今月の質問数」</b></td>
+<td><b>利用状況</b> の画面で、生徒別の内訳として見られます</td>
+</tr>
+
+<tr>
+<td><b>生徒詳細ページでの利用推移グラフ・レポート一覧</b></td>
+<td>利用状況（推移）とレポート管理（生徒で絞り込み）を、それぞれ開いて見てください</td>
+</tr>
+
+<tr>
+<td><b>PDF・Word・Excel・音声・動画の読み取り</b></td>
+<td>画像（jpg / png / webp）だけです。PDF なら該当ページを<b>写真に撮って</b>送ってもらいます</td>
+</tr>
+
+<tr>
+<td><b>紐付けたチャンネル ID と生徒の後からの変更</b></td>
+<td>変更できるのは表示名とステータスだけです。<b>作り直します</b>（<a href="03_生徒の登録と管理.html#binding">第 3 章 3-7</a>）</td>
+</tr>
+
+<tr>
+<td><b>1 つのチャンネルを複数の生徒で共有する</b></td>
+<td>1 チャンネル = 1 生徒です。兄弟でも別チャンネルを作ってください</td>
+</tr>
+
+<tr>
+<td><b>質問回数の上限を画面から変える</b></td>
+<td>プログラムの変更が必要です。変えたい場合は開発者に相談してください</td>
+</tr>
+
+<tr>
+<td><b>生徒が管理画面を見る</b></td>
+<td>できません（そうすべきでもありません）。生徒が触るのは Slack だけです</td>
+</tr>
+
+</tbody>
+</table>
+</div>
+
+<h2 id="explain">6-4. 保護者・講師への説明のしかた</h2>
+
+<p>そのまま読み上げたり、書面に写して使える文です。</p>
+
+<h3>サービスの説明（保護者向け）</h3>
+<div class="okbox">
+<p>当塾では、お子さま専用のチャットで学習の質問に答える AI を導入しています。
+お子さまは Slack のご自身のチャンネルから、いつでも文章や問題の写真で質問できます。
+この AI は、講師が記録した学習の状況と、毎月の学習レポートを踏まえて答えます。
+答えをそのまま写させるのではなく、考え方から説明する方針で運用しています。
+やり取りはすべて塾側で確認でき、内容は講師が定期的に見ています。</p>
+</div>
+
+<h3>個人情報についての説明（保護者向け）</h3>
+<div class="okbox">
+<p>AI に渡しているのは、学年・講師が書いた学習メモ・質問の内容・承認済みの学習レポートの一部です。
+<b>お子さまの氏名は AI に渡していません。</b>
+写真をお送りいただいた場合も、撮影場所などの情報を取り除いてから処理しています。
+やり取りは塾の管理画面から確認でき、他の生徒の情報が混ざることはありません。</p>
+</div>
+<p class="small">→ 詳しくは <a href="07_安全のしくみ.html#privacy">第 7 章 7-3</a>。質問を受けたときはそちらの表を見てください。</p>
+
+<h3>講師・新任スタッフへの説明</h3>
+<div class="okbox">
+<p>AI の答えの質は、<b>管理画面に書く AI 用プロフィールと月次レポートの質で決まります</b>。
+「頑張っている」のような言葉では AI は何も変えられません。
+「どの単元で、どういうつまずき方をするか」を書いてください。
+生徒の氏名は書かないでください（AI にそのまま送られます）。</p>
+</div>
+
+<h3>生徒への説明</h3>
+<div class="okbox">
+<p>質問するときは <code>@じゅくAI</code> を付けて書いてね。
+返事が来たら、その下（スレッド）で続けて聞けるよ。2 回目からは <code>@じゅくAI</code> はいらないよ。
+問題の写真を送ってもいいよ（1 回 3 枚まで）。
+やり取りは先生も見られるから、分からないところは遠慮しないで聞いてね。</p>
+</div>
+
+<div class="nav">
+<a href="05_困ったとき.html">← 第 5 章 困ったとき</a>
+<a href="index.html">目次</a>
+<a href="07_安全のしくみ.html">第 7 章 安全のしくみ →</a>
+</div>
+
+</div>
+
+<script>
+/* チェックボックスの状態をこのブラウザに保存する（外部通信はしない） */
+(function(){
+  var key='jukuai-manual:'+location.pathname.split('/').pop();
+  document.querySelectorAll('ul.check input[type=checkbox]').forEach(function(cb){
+    var k=key+':'+cb.id;
+    try{if(localStorage.getItem(k)==='1')cb.checked=true;}catch(e){}
+    cb.addEventListener('change',function(){try{localStorage.setItem(k,cb.checked?'1':'0');}catch(e){}});
+  });
+})();
+</script>
+</body>
+</html>

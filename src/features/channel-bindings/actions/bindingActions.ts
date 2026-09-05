@@ -3,19 +3,25 @@
  * 入力: FormData
  * 出力: ActionResult
  * 例外: 認証・DB エラーは ActionResult に変換。重複チャンネルは専用メッセージ（AC-15-03）
- * 依存: requireAdmin, createServerClient, bindingSchema
- * 副作用: slack_channel_bindings への insert/update
- * セキュリティ: requireAdmin（権限設計 EP-07〜09 は admin 専用）。
- *   channel_id は「誰の質問か」を決める信頼の基点（BR-07-01）なので staff には書かせない
+ * 依存: requireStaff, createServerClient, bindingSchema, logError
+ * 副作用: slack_channel_bindings への insert/update、ai_error_logs への操作ログ（severity=info）
+ * セキュリティ: requireStaff（権限設計 EP-07〜09。生徒チャンネルの紐付けは各スタッフが行う運用）。
+ *   channel_id は「誰の質問か」を決める信頼の基点（BR-07-01）で、誤ると別生徒の
+ *   プロフィールとレポートで AI が回答する。admin 限定という入口の制限を外す代わりに、
+ *   (1) フォーム側の生徒名つき確認ダイアログ、(2) 既定レポートの生徒一致検査（既存）、
+ *   (3) 誰がどの紐付けを作成・変更したかの操作ログ、の 3 段で誤操作を抑える
  * @implements FR-13, FR-15, AC-15-01, AC-15-02, AC-15-03, BR-15-01, BR-15-03
  */
 'use server'
 
 import { revalidatePath } from 'next/cache'
 import { createServerClient } from '@shared/lib/supabase/serverClient'
-import { requireAdmin } from '@shared/lib/auth/requireAdmin'
+import { requireStaff } from '@shared/lib/auth/requireStaff'
+import { staffAuthFailure } from '@shared/lib/auth/authFailure'
+import { logError } from '@features/error-logs'
 import type { ActionResult } from '@shared/types/action'
 import { bindingCreateSchema, bindingUpdateSchema } from '../schemas/bindingSchema'
+import { BINDING_CREATED_CODE, BINDING_UPDATED_CODE, auditLine } from '../lib/auditLog'
 
 const PG_UNIQUE_VIOLATION = '23505'
 
@@ -29,21 +35,15 @@ function flatten(err: import('zod').ZodError): Record<string, string> {
   return out
 }
 
-/** requireAdmin の失敗を ActionResult に正規化する（unauthorized と forbidden を区別） */
-function authFailure(e: unknown): ActionResult {
-  return (e as Error)?.message === 'forbidden'
-    ? { ok: false, error: 'この操作は管理者のみ実行できます' }
-    : { ok: false, error: 'ログインが必要です' }
-}
-
 export async function createBindingAction(
   _prev: ActionResult | undefined,
   formData: FormData,
 ): Promise<ActionResult> {
+  let actor: string
   try {
-    await requireAdmin()
+    actor = (await requireStaff()).email
   } catch (e) {
-    return authFailure(e)
+    return staffAuthFailure(e)
   }
 
   const parsed = bindingCreateSchema.safeParse({
@@ -113,6 +113,24 @@ export async function createBindingAction(
     return { ok: false, error: '保存に失敗しました' }
   }
 
+  // 紐付けを誤ると別生徒として回答してしまうため、誰がどの対応付けを作ったかを必ず残す。
+  // dedupeWhileUnresolved は使わない（操作ログは毎回 1 行積む必要がある）
+  await logError(db, {
+    code: BINDING_CREATED_CODE,
+    severity: 'info',
+    channelId: parsed.data.slackChannelId,
+    personId: parsed.data.personId,
+    internalMessage: auditLine({
+      actor,
+      channel_id: parsed.data.slackChannelId,
+      channel_name: parsed.data.slackChannelName,
+      person_id: parsed.data.personId,
+      person_name: person.name,
+      default_report_id: parsed.data.defaultReportId,
+      status: parsed.data.status,
+    }),
+  })
+
   revalidatePath('/admin/channels')
   return { ok: true }
 }
@@ -121,10 +139,11 @@ export async function updateBindingAction(
   _prev: ActionResult | undefined,
   formData: FormData,
 ): Promise<ActionResult> {
+  let actor: string
   try {
-    await requireAdmin()
+    actor = (await requireStaff()).email
   } catch (e) {
-    return authFailure(e)
+    return staffAuthFailure(e)
   }
 
   const parsed = bindingUpdateSchema.safeParse({
@@ -141,12 +160,39 @@ export async function updateBindingAction(
   }
 
   const db = createServerClient()
+  // 操作ログに「どのチャンネルがどの生徒として扱われていたか」を残すための変更前スナップショット。
+  // 読めなくても更新自体は続ける（操作者の記録が消える方が困る）ので null 許容で扱う
+  const { data: before } = await db
+    .from('slack_channel_bindings')
+    .select('slack_channel_id, person_id, status')
+    .eq('id', parsed.data.id)
+    .maybeSingle()
+
   // BR-15-01: channel_id は変更不可。name/status のみ更新
   const { error } = await db
     .from('slack_channel_bindings')
     .update({ slack_channel_name: parsed.data.slackChannelName, status: parsed.data.status })
     .eq('id', parsed.data.id)
   if (error) return { ok: false, error: '保存に失敗しました' }
+
+  // person_id は UI から変更できない（BR-15-01）が、before/after を並べて残すことで
+  // 「付け替わっていないこと」自体が後から検証できる
+  await logError(db, {
+    code: BINDING_UPDATED_CODE,
+    severity: 'info',
+    channelId: before?.slack_channel_id ?? null,
+    personId: before?.person_id ?? null,
+    internalMessage: auditLine({
+      actor,
+      binding_id: parsed.data.id,
+      channel_id: before?.slack_channel_id,
+      channel_name: parsed.data.slackChannelName,
+      person_id_before: before?.person_id,
+      person_id_after: before?.person_id,
+      status_before: before?.status,
+      status_after: parsed.data.status,
+    }),
+  })
 
   revalidatePath('/admin/channels')
   // H-12: 詳細ページも再検証しないと編集直後に古い値が残る（Router Cache / staleTimes 設定時に顕在化）
