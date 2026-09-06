@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第1章 はじめに</title>
+<style>
+:root{--fg:#191c21;--muted:#5c6470;--line:#d9dee6;--bg:#fff;--soft:#f6f8fa;--soft2:#eef2f7;--accent:#1f5fa9;--code:#0f2b46;
+--warn:#7a4d00;--warnbg:#fff8e8;--warnline:#e6c579;--danger:#96262c;--dangerbg:#fdf1f2;--dangerline:#e3adb1;
+--ok:#1a6444;--okbg:#f0f8f4;--okline:#a5d5bd;--info:#144a73;--infobg:#eef6fc;--infoline:#9dc6e4;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);line-height:1.85;font-size:16px;
+font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,-apple-system,"Segoe UI",sans-serif;}
+.wrap{max-width:940px;margin:0 auto;padding:28px 20px 90px}
+.topbar{border-bottom:1px solid var(--line);background:var(--soft);}
+.topbar .inner{max-width:940px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
+.topbar a{color:var(--accent);text-decoration:none}
+.topbar a:hover{text-decoration:underline}
+.crumb{font-size:13px;color:var(--muted)}
+h1{font-size:27px;line-height:1.45;margin:26px 0 8px;letter-spacing:.01em}
+h2{font-size:21px;margin:44px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--line)}
+h3{font-size:17px;margin:30px 0 8px}
+h4{font-size:15px;margin:22px 0 6px;color:var(--muted)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:1.6em}
+li{margin:5px 0}
+code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13.5px;
+background:var(--soft2);padding:1px 5px;border-radius:3px;word-break:break-all}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:14px 14px;overflow-x:auto;
+font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13px;line-height:1.7;color:var(--code);margin:12px 0}
+pre code{background:none;padding:0;font-size:13px;word-break:normal}
+.codewrap{position:relative}
+.codewrap>pre{padding-right:82px}
+.copy{position:absolute;top:8px;right:8px;font:inherit;font-size:12px;padding:3px 10px;border:1px solid var(--line);
+background:#fff;color:var(--muted);border-radius:4px;cursor:pointer}
+.copy:hover{color:var(--fg);border-color:var(--muted)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--soft2);font-weight:600;white-space:nowrap}
+td code{font-size:12.8px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scroll table{min-width:640px}
+.scroll.wide table{min-width:880px}
+.note,.warnbox,.dangerbox,.okbox{border:1px solid;border-radius:6px;padding:12px 14px;margin:16px 0;font-size:15px}
+.note{border-color:var(--infoline);background:var(--infobg);color:var(--info)}
+.warnbox{border-color:var(--warnline);background:var(--warnbg);color:var(--warn)}
+.dangerbox{border-color:var(--dangerline);background:var(--dangerbg);color:var(--danger)}
+.okbox{border-color:var(--okline);background:var(--okbg);color:var(--ok)}
+.note b,.warnbox b,.dangerbox b,.okbox b{font-weight:700}
+.note p:first-child,.warnbox p:first-child,.dangerbox p:first-child,.okbox p:first-child{margin-top:0}
+.note p:last-child,.warnbox p:last-child,.dangerbox p:last-child,.okbox p:last-child{margin-bottom:0}
+.note code,.warnbox code,.dangerbox code,.okbox code{background:rgba(255,255,255,.7)}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 6px}
+.meta div{flex:1 1 240px;border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--soft)}
+.meta .k{font-size:12px;color:var(--muted);display:block;margin-bottom:2px}
+.meta .v{font-size:15px;font-weight:600;line-height:1.6}
+.meta .v ul{margin:2px 0 0;padding-left:1.3em;font-weight:400;font-size:14px}
+ul.check{list-style:none;padding-left:0}
+ul.check li{margin:6px 0;display:flex;gap:9px;align-items:flex-start}
+ul.check input{margin-top:7px;flex:0 0 auto;width:15px;height:15px}
+ul.check label{cursor:pointer}
+.steps{list-style:none;padding-left:0;margin:20px 0}
+.steps li{border:1px solid var(--line);border-radius:7px;margin:10px 0;padding:0}
+.steps a{display:block;padding:13px 16px;text-decoration:none;color:inherit}
+.steps a:hover{background:var(--soft)}
+.steps .n{display:inline-block;min-width:74px;font-size:12px;color:#fff;background:var(--accent);border-radius:11px;
+padding:1px 9px;text-align:center;margin-right:10px;vertical-align:2px}
+.steps .n.alt{background:#6b7280}
+.steps .t{font-weight:600;font-size:16.5px}
+.steps .d{display:block;color:var(--muted);font-size:14px;margin-top:3px;padding-left:0}
+.steps .tm{float:right;color:var(--muted);font-size:13px;font-weight:400}
+.nav{display:flex;justify-content:space-between;gap:14px;margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:15px}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+.nav span{color:#b6bcc6}
+.ph{background:#fff5d6;border-bottom:1px dotted #b08a19;padding:0 2px;font-weight:600}
+.diagram{font-size:12.5px;line-height:1.55;background:#fff;border:1px solid var(--line)}
+.small{font-size:13.5px;color:var(--muted)}
+.req{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap}
+.req.y{background:#fde8e8;color:#96262c;border:1px solid #e3adb1}
+.req.n{background:#eef2f7;color:#5c6470;border:1px solid #d9dee6}
+.req.r{background:#fff3d9;color:#7a4d00;border:1px solid #e6c579}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+a{color:var(--accent)}
+/* 画面キャプチャ（figure + img + figcaption）。枠線・角丸・中央寄せで本文と馴染ませる */
+figure.shot{margin:20px 0 24px}
+figure.shot img{display:block;width:100%;max-width:100%;margin:0 auto;border:1px solid var(--line);
+border-radius:7px;background:var(--bg);box-shadow:0 1px 3px rgba(16,32,56,.07)}
+/* 要素だけを切り出したキャプチャは実寸を超えて拡大しない（にじみを防ぐ） */
+figure.shot.sm img{max-width:576px}
+figure.shot figcaption{margin-top:8px;font-size:13px;line-height:1.65;color:var(--muted);text-align:center}
+@media print{
+ .topbar,.nav,.copy{display:none}
+ body{font-size:11.5pt}
+ a{color:#000;text-decoration:none}
+ pre,table,.note,.warnbox,.dangerbox,.okbox,figure.shot{page-break-inside:avoid}
+ figure.shot img{box-shadow:none}
+ h2{page-break-after:avoid}
+}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="inner">
+<span class="crumb"><a href="index.html">目次</a> ／ 第 1 章 / 7 — はじめに</span>
+<span class="crumb"><a href="02_毎日の確認.html">次へ →</a></span>
+</div></div>
+
+<div class="wrap">
+
+<h1>第 1 章 — はじめに</h1>
+
+<div class="note">
+<p><b>この章で分かること</b></p>
+<ul>
+<li>じゅくAI が何をしてくれるものか</li>
+<li>生徒の側からはどう見えているか</li>
+<li>スタッフが触る場所は「管理画面」だけ、ということ</li>
+<li>スタッフと管理者で、できることがどう違うか</li>
+</ul>
+</div>
+
+<h2 id="what">1-1. じゅくAI とは</h2>
+
+<p>生徒が Slack の自分専用チャンネルで質問すると、AI が答えて返します。
+ふつうの AI チャットとの違いは、<b>その生徒のことを踏まえて答える</b>ことです。</p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>AI が毎回参照するもの</th><th>誰が用意するか</th><th>詳しくは</th></tr></thead>
+<tbody>
+<tr><td><b>学年</b></td><td>スタッフ（生徒情報の「学年」欄）</td><td><a href="03_生徒の登録と管理.html#person">第 3 章 3-1</a></td></tr>
+<tr><td><b>AI 用プロフィール</b><br>（得意・苦手・説明のしかたなどの学習メモ）</td><td>スタッフ（手で書く）</td><td><a href="03_生徒の登録と管理.html#profile">第 3 章 3-2</a></td></tr>
+<tr><td><b>承認済みの月次レポート</b><br>（質問に関係のある部分だけ）</td><td>スタッフ（手で書いて承認する）</td><td><a href="04_月次レポート.html">第 4 章</a></td></tr>
+<tr><td><b>同じスレッドのこれまでのやり取り</b></td><td>自動</td><td>—</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>つまり、<b>スタッフが書いた情報の質が、そのまま AI の答えの質になります</b>。
+このマニュアルで一番大事なのが第 3 章の「AI 用プロフィールの書き方」なのは、そのためです。</p>
+
+<div class="okbox">
+<p><b>じゅくAI の方針</b>：答えを丸写しさせる道具ではなく、<b>となりで一緒に考える「伴走者」</b>としてふるまうように作られています。
+成績を評価したり採点したりはしません。1 回の返信で生徒に投げかける質問は多くても 1 つまで、という決まりも入っています。</p>
+</div>
+
+<h2 id="student">1-2. 生徒からはどう見えるか</h2>
+
+<p>生徒には「自分専用のチャンネル」が 1 つあります。そこでの流れはこうです。</p>
+
+<ol>
+<li>チャンネルで <b><code>@じゅくAI</code> を付けて</b>質問を書く<br>
+<span class="small">例：<code>@じゅくAI 二次関数のグラフの書き方がわからない</code></span></li>
+<li>生徒の発言に <b>🤔（考えている顔）</b> が付く ← 「受け付けました」の合図</li>
+<li>数十秒待つと、<b>スレッドの中に</b>回答が届く</li>
+<li>🤔 が外れる ← 「終わりました」の合図</li>
+<li>話の続きは<b>そのスレッドの中で返信する</b>だけでよい（<code>@じゅくAI</code> は<b>不要</b>）</li>
+</ol>
+
+<!-- SCREENSHOT: 生徒の Slack チャンネルで @じゅくAI に質問し、🤔 が付いてスレッドに回答が返っている様子（1つの画面に質問・🤔・回答が写るように） -->
+<!-- 上記は実際の Slack の画面。管理画面ではないため撮影できないので、文章で補っている -->
+
+<div class="note">
+<p><b>Slack 側の見た目は、実際のワークスペースでご自分の目で確かめてください。</b>
+（この手引きに貼れるのは管理画面の画像だけです。）テスト用のチャンネルで
+<code>@じゅくAI 二次関数のグラフの書き方がわからない</code> と 1 往復してみると、次の順に変わります。</p>
+<ol>
+<li>送った発言に <b>🤔</b> のリアクションが付く（＝受け付けた合図）</li>
+<li>その発言の下に <b>「1 件の返信」</b> というスレッドへのリンクが現れる</li>
+<li>スレッドを開くと <b>じゅくAI</b> からの回答が入っている</li>
+<li>回答が入り終わると <b>🤔 が消える</b>（＝終わった合図）</li>
+</ol>
+<p class="small">新しく入ったスタッフには、この 1 往復を実際にやってもらうのがいちばん早い説明になります。</p>
+</div>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>生徒ができること</th><th>補足</th></tr></thead>
+<tbody>
+<tr><td>文章で質問する</td><td>目安 6000 文字まで。長すぎると「質問が少し長すぎて処理できなかったよ」と返ります</td></tr>
+<tr><td><b>写真で質問する</b></td><td>問題・ノート・数式の写真。<b>1 回に 3 枚まで</b>／ jpg・png・webp ／ 1 枚 20MB まで</td></tr>
+<tr><td>スレッドで続けて聞く</td><td>2 回目以降は <code>@じゅくAI</code> 不要。話が長くなっても前半を要約して文脈を保ちます</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="warnbox">
+<p><b>生徒が <code>@じゅくAI</code> を付けずにチャンネルへ書き込んだ場合、じゅくAI は反応しません。</b>
+これは仕様です（スタッフの連絡や雑談に反応しないようにするため）。
+ただし<b>一度じゅくAI が答えたスレッドの中</b>では、メンションなしで会話を続けられます。</p>
+</div>
+
+<h2 id="admin">1-3. スタッフが触るのは管理画面だけ</h2>
+
+<p>スタッフの操作は、すべて <b>Web の管理画面</b>で行います。ログイン用のアドレスとパスワードは管理者から受け取ってください。
+画面の左側にメニューが並んでいます。</p>
+
+<figure class="shot">
+<img src="images/01-dashboard.png" alt="管理画面のダッシュボード全体。左側に「ダッシュボード／生徒管理／チャンネル設定／レポート／会話ログ／エラーログ／ジョブ／利用状況」の 8 つのメニューが縦に並び、右側には AI応答の状態カード、今日の質問数・今月のコスト・未対応エラー・生徒数の 4 つのカード、最近のエラー一覧が表示されている">
+<figcaption>管理画面のダッシュボード。左のメニュー 8 項目がスタッフの入り口です（画面の生徒名・数値はすべてサンプルです）</figcaption>
+</figure>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>メニュー</th><th>何が見られるか</th><th>いつ使うか</th></tr></thead>
+<tbody>
+<tr><td><b>ダッシュボード</b></td><td>AI が動いているか / 今日の質問数 / 今月のコスト / 未対応エラー / 生徒数</td><td><b>毎日</b>（<a href="02_毎日の確認.html">第 2 章</a>）</td></tr>
+<tr><td><b>生徒管理</b></td><td>生徒の一覧・登録・編集、AI 用プロフィール、試験期間</td><td>生徒が増えたとき・情報を直すとき（<a href="03_生徒の登録と管理.html">第 3 章</a>）</td></tr>
+<tr><td><b>チャンネル設定</b></td><td>Slack チャンネルと生徒の紐付け</td><td>生徒が増えたとき（<a href="03_生徒の登録と管理.html#binding">第 3 章 3-7</a>）</td></tr>
+<tr><td><b>レポート</b></td><td>月次レポートの作成・承認</td><td>毎月（<a href="04_月次レポート.html">第 4 章</a>）</td></tr>
+<tr><td><b>会話ログ</b></td><td>生徒と Bot のやり取りの記録</td><td>答えの質を確かめたいとき（<a href="02_毎日の確認.html#conv">第 2 章 2-3</a>）</td></tr>
+<tr><td><b>エラーログ</b></td><td>うまくいかなかった処理の記録</td><td><b>毎日</b>（<a href="02_毎日の確認.html#errors">第 2 章 2-2</a>）</td></tr>
+<tr><td><b>ジョブ</b></td><td>質問の処理が詰まっていないか</td><td>「回答が来ない」と言われたとき（<a href="02_毎日の確認.html#jobs">第 2 章 2-5</a>）</td></tr>
+<tr><td><b>利用状況</b></td><td>質問数・コスト・画像付き質問の割合の推移</td><td>月末・コストが気になるとき</td></tr>
+</tbody>
+</table>
+</div>
+
+<p class="small">メニューの名前と、開いた先の見出しが少し違うことがあります
+（「レポート」→「レポート管理」、「エラーログ」→「エラー管理」、「チャンネル設定」→「チャンネル紐付け」、「ジョブ」→「ジョブ管理」）。同じ画面です。</p>
+
+<h2 id="role">1-4. スタッフと管理者のちがい</h2>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>操作</th><th>スタッフ</th><th>管理者</th></tr></thead>
+<tbody>
+<tr><td>生徒の登録・編集、AI 用プロフィール、試験期間</td><td><span class="req n">できる</span></td><td><span class="req n">できる</span></td></tr>
+<tr><td>チャンネルと生徒の紐付け</td><td><span class="req n">できる</span></td><td><span class="req n">できる</span></td></tr>
+<tr><td>月次レポートの作成・承認</td><td><span class="req n">できる</span></td><td><span class="req n">できる</span></td></tr>
+<tr><td>会話ログ・エラーログ・ジョブ・利用状況を見る</td><td><span class="req n">できる</span></td><td><span class="req n">できる</span></td></tr>
+<tr><td><b>緊急停止（AI 応答の停止・再開）</b></td><td><span class="req y">できない</span></td><td><span class="req n">できる</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<p>スタッフでも「AI応答」のカードは見えますが、ボタンを押すと
+<code>AI応答の停止・再開は管理者のみ実行できます</code> と表示されます。
+止める必要があるときは管理者に連絡してください（<a href="07_安全のしくみ.html#stop">第 7 章 7-1</a>）。</p>
+
+<div class="note">
+<p><b>左メニューに「チャンネル設定」が出てこない場合</b>は、あなたのログイン権限がまだ切り替わっていない可能性があります。
+管理者か開発者に確認してください。紐付けは<b>スタッフが行える運用</b>になっています。</p>
+</div>
+
+<h2 id="cheat">1-5. スタッフのしごと早見表</h2>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>頻度</th><th>やること</th><th>章</th></tr></thead>
+<tbody>
+<tr><td><b>毎日（3 分）</b></td><td>ダッシュボードを開く → AI応答が「稼働中」／未対応エラーが 0 か確認</td><td><a href="02_毎日の確認.html">第 2 章</a></td></tr>
+<tr><td><b>生徒が増えたとき</b></td><td>生徒登録 → AI 用プロフィール → チャンネル作成 → <b>Bot を招待</b> → 紐付け</td><td><a href="03_生徒の登録と管理.html">第 3 章</a></td></tr>
+<tr><td><b>毎月</b></td><td>前月ぶんの月次レポートを書く → 承認する → AI が読めたか確認</td><td><a href="04_月次レポート.html">第 4 章</a></td></tr>
+<tr><td>3 か月に 1 回</td><td>会話ログを見て AI 用プロフィールを見直す</td><td><a href="03_生徒の登録と管理.html#profile">第 3 章 3-2</a></td></tr>
+<tr><td>試験前（任意）</td><td>試験期間を設定する（余裕があれば）</td><td><a href="03_生徒の登録と管理.html#exam">第 3 章 3-3</a></td></tr>
+<tr><td>退塾・休塾のとき</td><td>生徒のステータスを「無効」にする（<b>削除しない</b>）</td><td><a href="03_生徒の登録と管理.html#leave">第 3 章 3-8</a></td></tr>
+<tr><td>困ったとき</td><td>生徒に返った文面から原因を探す</td><td><a href="05_困ったとき.html">第 5 章</a></td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="nav">
+<a href="index.html">← 目次</a>
+<a href="index.html">目次</a>
+<a href="02_毎日の確認.html">第 2 章 毎日の確認 →</a>
+</div>
+
+</div>
+
+<script>
+/* チェックボックスの状態をこのブラウザに保存する（外部通信はしない） */
+(function(){
+  var key='jukuai-manual:'+location.pathname.split('/').pop();
+  document.querySelectorAll('ul.check input[type=checkbox]').forEach(function(cb){
+    var k=key+':'+cb.id;
+    try{if(localStorage.getItem(k)==='1')cb.checked=true;}catch(e){}
+    cb.addEventListener('change',function(){try{localStorage.setItem(k,cb.checked?'1':'0');}catch(e){}});
+  });
+})();
+</script>
+</body>
+</html>

@@ -27,4 +27,18 @@ test.describe('認証ガード（未認証アクセス）', () => {
       await expect(page).toHaveURL(/\/login/)
     })
   }
+
+  /**
+   * /set-password は matcher の外に置く。招待リンクはトークンを URL フラグメント
+   * （`#access_token=...`）で渡すため、middleware でリダイレクトすると
+   * フラグメントが失われて招待リンクが二度と使えなくなる。
+   * ここを保護対象に入れる変更を機械的に止めるためのテスト。
+   */
+  test('/set-password は未認証で開ける（middleware の保護対象に入れてはいけない）', async ({
+    page,
+  }) => {
+    await page.goto('/set-password')
+    await expect(page).toHaveURL(/\/set-password$/)
+    await expect(page.getByRole('heading', { name: 'パスワードの設定' })).toBeVisible()
+  })
 })

@@ -42,6 +42,16 @@ export async function middleware(request: NextRequest) {
   return supabaseResponse
 }
 
+/**
+ * 保護対象は「/admin 配下」と「/login」だけ。
+ *
+ * ⚠️ `/set-password` を**絶対に追加しないこと**。招待リンク（Supabase recovery）は
+ * トークンを URL フラグメント（`#access_token=...`）で渡すため、matcher に入れると
+ * 未認証のまま開いた瞬間に /login へリダイレクトされ、リダイレクトでフラグメントが
+ * 消えて招待リンクが二度と使えなくなる（E2E: auth-guard.spec.ts が固定）。
+ * このページ自体の安全性は「セッションが無ければパスワードを変更できない」
+ * （Supabase の PUT /auth/v1/user が Bearer トークン必須）で担保している。
+ */
 export const config = {
   matcher: ['/admin/:path*', '/login'],
 }

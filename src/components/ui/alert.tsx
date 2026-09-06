@@ -20,11 +20,19 @@ const alertVariants = cva(
   },
 )
 
+/**
+ * role の既定は "alert"（操作の結果として現れる、すぐ伝えたいメッセージ）。
+ *
+ * 常に表示されている案内文には `role="note"` を渡すこと。
+ * role="alert" はスクリーンリーダーが読み上げを割り込ませる強い意味を持つため、
+ * 静的な注意書きに付けると**ページを開くたびに読み上げられて邪魔になる**。
+ * 併せて、E2E の `alert()` ヘルパーがエラー表示を一意に取れなくなる副作用もある。
+ */
 const Alert = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof alertVariants>
->(({ className, variant, ...props }, ref) => (
-  <div ref={ref} role="alert" className={cn(alertVariants({ variant }), className)} {...props} />
+>(({ className, variant, role = 'alert', ...props }, ref) => (
+  <div ref={ref} role={role} className={cn(alertVariants({ variant }), className)} {...props} />
 ))
 Alert.displayName = 'Alert'
 

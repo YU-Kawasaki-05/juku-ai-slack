@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>じゅくAI スタッフ操作マニュアル</title>
+<style>
+:root{--fg:#191c21;--muted:#5c6470;--line:#d9dee6;--bg:#fff;--soft:#f6f8fa;--soft2:#eef2f7;--accent:#1f5fa9;--code:#0f2b46;
+--warn:#7a4d00;--warnbg:#fff8e8;--warnline:#e6c579;--danger:#96262c;--dangerbg:#fdf1f2;--dangerline:#e3adb1;
+--ok:#1a6444;--okbg:#f0f8f4;--okline:#a5d5bd;--info:#144a73;--infobg:#eef6fc;--infoline:#9dc6e4;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);line-height:1.85;font-size:16px;
+font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,-apple-system,"Segoe UI",sans-serif;}
+.wrap{max-width:940px;margin:0 auto;padding:28px 20px 90px}
+.topbar{border-bottom:1px solid var(--line);background:var(--soft);}
+.topbar .inner{max-width:940px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
+.topbar a{color:var(--accent);text-decoration:none}
+.topbar a:hover{text-decoration:underline}
+.crumb{font-size:13px;color:var(--muted)}
+h1{font-size:27px;line-height:1.45;margin:26px 0 8px;letter-spacing:.01em}
+h2{font-size:21px;margin:44px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--line)}
+h3{font-size:17px;margin:30px 0 8px}
+h4{font-size:15px;margin:22px 0 6px;color:var(--muted)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:1.6em}
+li{margin:5px 0}
+code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13.5px;
+background:var(--soft2);padding:1px 5px;border-radius:3px;word-break:break-all}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:14px 14px;overflow-x:auto;
+font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13px;line-height:1.7;color:var(--code);margin:12px 0}
+pre code{background:none;padding:0;font-size:13px;word-break:normal}
+.codewrap{position:relative}
+.codewrap>pre{padding-right:82px}
+.copy{position:absolute;top:8px;right:8px;font:inherit;font-size:12px;padding:3px 10px;border:1px solid var(--line);
+background:#fff;color:var(--muted);border-radius:4px;cursor:pointer}
+.copy:hover{color:var(--fg);border-color:var(--muted)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--soft2);font-weight:600;white-space:nowrap}
+td code{font-size:12.8px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scroll table{min-width:640px}
+.scroll.wide table{min-width:880px}
+.note,.warnbox,.dangerbox,.okbox{border:1px solid;border-radius:6px;padding:12px 14px;margin:16px 0;font-size:15px}
+.note{border-color:var(--infoline);background:var(--infobg);color:var(--info)}
+.warnbox{border-color:var(--warnline);background:var(--warnbg);color:var(--warn)}
+.dangerbox{border-color:var(--dangerline);background:var(--dangerbg);color:var(--danger)}
+.okbox{border-color:var(--okline);background:var(--okbg);color:var(--ok)}
+.note b,.warnbox b,.dangerbox b,.okbox b{font-weight:700}
+.note p:first-child,.warnbox p:first-child,.dangerbox p:first-child,.okbox p:first-child{margin-top:0}
+.note p:last-child,.warnbox p:last-child,.dangerbox p:last-child,.okbox p:last-child{margin-bottom:0}
+.note code,.warnbox code,.dangerbox code,.okbox code{background:rgba(255,255,255,.7)}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 6px}
+.meta div{flex:1 1 240px;border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--soft)}
+.meta .k{font-size:12px;color:var(--muted);display:block;margin-bottom:2px}
+.meta .v{font-size:15px;font-weight:600;line-height:1.6}
+.meta .v ul{margin:2px 0 0;padding-left:1.3em;font-weight:400;font-size:14px}
+ul.check{list-style:none;padding-left:0}
+ul.check li{margin:6px 0;display:flex;gap:9px;align-items:flex-start}
+ul.check input{margin-top:7px;flex:0 0 auto;width:15px;height:15px}
+ul.check label{cursor:pointer}
+.steps{list-style:none;padding-left:0;margin:20px 0}
+.steps li{border:1px solid var(--line);border-radius:7px;margin:10px 0;padding:0}
+.steps a{display:block;padding:13px 16px;text-decoration:none;color:inherit}
+.steps a:hover{background:var(--soft)}
+.steps .n{display:inline-block;min-width:74px;font-size:12px;color:#fff;background:var(--accent);border-radius:11px;
+padding:1px 9px;text-align:center;margin-right:10px;vertical-align:2px}
+.steps .n.alt{background:#6b7280}
+.steps .t{font-weight:600;font-size:16.5px}
+.steps .d{display:block;color:var(--muted);font-size:14px;margin-top:3px;padding-left:0}
+.steps .tm{float:right;color:var(--muted);font-size:13px;font-weight:400}
+.nav{display:flex;justify-content:space-between;gap:14px;margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:15px}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+.nav span{color:#b6bcc6}
+.ph{background:#fff5d6;border-bottom:1px dotted #b08a19;padding:0 2px;font-weight:600}
+.diagram{font-size:12.5px;line-height:1.55;background:#fff;border:1px solid var(--line)}
+.small{font-size:13.5px;color:var(--muted)}
+.req{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap}
+.req.y{background:#fde8e8;color:#96262c;border:1px solid #e3adb1}
+.req.n{background:#eef2f7;color:#5c6470;border:1px solid #d9dee6}
+.req.r{background:#fff3d9;color:#7a4d00;border:1px solid #e6c579}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+a{color:var(--accent)}
+@media print{
+ .topbar,.nav,.copy{display:none}
+ body{font-size:11.5pt}
+ a{color:#000;text-decoration:none}
+ pre,table,.note,.warnbox,.dangerbox,.okbox{page-break-inside:avoid}
+ h2{page-break-after:avoid}
+}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="inner">
+<span class="crumb">じゅくAI スタッフ操作マニュアル</span>
+<span class="crumb">全 7 章</span>
+</div></div>
+
+<div class="wrap">
+
+<h1>じゅくAI スタッフ操作マニュアル</h1>
+
+<p>じゅくAI は、<b>生徒が Slack で質問すると AI が答えてくれる</b>しくみです。
+ふつうの AI チャットと違うのは、<b>その生徒のことを踏まえて</b>答えるところです。
+そのために必要な情報を用意するのが、スタッフのしごとです。</p>
+
+<p>このマニュアルは、<b>Slack と Web の画面が使えれば読める</b>ように書いてあります。
+プログラムの知識は必要ありません。紙に印刷しても使えます。</p>
+
+<h2>1. 全体像</h2>
+
+<pre class="diagram nocopy"><code>   生徒（Slack）                          スタッフ（Web の管理画面）
+       │                                        │
+       │ 自分専用のチャンネルで質問する          │ 生徒を登録する
+       │  「@じゅくAI この問題わからない」       │ AI 用プロフィールを書く
+       │                                        │ 月次レポートを登録する
+       ▼                                        │ 会話ログ・エラーを見る
+   ┌──────────────────────┐                     │
+   │  じゅくAI              │◀────────────────┘
+   │                       │
+   │  この生徒のことを      │   ・学年
+   │  ふまえて答える        │   ・AI 用プロフィール（スタッフが書いた学習メモ）
+   │                       │   ・承認済みの月次レポート
+   └──────────┬───────────┘   ・同じスレッドのこれまでのやり取り
+              │
+              ▼
+   生徒のチャンネルに回答が届く</code></pre>
+
+<div class="note">
+<p><b>スタッフが操作するのは Web の管理画面だけです。</b>
+生徒の Slack チャンネルにスタッフが書き込む必要はありません
+（チャンネルの中でスタッフが雑談しても、じゅくAI は反応しません）。</p>
+</div>
+
+<h2>2. まず何を読むか</h2>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>あなたの状況</th><th>読む順番</th></tr></thead>
+<tbody>
+<tr><td><b>はじめて担当になった</b></td><td>第 1 章 → 第 2 章。ここまでで日々の仕事は回ります</td></tr>
+<tr><td><b>新しい生徒を使えるようにしたい</b></td><td>第 3 章（全体の流れ → 5 ステップ）</td></tr>
+<tr><td><b>AI の答えの質を上げたい</b></td><td>第 3 章「AI 用プロフィールの書き方」＋ 第 4 章</td></tr>
+<tr><td><b>月が変わった</b></td><td>第 4 章</td></tr>
+<tr><td><b>生徒から「使えない」と言われた</b></td><td>第 2 章「Bot が反応しないと言われたとき」→ 第 5 章</td></tr>
+<tr><td><b>保護者や講師に説明したい</b></td><td>第 6 章 ＋ 第 7 章</td></tr>
+<tr><td><b>塾の管理者（責任者）である</b></td><td>第 7 章は必ず読んでください（緊急停止・個人情報）</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>3. 章の一覧</h2>
+
+<ol class="steps">
+<li><a href="01_はじめに.html"><span class="n">第 1 章</span><span class="t">はじめに</span>
+<span class="d">じゅくAI とは何か / 生徒からはどう見えるか / スタッフが触るのは管理画面だけ / 役割と早見表</span></a></li>
+
+<li><a href="02_毎日の確認.html"><span class="n">第 2 章</span><span class="t">毎日の確認</span>
+<span class="d">朝の 3 分チェック / エラーの見方 / 会話ログの見方 /「Bot が反応しない」と言われたときの手順</span></a></li>
+
+<li><a href="03_生徒の登録と管理.html"><span class="n">第 3 章</span><span class="t">生徒の登録と管理</span>
+<span class="d">生徒登録 / <b>AI 用プロフィールの書き方</b> / 試験期間 / チャンネル作成と Bot の招待 / <b>紐付け</b> / 退塾・休塾</span></a></li>
+
+<li><a href="04_月次レポート.html"><span class="n">第 4 章</span><span class="t">月次レポート</span>
+<span class="d">レポートの登録と承認 / AI が参照できるようになったかの確認</span></a></li>
+
+<li><a href="05_困ったとき.html"><span class="n">第 5 章</span><span class="t">困ったとき</span>
+<span class="d">生徒に返った文面から原因を当てる / 症状別の対処表 / 開発者に連絡すべきかの判断基準</span></a></li>
+
+<li><a href="06_このアプリでできること.html"><span class="n">第 6 章</span><span class="t">このアプリでできること</span>
+<span class="d">できること / <b>今はできないこと</b> / 保護者・講師への説明のしかた</span></a></li>
+
+<li><a href="07_安全のしくみ.html"><span class="n">第 7 章</span><span class="t">安全のしくみ</span>
+<span class="d">緊急停止 / 質問回数の上限 / 個人情報の扱い（保護者に説明できる材料）</span></a></li>
+</ol>
+
+<h2>4. 最初に覚える 3 つ</h2>
+
+<div class="dangerbox">
+<p><b>① チャンネルを作ったら、Bot を招待する。</b>
+Slack のチャンネルで <code>/invite @じゅくAI</code> と打ちます。これを忘れると、じゅくAI は<b>完全に無反応</b>になります。
+エラーの記録さえ残らないので、いちばん気づきにくいミスです。→ <a href="03_生徒の登録と管理.html#invite">第 3 章</a></p>
+</div>
+
+<div class="dangerbox">
+<p><b>② 紐付け（ひもづけ）を間違えない。</b>
+紐付けは「このチャンネルの質問は誰のものか」を決める設定です。間違えると
+<b>別の生徒の学習履歴とレポートを使って回答してしまいます</b>。→ <a href="03_生徒の登録と管理.html#binding">第 3 章</a></p>
+</div>
+
+<div class="dangerbox">
+<p><b>③ AI 用プロフィールに生徒の氏名を書かない。</b>
+この欄に書いた文章は<b>そのまま AI に送られます</b>。氏名は答えの質を上げないので、書く必要がありません。
+→ <a href="03_生徒の登録と管理.html#profile">第 3 章</a></p>
+</div>
+
+<h2>5. このマニュアルで使う言葉</h2>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>言葉</th><th>意味</th></tr></thead>
+<tbody>
+<tr><td><b>管理画面</b></td><td>スタッフが使う Web の画面。ログインが必要。生徒はログインできません</td></tr>
+<tr><td><b>Bot（ボット）</b></td><td>Slack の中にいる「じゅくAI」のこと。人ではなくアプリです</td></tr>
+<tr><td><b>チャンネル</b></td><td>Slack の会話の部屋。<b>生徒 1 人につき 1 つ</b>作ります</td></tr>
+<tr><td><b>スレッド</b></td><td>Slack で 1 つの発言にぶら下がる返信の列。話の続きはここで続けます</td></tr>
+<tr><td><b>紐付け（ひもづけ）</b></td><td>「このチャンネルの質問は誰のものか」を決める設定</td></tr>
+<tr><td><b>AI 用プロフィール</b></td><td>スタッフが書く生徒の学習メモ。AI が毎回の回答で参照します</td></tr>
+<tr><td><b>月次レポート</b></td><td>生徒ごと・月ごとの学習記録。承認すると AI が参照できるようになります</td></tr>
+<tr><td><b>緊急停止</b></td><td>全生徒への AI 回答をすぐに止めるボタン。管理者のみ操作できます</td></tr>
+<tr><td><b>スタッフ / 管理者</b></td><td>管理画面にログインできる人の 2 種類。緊急停止だけは管理者専用です</td></tr>
+</tbody>
+</table>
+</div>
+
+<p class="small">このマニュアルは<b>塾で日々使う操作</b>を扱います。
+最初の環境づくり（アプリを作って動かすまで）は開発者向けの
+<a href="../06_セットアップガイド/index.html">セットアップガイド</a> にあります。</p>
+
+<div class="nav">
+<span></span>
+<span>目次</span>
+<a href="01_はじめに.html">第 1 章 はじめに →</a>
+</div>
+
+</div>
+
+<script>
+/* チェックボックスの状態をこのブラウザに保存する（外部通信はしない） */
+(function(){
+  var key='jukuai-manual:'+location.pathname.split('/').pop();
+  document.querySelectorAll('ul.check input[type=checkbox]').forEach(function(cb){
+    var k=key+':'+cb.id;
+    try{if(localStorage.getItem(k)==='1')cb.checked=true;}catch(e){}
+    cb.addEventListener('change',function(){try{localStorage.setItem(k,cb.checked?'1':'0');}catch(e){}});
+  });
+})();
+</script>
+</body>
+</html>

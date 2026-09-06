@@ -14,6 +14,7 @@ import {
   deleteAuthUser,
   restInsert,
   restSelect,
+  findErrorLogs,
   selfSetUserMetadata,
   shot,
   signInForToken,
@@ -151,27 +152,45 @@ test.describe('管理画面の権限（証拠あり）', () => {
   })
 
   /**
-   * EP-07: 紐付けは admin 限定。画面自体を塞ぐ（フォームを見せて保存時に断る、ではない）。
-   * 生徒名とチャンネル ID の対応表そのものなので、データを読む前に止める。
+   * EP-07〜09 は staff 可（権限設計 3.1）。生徒チャンネルの紐付けは担当スタッフが行う運用。
+   * 入口を閉じる代わりの防御が実際に効いていることを確認する:
+   *   (1) 確定前に生徒名つきの確認ダイアログが出る
+   *   (2) 誰がどのチャンネルをどの生徒に紐付けたかが操作ログに残る
    */
-  test('AT-13 staff はチャンネル紐付けの画面に到達できない（EP-07〜09 / D-3）', async ({ page }) => {
+  test('AT-13 staff はチャンネル紐付けを作成でき、操作ログが残る（EP-07〜09 / 権限設計 3.1）', async ({
+    page,
+  }) => {
     const person = await createPerson(`AT 権限紐付け ${uniqueSuffix()}`)
     personIds.push(person.id)
+    const channel = `C${uniqueSuffix().toUpperCase().replace(/[^A-Z0-9]/g, '0')}`
 
     await page.goto('/admin/channels/new')
-    await expect(
-      page.getByText('チャンネル紐付けの管理は管理者（admin）のみが利用できます'),
-    ).toBeVisible()
-    await expect(page.getByLabel('SlackチャンネルID')).toHaveCount(0)
-    await expect(page.getByRole('button', { name: '紐付ける' })).toHaveCount(0)
-    await shot(page, 'AT-13_staffはチャンネル紐付けの画面に到達できない')
+    await page.getByLabel('SlackチャンネルID').fill(channel)
+    await page.getByLabel('ワークスペースID').fill('T0ATTEAM')
+    await page.getByLabel('チャンネル名').fill('at-staff-bind')
+    await page.getByLabel('生徒').click()
+    await page.getByRole('option', { name: person.name }).click()
+    await page.getByRole('button', { name: '紐付ける' }).click()
 
-    // 一覧側も同様に塞がれ、生徒名が漏れない
-    await page.goto('/admin/channels')
-    await expect(
-      page.getByText('チャンネル紐付けの管理は管理者（admin）のみが利用できます'),
-    ).toBeVisible()
-    await expect(page.getByText(person.name)).toHaveCount(0)
+    // (1) 生徒を取り違えていないか、確定前に生徒名で確認させる
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toContainText('#at-staff-bind')
+    await expect(dialog).toContainText(person.name)
+    await expect(dialog).toContainText('この生徒の学習履歴とレポートが使われます')
+    await shot(page, 'AT-13_staffはチャンネル紐付けを作成できる')
+    await dialog.getByRole('button', { name: '紐付けを確定する' }).click()
+
+    await expect(page).toHaveURL(/\/admin\/channels$/)
+    await expect(page.getByRole('row').filter({ hasText: channel })).toContainText(person.name)
+
+    // (2) 操作ログ（severity=info）に操作者・channel_id・person_id が残る
+    const logs = await findErrorLogs(channel, { code: 'CHANNEL_BINDING_CREATED' })
+    const created = logs.find((l) => l.error_code === 'CHANNEL_BINDING_CREATED')
+    expect(created, '紐付けの操作ログが記録されていません').toBeTruthy()
+    expect(created?.severity).toBe('info')
+    expect(created?.person_id).toBe(person.id)
+    expect(String(created?.internal_message)).toContain(`actor=${testUsers.staff.email}`)
+    expect(String(created?.internal_message)).toContain(`person_id=${person.id}`)
   })
 })
 

@@ -88,7 +88,7 @@ export function PersonForm({
             />
             <FieldError id="displayName-error" message={err?.fieldErrors?.displayName} />
             <p id="displayName-help" className="text-xs text-muted-foreground">
-              Bot が呼びかけに使う名前です（例: 太郎くん）
+              管理画面の生徒一覧に併記される名前です（例: 太郎くん）。AI には送られません
             </p>
           </div>
 
@@ -101,9 +101,13 @@ export function PersonForm({
               placeholder="例: 中学3年"
               maxLength={50}
               aria-invalid={err?.fieldErrors?.grade ? true : undefined}
-              aria-describedby={err?.fieldErrors?.grade ? 'grade-error' : undefined}
+              aria-describedby={err?.fieldErrors?.grade ? 'grade-error grade-help' : 'grade-help'}
             />
             <FieldError id="grade-error" message={err?.fieldErrors?.grade} />
+            {/* persons から AI に渡るのはこの列だけ。氏名・講師名を書かれるとそのまま外部 LLM に届く */}
+            <p id="grade-help" className="text-xs text-muted-foreground">
+              この欄の内容はそのまま AI に送られます。学年だけを書いてください（氏名や講師名は書かない）
+            </p>
           </div>
 
           <div className="space-y-2">

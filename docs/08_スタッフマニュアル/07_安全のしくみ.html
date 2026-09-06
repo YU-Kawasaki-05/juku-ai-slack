@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第7章 安全のしくみ</title>
+<style>
+:root{--fg:#191c21;--muted:#5c6470;--line:#d9dee6;--bg:#fff;--soft:#f6f8fa;--soft2:#eef2f7;--accent:#1f5fa9;--code:#0f2b46;
+--warn:#7a4d00;--warnbg:#fff8e8;--warnline:#e6c579;--danger:#96262c;--dangerbg:#fdf1f2;--dangerline:#e3adb1;
+--ok:#1a6444;--okbg:#f0f8f4;--okline:#a5d5bd;--info:#144a73;--infobg:#eef6fc;--infoline:#9dc6e4;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);line-height:1.85;font-size:16px;
+font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,-apple-system,"Segoe UI",sans-serif;}
+.wrap{max-width:940px;margin:0 auto;padding:28px 20px 90px}
+.topbar{border-bottom:1px solid var(--line);background:var(--soft);}
+.topbar .inner{max-width:940px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
+.topbar a{color:var(--accent);text-decoration:none}
+.topbar a:hover{text-decoration:underline}
+.crumb{font-size:13px;color:var(--muted)}
+h1{font-size:27px;line-height:1.45;margin:26px 0 8px;letter-spacing:.01em}
+h2{font-size:21px;margin:44px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--line)}
+h3{font-size:17px;margin:30px 0 8px}
+h4{font-size:15px;margin:22px 0 6px;color:var(--muted)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:1.6em}
+li{margin:5px 0}
+code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13.5px;
+background:var(--soft2);padding:1px 5px;border-radius:3px;word-break:break-all}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:14px 14px;overflow-x:auto;
+font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13px;line-height:1.7;color:var(--code);margin:12px 0}
+pre code{background:none;padding:0;font-size:13px;word-break:normal}
+.codewrap{position:relative}
+.codewrap>pre{padding-right:82px}
+.copy{position:absolute;top:8px;right:8px;font:inherit;font-size:12px;padding:3px 10px;border:1px solid var(--line);
+background:#fff;color:var(--muted);border-radius:4px;cursor:pointer}
+.copy:hover{color:var(--fg);border-color:var(--muted)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--soft2);font-weight:600;white-space:nowrap}
+td code{font-size:12.8px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scroll table{min-width:640px}
+.scroll.wide table{min-width:880px}
+.note,.warnbox,.dangerbox,.okbox{border:1px solid;border-radius:6px;padding:12px 14px;margin:16px 0;font-size:15px}
+.note{border-color:var(--infoline);background:var(--infobg);color:var(--info)}
+.warnbox{border-color:var(--warnline);background:var(--warnbg);color:var(--warn)}
+.dangerbox{border-color:var(--dangerline);background:var(--dangerbg);color:var(--danger)}
+.okbox{border-color:var(--okline);background:var(--okbg);color:var(--ok)}
+.note b,.warnbox b,.dangerbox b,.okbox b{font-weight:700}
+.note p:first-child,.warnbox p:first-child,.dangerbox p:first-child,.okbox p:first-child{margin-top:0}
+.note p:last-child,.warnbox p:last-child,.dangerbox p:last-child,.okbox p:last-child{margin-bottom:0}
+.note code,.warnbox code,.dangerbox code,.okbox code{background:rgba(255,255,255,.7)}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 6px}
+.meta div{flex:1 1 240px;border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--soft)}
+.meta .k{font-size:12px;color:var(--muted);display:block;margin-bottom:2px}
+.meta .v{font-size:15px;font-weight:600;line-height:1.6}
+.meta .v ul{margin:2px 0 0;padding-left:1.3em;font-weight:400;font-size:14px}
+ul.check{list-style:none;padding-left:0}
+ul.check li{margin:6px 0;display:flex;gap:9px;align-items:flex-start}
+ul.check input{margin-top:7px;flex:0 0 auto;width:15px;height:15px}
+ul.check label{cursor:pointer}
+.steps{list-style:none;padding-left:0;margin:20px 0}
+.steps li{border:1px solid var(--line);border-radius:7px;margin:10px 0;padding:0}
+.steps a{display:block;padding:13px 16px;text-decoration:none;color:inherit}
+.steps a:hover{background:var(--soft)}
+.steps .n{display:inline-block;min-width:74px;font-size:12px;color:#fff;background:var(--accent);border-radius:11px;
+padding:1px 9px;text-align:center;margin-right:10px;vertical-align:2px}
+.steps .n.alt{background:#6b7280}
+.steps .t{font-weight:600;font-size:16.5px}
+.steps .d{display:block;color:var(--muted);font-size:14px;margin-top:3px;padding-left:0}
+.steps .tm{float:right;color:var(--muted);font-size:13px;font-weight:400}
+.nav{display:flex;justify-content:space-between;gap:14px;margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:15px}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+.nav span{color:#b6bcc6}
+.ph{background:#fff5d6;border-bottom:1px dotted #b08a19;padding:0 2px;font-weight:600}
+.diagram{font-size:12.5px;line-height:1.55;background:#fff;border:1px solid var(--line)}
+.small{font-size:13.5px;color:var(--muted)}
+.req{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap}
+.req.y{background:#fde8e8;color:#96262c;border:1px solid #e3adb1}
+.req.n{background:#eef2f7;color:#5c6470;border:1px solid #d9dee6}
+.req.r{background:#fff3d9;color:#7a4d00;border:1px solid #e6c579}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+a{color:var(--accent)}
+/* 画面キャプチャ（figure + img + figcaption）。枠線・角丸・中央寄せで本文と馴染ませる */
+figure.shot{margin:20px 0 24px}
+figure.shot img{display:block;width:100%;max-width:100%;margin:0 auto;border:1px solid var(--line);
+border-radius:7px;background:var(--bg);box-shadow:0 1px 3px rgba(16,32,56,.07)}
+/* 要素だけを切り出したキャプチャは実寸を超えて拡大しない（にじみを防ぐ） */
+figure.shot.sm img{max-width:576px}
+figure.shot figcaption{margin-top:8px;font-size:13px;line-height:1.65;color:var(--muted);text-align:center}
+@media print{
+ .topbar,.nav,.copy{display:none}
+ body{font-size:11.5pt}
+ a{color:#000;text-decoration:none}
+ pre,table,.note,.warnbox,.dangerbox,.okbox,figure.shot{page-break-inside:avoid}
+ figure.shot img{box-shadow:none}
+ h2{page-break-after:avoid}
+}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="inner">
+<span class="crumb"><a href="index.html">目次</a> ／ 第 7 章 / 7 — 安全のしくみ</span>
+<span class="crumb">最後の章</span>
+</div></div>
+
+<div class="wrap">
+
+<h1>第 7 章 — 安全のしくみ</h1>
+
+<div class="note">
+<p><b>この章で分かること</b></p>
+<ul>
+<li>緊急停止の使い方（管理者向け）</li>
+<li>質問回数の上限のしくみ</li>
+<li><b>個人情報の扱い</b>（保護者に説明できる材料）</li>
+<li>誰が何を見られるか</li>
+</ul>
+<p>7-1 は<b>管理者（塾の責任者）向け</b>です。7-3 以降は<b>スタッフ全員に読んでほしい内容</b>です。</p>
+</div>
+
+<h2 id="stop">7-1. 緊急停止（管理者のみ）</h2>
+
+<p>「AI が変なことを言っている」「費用が異常に増えている」「個人情報の事故が起きた」ときに、
+<b>数秒で全生徒への回答を止められます</b>。プログラムの変更も設定作業も要りません。</p>
+
+<h3>止め方</h3>
+<ol>
+<li>管理画面の <b>ダッシュボード</b> を開く（<b>一番上</b>に「AI応答」のカードがあります）</li>
+<li><b>AI応答を停止</b> をクリック</li>
+<li><b>理由</b>を書く（例：<code>紐付けの誤りが見つかったため一時停止</code>）— 任意ですが<b>必ず書いてください</b></li>
+<li><b>停止する</b> をクリック</li>
+</ol>
+
+<figure class="shot">
+<img src="images/07-killswitch-card.png" alt="ダッシュボード最上部の「AI応答」カード。緑色のチェックアイコンと「AI応答」の見出し、緑色の「稼働中」バッジ、「生徒からの質問に AI が回答しています」という説明と最終更新日時。右端に赤い「AI応答を停止」ボタンがある">
+<figcaption>ダッシュボード最上部の「AI応答」カード。緑の <b>稼働中</b> が正常です</figcaption>
+</figure>
+
+<figure class="shot sm">
+<img src="images/07-killswitch-dialog.png" alt="「AI応答を停止しますか？」の確認ダイアログ。「停止中は全生徒への AI 回答が止まり、質問には「メンテナンス中」の定型文だけを返します。この操作は管理者のみ実行でき、#alerts に通知されます。」という説明の下に「理由（#alerts と管理画面に表示されます）」の入力欄があり、下部に「キャンセル」と赤い「停止する」のボタンが並んでいる">
+<figcaption>確認ダイアログ。<b>理由</b>は任意ですが、あとから経緯を追えるように必ず書いてください</figcaption>
+</figure>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>項目</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td><b>誰ができるか</b></td><td><b>管理者のみ。</b>スタッフはカードを見られますが、押すと
+<code>AI応答の停止・再開は管理者のみ実行できます</code> と表示されます</td></tr>
+<tr><td><b>止まると何が起きるか</b></td><td>🤔 も付かず、質問には定型文だけが返ります：<br>
+「いまメンテナンス中でお返事ができないんだ しばらく経ってからもう一度質問してね。」<br>
+<b>AI は呼ばれないので、費用も止まります</b></td></tr>
+<tr><td><b>通知</b></td><td>Slack の <code>#alerts</code> チャンネルに「操作者・理由・時刻」が投稿されます（設定してある場合）。
+状態が変わったときだけ通知されます</td></tr>
+<tr><td><b>再開</b></td><td>同じカードの <b>AI応答を再開</b>。カードが緑の <b>稼働中</b> に戻ります</td></tr>
+<tr><td><b>理由の表示</b></td><td>カードに「理由」「最終更新（操作者）」が残るので、他のスタッフも状況が分かります</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>使うべき場面</h3>
+<ul>
+<li><b>別の生徒として回答されている</b>（<a href="05_困ったとき.html#wrongperson">第 5 章 5-3</a>）</li>
+<li>AI が不適切な内容を返している</li>
+<li>コストが異常に増えている</li>
+<li>エラーが大量に出ていて、原因が分かるまで動かしたくない</li>
+</ul>
+
+<div class="dangerbox">
+<p><b>止めたまま忘れないでください。</b>
+停止中は全生徒が使えません。ダッシュボードを開けばカードが赤い <b>停止中</b> になっているので、
+<b>朝いちばんに開く習慣</b>にしておけば取りこぼしません（<a href="02_毎日の確認.html#daily">第 2 章 2-1</a>）。
+理由を書いておけば、あとから見た人も「まだ止めておくべきか」を判断できます。</p>
+</div>
+
+<p class="small">どうしても停止ボタンで止められないときは、Slack アプリ側でイベントの受け取りを止める・
+アプリの公開を止めるといった手段になります。この作業は開発者に依頼してください。</p>
+
+<h2 id="limit">7-2. 質問回数の上限</h2>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>項目</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td><b>上限</b></td><td><b>生徒 1 人あたり、直近 1 時間に 10 回</b></td></tr>
+<tr><td><b>数える単位</b></td><td><b>生徒ごと</b>です（チャンネルごとではありません）</td></tr>
+<tr><td><b>超えると</b></td><td>次の定型文が返ります：<br>
+「今日はたくさん質問してくれてありがとう！ちょっと休憩して、1時間ほどしてからまた質問してね」</td></tr>
+<tr><td><b>費用</b></td><td><b>かかりません。</b>AI を呼ぶ前に判定しているので、超えたぶんは課金されません</td></tr>
+<tr><td><b>解除</b></td><td><b>自動です。</b>「直近 1 時間」の数え方なので、古い質問が 1 時間より前になれば、その分だけまた使えます</td></tr>
+<tr><td><b>記録</b></td><td>エラーログに <code>RATE_LIMITED</code>（深刻度 <b>情報</b>）として残ります。
+ふだんは非表示なので、深刻度を <b>すべて</b> にすると見えます</td></tr>
+<tr><td><b>数え方の対象</b></td><td>生徒への回答が成功した回数です。内部処理（会話の要約など）は数えません</td></tr>
+<tr><td><b>上限を変えたい</b></td><td>画面からは変えられません。開発者に相談してください（プログラムの変更になります）</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note">
+<p><b>生徒から「使えない」と言われたら、まずこれを疑ってください。</b>
+試験前などで質問が集中すると、ふつうに到達します。エラーログで深刻度を <b>すべて</b> にして
+<code>RATE_LIMITED</code> を探せば確認できます。異常ではありません。</p>
+</div>
+
+<h2 id="privacy">7-3. 個人情報の扱い</h2>
+
+<p><b>保護者への説明にそのまま使える内容です。</b>
+このアプリは、外部の AI サービスに送る情報を意図的に絞って作られています。</p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>情報</th><th>AI に送るか</th><th>説明</th></tr></thead>
+<tbody>
+
+<tr>
+<td><b>生徒の氏名</b></td>
+<td><span class="req y">送らない</span></td>
+<td><b>設計として、AI に渡す情報から氏名を外しています。</b>
+氏名は回答の質を上げず、外部に渡す必要のない情報だからです。<br>
+<b>ただし例外が 1 つ</b>：スタッフが「AI 用プロフィール」や「学年」欄、レポート本文に氏名を書いた場合は、
+その文字はそのまま送られます。<b>だから書かないでください</b>（<a href="03_生徒の登録と管理.html#profile">第 3 章 3-2</a>）</td>
+</tr>
+
+<tr>
+<td><b>生徒番号などの内部の管理番号</b></td>
+<td><span class="req y">送らない</span></td>
+<td>AI にとって意味のない文字列で、送る理由がありません</td>
+</tr>
+
+<tr>
+<td><b>Bot が呼びかけに使う表示名</b></td>
+<td><span class="req y">送らない</span></td>
+<td>管理画面の設定として保存されるだけです</td>
+</tr>
+
+<tr>
+<td><b>保護者のメールアドレス</b></td>
+<td><span class="req y">送らない</span></td>
+<td>管理画面に記録として保存されるだけです（メール送信の機能もまだありません）</td>
+</tr>
+
+<tr>
+<td><b>生徒の Slack アカウント名・メールアドレス</b></td>
+<td><span class="req y">送らない</span></td>
+<td>AI に渡す情報には含まれません</td>
+</tr>
+
+<tr>
+<td><b>学年</b></td>
+<td><span class="req r">送る</span></td>
+<td>説明の深さと言葉づかいを学年に合わせるために必要です（中 1 と高 3 で説明を変える必要があります）</td>
+</tr>
+
+<tr>
+<td><b>AI 用プロフィールに書いた文章</b></td>
+<td><span class="req r">送る</span></td>
+<td><b>書いた内容がそのまま送られます。</b>学習の状況を伝えるための欄です</td>
+</tr>
+
+<tr>
+<td><b>質問の文章</b></td>
+<td><span class="req r">送る</span></td>
+<td>回答するために必要です</td>
+</tr>
+
+<tr>
+<td><b>同じスレッドのこれまでのやり取り</b></td>
+<td><span class="req r">送る</span></td>
+<td>会話の続きを理解するために必要です。長くなった場合は前半を要約した形で送ります</td>
+</tr>
+
+<tr>
+<td><b>承認済みレポートの一部</b></td>
+<td><span class="req r">送る</span></td>
+<td>その質問に<b>関係のある部分だけ</b>が抜き出されて送られます。レポート全文が毎回送られるわけではありません</td>
+</tr>
+
+<tr>
+<td><b>生徒が送った写真</b></td>
+<td><span class="req r">送る</span></td>
+<td>写真の内容を読み取るために送ります。<b>ただし埋め込まれた撮影情報は取り除いてから</b>送ります（次の 7-4）</td>
+</tr>
+
+</tbody>
+</table>
+</div>
+
+<h2 id="photo">7-4. 写真から撮影情報を取り除いています</h2>
+
+<p>スマートフォンで撮った写真には、写真そのものとは別に
+<b>撮影した場所（GPS の位置情報）・端末の機種・撮影日時</b>などが埋め込まれていることがあります。</p>
+
+<div class="okbox">
+<p>じゅくAI は、生徒から写真を受け取った<b>直後に</b>これらの情報を取り除いてから、保存と AI への送信を行います。
+つまり<b>生徒の自宅の位置情報が外部に渡ることはありません。</b></p>
+<p>取り除くのは<b>余分な情報だけ</b>で、写真そのものを作り直しはしないため、<b>画質は落ちません</b>
+（数式や手書き文字の読み取りに影響しません）。</p>
+</div>
+
+<p class="small">写真が大きすぎる場合は、AI に送る前にサイズを小さくすることがあります（費用を抑えるためです）。
+数式や手書き文字が読める解像度は保たれます。</p>
+
+<h2 id="isolation">7-5. 生徒の情報が混ざらないしくみ</h2>
+
+<ul>
+<li><b>「誰の質問か」はチャンネル ID だけで決まります。</b>生徒が名乗る必要はなく、名乗っても変わりません</li>
+<li>AI に渡す情報は、<b>その生徒のものだけ</b>に絞り込まれます（他の生徒のプロフィールやレポートが混ざる作りになっていません）</li>
+<li>回答は、質問が来たチャンネルのスレッドにだけ投稿されます</li>
+<li>AI への指示にも「この生徒のメモ（他の生徒には使わない）」と明示されています</li>
+</ul>
+
+<div class="dangerbox">
+<p><b>この前提が崩れる唯一の原因は、紐付けの間違いです。</b>
+チャンネルと生徒の対応を間違えると、しくみは正しく動いたまま「間違った生徒の情報」を使ってしまいます。
+だから紐付けの操作だけは慎重に行ってください（<a href="03_生徒の登録と管理.html#binding">第 3 章 3-7</a>）。
+月に 1 回、チャンネル設定の一覧を見て対応を確認する運用をおすすめします。</p>
+</div>
+
+<h2 id="access">7-6. 誰が何を見られるか</h2>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>立場</th><th>見られるもの</th><th>できないこと</th></tr></thead>
+<tbody>
+<tr><td><b>生徒</b></td><td>自分のチャンネルの会話だけ（Slack の中）</td><td>管理画面にログインできません。他の生徒の情報は見られません</td></tr>
+<tr><td><b>スタッフ</b></td><td>管理画面のすべての画面（生徒情報・会話ログ・レポート・エラー・利用状況・紐付け）</td><td>緊急停止の操作</td></tr>
+<tr><td><b>管理者</b></td><td>スタッフと同じ ＋ 緊急停止の操作</td><td>—</td></tr>
+</tbody>
+</table>
+</div>
+
+<ul>
+<li>管理画面は<b>ログインが必要</b>です。生徒はログインアカウントを持ちません</li>
+<li>アカウントは<b>招待制</b>です（自分で勝手に登録して入ることはできません）。新しいスタッフの追加は管理者・開発者に依頼してください</li>
+<li>会話ログには<b>生徒のやり取りがそのまま</b>残ります。スタッフはこれを見られるので、
+<b>塾の外に持ち出さない</b>（画面の写真を SNS に上げないなど）ことを徹底してください</li>
+</ul>
+
+<h3>アカウントを受け取るとき（新しいスタッフの方へ）</h3>
+
+<ol>
+<li>管理者から <b>Slack のダイレクトメッセージ</b>で「パスワード設定用のリンク」が届きます</li>
+<li>リンクを開くと <b>パスワードの設定</b> 画面が出ます。<b>新しいパスワード</b>と<b>確認</b>を入れて設定します</li>
+<li>設定できたらログイン画面から入れます</li>
+</ol>
+
+<div class="dangerbox">
+<p><b>このリンクは、それ単体であなたのアカウントに入れてしまう「鍵」です。</b></p>
+<ul>
+<li><b>ほかの人に転送しないでください</b>（グループチャンネルへの貼り付けも禁止です）</li>
+<li><b>有効期限は 1 時間</b>です。切れたら管理者に再発行を依頼してください</li>
+<li>パスワードは自分だけが知っている状態にしてください。管理者もパスワードを知りません</li>
+</ul>
+</div>
+
+<h2 id="rules">7-7. スタッフが守ること（まとめ）</h2>
+
+<ul class="check">
+<li><input type="checkbox" id="r-1"><label for="r-1"><b>AI 用プロフィール・学年欄・レポート本文に生徒の氏名を書かない</b></label></li>
+<li><input type="checkbox" id="r-2"><label for="r-2"><b>紐付けは確認ダイアログのチャンネル名と生徒名を読んでから確定する</b></label></li>
+<li><input type="checkbox" id="r-3"><label for="r-3">生徒を削除せず、退塾・休塾は「無効」で対応する</label></li>
+<li><input type="checkbox" id="r-4"><label for="r-4">会話ログの内容を塾の外に持ち出さない（画面の写真も含む）</label></li>
+<li><input type="checkbox" id="r-5"><label for="r-5">管理画面のログイン情報を他人と共有しない</label></li>
+<li><input type="checkbox" id="r-6"><label for="r-6">別の生徒として回答されているのを見つけたら、すぐ管理者に連絡する</label></li>
+<li><input type="checkbox" id="r-7"><label for="r-7">毎日ダッシュボードを開き、停止したままになっていないか確認する</label></li>
+</ul>
+
+<hr>
+
+<p class="small">これで全 7 章です。<a href="index.html">目次に戻る</a>。
+機能の追加や設定の変更が必要になったときは、開発者に相談してください。</p>
+
+<div class="nav">
+<a href="06_このアプリでできること.html">← 第 6 章 このアプリでできること</a>
+<a href="index.html">目次</a>
+<span>次へ →</span>
+</div>
+
+</div>
+
+<script>
+/* チェックボックスの状態をこのブラウザに保存する（外部通信はしない） */
+(function(){
+  var key='jukuai-manual:'+location.pathname.split('/').pop();
+  document.querySelectorAll('ul.check input[type=checkbox]').forEach(function(cb){
+    var k=key+':'+cb.id;
+    try{if(localStorage.getItem(k)==='1')cb.checked=true;}catch(e){}
+    cb.addEventListener('change',function(){try{localStorage.setItem(k,cb.checked?'1':'0');}catch(e){}});
+  });
+})();
+</script>
+</body>
+</html>

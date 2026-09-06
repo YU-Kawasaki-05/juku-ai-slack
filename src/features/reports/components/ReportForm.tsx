@@ -12,7 +12,7 @@
 import { useActionState, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, Loader2 } from 'lucide-react'
+import { AlertCircle, Info, Loader2 } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -232,6 +232,19 @@ export function ReportForm({
               <FieldError id="isAiReference-error" message={err?.fieldErrors?.isAiReference} />
             </div>
           </div>
+
+          {/*
+            本文は承認後 RAG のチャンクになり、抜粋として外部 LLM のプロンプトに載る
+            （rebuildReportEmbeddings → searchChunks → buildPrompt）。
+            プロフィール欄と同じトーンで、氏名を書かせないための注意を出す
+          */}
+          <Alert role="note">
+            <Info className="h-4 w-4" aria-hidden="true" />
+            <AlertDescription>
+              承認して保存すると、本文は AI の回答に使われます（AI 参照対象がオンの場合）。
+              生徒や講師の氏名は書かないでください
+            </AlertDescription>
+          </Alert>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">

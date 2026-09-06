@@ -46,12 +46,24 @@ test.describe('管理画面ナビゲーション', () => {
     await page.goto('/admin')
     const nav = page.getByRole('navigation', { name: 'メインナビゲーション' })
 
+    // 先に全リンクの href を確認する。ここは遷移を伴わないので負荷に影響されず、
+    // 「リンクが間違っている」ことを決定的に検出できる
+    for (const [label, href] of NAV) {
+      await expect(nav.getByRole('link', { name: label })).toHaveAttribute('href', href)
+    }
+
+    // 続けてクリックして実際に遷移することを確認する。
+    // このテストは 1 件で 8 ページ分のクライアント遷移を連続実行し、各ページが
+    // Supabase に問い合わせるため、並列実行の負荷下では既定の 10 秒を超えることがある
+    // （3 回フレークを観測。パンくずは更新済みなのに main の h1 が前のページのまま）。
+    // 各ページの表示自体は下の「直接開くと 200 で表示される」8 件が担保しているので、
+    // ここは待ち時間を延ばして遷移そのものの検証に集中させる。
     for (const [label, href, heading] of NAV) {
-      const link = nav.getByRole('link', { name: label })
-      await expect(link).toHaveAttribute('href', href)
-      await link.click()
+      await nav.getByRole('link', { name: label }).click()
       await expect(page).toHaveURL(new RegExp(`${href}$`))
-      await expect(page.getByRole('heading', { name: heading, level: 1 })).toBeVisible()
+      await expect(page.getByRole('heading', { name: heading, level: 1 })).toBeVisible({
+        timeout: 30_000,
+      })
     }
   })
 

@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第3章 生徒の登録と管理</title>
+<style>
+:root{--fg:#191c21;--muted:#5c6470;--line:#d9dee6;--bg:#fff;--soft:#f6f8fa;--soft2:#eef2f7;--accent:#1f5fa9;--code:#0f2b46;
+--warn:#7a4d00;--warnbg:#fff8e8;--warnline:#e6c579;--danger:#96262c;--dangerbg:#fdf1f2;--dangerline:#e3adb1;
+--ok:#1a6444;--okbg:#f0f8f4;--okline:#a5d5bd;--info:#144a73;--infobg:#eef6fc;--infoline:#9dc6e4;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);line-height:1.85;font-size:16px;
+font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,-apple-system,"Segoe UI",sans-serif;}
+.wrap{max-width:940px;margin:0 auto;padding:28px 20px 90px}
+.topbar{border-bottom:1px solid var(--line);background:var(--soft);}
+.topbar .inner{max-width:940px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
+.topbar a{color:var(--accent);text-decoration:none}
+.topbar a:hover{text-decoration:underline}
+.crumb{font-size:13px;color:var(--muted)}
+h1{font-size:27px;line-height:1.45;margin:26px 0 8px;letter-spacing:.01em}
+h2{font-size:21px;margin:44px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--line)}
+h3{font-size:17px;margin:30px 0 8px}
+h4{font-size:15px;margin:22px 0 6px;color:var(--muted)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:1.6em}
+li{margin:5px 0}
+code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13.5px;
+background:var(--soft2);padding:1px 5px;border-radius:3px;word-break:break-all}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:14px 14px;overflow-x:auto;
+font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13px;line-height:1.7;color:var(--code);margin:12px 0}
+pre code{background:none;padding:0;font-size:13px;word-break:normal}
+.codewrap{position:relative}
+.codewrap>pre{padding-right:82px}
+.copy{position:absolute;top:8px;right:8px;font:inherit;font-size:12px;padding:3px 10px;border:1px solid var(--line);
+background:#fff;color:var(--muted);border-radius:4px;cursor:pointer}
+.copy:hover{color:var(--fg);border-color:var(--muted)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--soft2);font-weight:600;white-space:nowrap}
+td code{font-size:12.8px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scroll table{min-width:640px}
+.scroll.wide table{min-width:880px}
+.note,.warnbox,.dangerbox,.okbox{border:1px solid;border-radius:6px;padding:12px 14px;margin:16px 0;font-size:15px}
+.note{border-color:var(--infoline);background:var(--infobg);color:var(--info)}
+.warnbox{border-color:var(--warnline);background:var(--warnbg);color:var(--warn)}
+.dangerbox{border-color:var(--dangerline);background:var(--dangerbg);color:var(--danger)}
+.okbox{border-color:var(--okline);background:var(--okbg);color:var(--ok)}
+.note b,.warnbox b,.dangerbox b,.okbox b{font-weight:700}
+.note p:first-child,.warnbox p:first-child,.dangerbox p:first-child,.okbox p:first-child{margin-top:0}
+.note p:last-child,.warnbox p:last-child,.dangerbox p:last-child,.okbox p:last-child{margin-bottom:0}
+.note code,.warnbox code,.dangerbox code,.okbox code{background:rgba(255,255,255,.7)}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 6px}
+.meta div{flex:1 1 240px;border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--soft)}
+.meta .k{font-size:12px;color:var(--muted);display:block;margin-bottom:2px}
+.meta .v{font-size:15px;font-weight:600;line-height:1.6}
+.meta .v ul{margin:2px 0 0;padding-left:1.3em;font-weight:400;font-size:14px}
+ul.check{list-style:none;padding-left:0}
+ul.check li{margin:6px 0;display:flex;gap:9px;align-items:flex-start}
+ul.check input{margin-top:7px;flex:0 0 auto;width:15px;height:15px}
+ul.check label{cursor:pointer}
+.steps{list-style:none;padding-left:0;margin:20px 0}
+.steps li{border:1px solid var(--line);border-radius:7px;margin:10px 0;padding:0}
+.steps a{display:block;padding:13px 16px;text-decoration:none;color:inherit}
+.steps a:hover{background:var(--soft)}
+.steps .n{display:inline-block;min-width:74px;font-size:12px;color:#fff;background:var(--accent);border-radius:11px;
+padding:1px 9px;text-align:center;margin-right:10px;vertical-align:2px}
+.steps .n.alt{background:#6b7280}
+.steps .t{font-weight:600;font-size:16.5px}
+.steps .d{display:block;color:var(--muted);font-size:14px;margin-top:3px;padding-left:0}
+.steps .tm{float:right;color:var(--muted);font-size:13px;font-weight:400}
+.nav{display:flex;justify-content:space-between;gap:14px;margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:15px}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+.nav span{color:#b6bcc6}
+.ph{background:#fff5d6;border-bottom:1px dotted #b08a19;padding:0 2px;font-weight:600}
+.diagram{font-size:12.5px;line-height:1.55;background:#fff;border:1px solid var(--line)}
+.small{font-size:13.5px;color:var(--muted)}
+.req{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap}
+.req.y{background:#fde8e8;color:#96262c;border:1px solid #e3adb1}
+.req.n{background:#eef2f7;color:#5c6470;border:1px solid #d9dee6}
+.req.r{background:#fff3d9;color:#7a4d00;border:1px solid #e6c579}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+a{color:var(--accent)}
+/* 画面キャプチャ（figure + img + figcaption）。枠線・角丸・中央寄せで本文と馴染ませる */
+figure.shot{margin:20px 0 24px}
+figure.shot img{display:block;width:100%;max-width:100%;margin:0 auto;border:1px solid var(--line);
+border-radius:7px;background:var(--bg);box-shadow:0 1px 3px rgba(16,32,56,.07)}
+/* 要素だけを切り出したキャプチャは実寸を超えて拡大しない（にじみを防ぐ） */
+figure.shot.sm img{max-width:576px}
+figure.shot figcaption{margin-top:8px;font-size:13px;line-height:1.65;color:var(--muted);text-align:center}
+@media print{
+ .topbar,.nav,.copy{display:none}
+ body{font-size:11.5pt}
+ a{color:#000;text-decoration:none}
+ pre,table,.note,.warnbox,.dangerbox,.okbox,figure.shot{page-break-inside:avoid}
+ figure.shot img{box-shadow:none}
+ h2{page-break-after:avoid}
+}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="inner">
+<span class="crumb"><a href="index.html">目次</a> ／ 第 3 章 / 7 — 生徒の登録と管理</span>
+<span class="crumb"><a href="04_月次レポート.html">次へ →</a></span>
+</div></div>
+
+<div class="wrap">
+
+<h1>第 3 章 — 生徒の登録と管理</h1>
+
+<div class="note">
+<p><b>この章で分かること</b></p>
+<ul>
+<li>生徒 1 人を使えるようにするまでの 5 ステップ</li>
+<li><b>AI 用プロフィールの書き方</b>（この章でいちばん大事）</li>
+<li>試験期間の設定（任意）</li>
+<li><b>紐付けの事故を防ぐ手順</b></li>
+<li>退塾・休塾のときの正しい操作</li>
+</ul>
+</div>
+
+<h2 id="flow">3-0. 全体の流れ（5 ステップ）</h2>
+
+<pre class="diagram nocopy"><code>  ① 生徒を登録する           管理画面 → 生徒管理 → 新規生徒
+           ↓
+  ② AI 用プロフィールを書く   管理画面 → 生徒管理 → 生徒名をクリック
+           ↓                  ★ ここが AI の答えの質を決めます
+  ③ チャンネルを作る          Slack → + → チャンネルを作成
+           ↓
+  ④ Bot を招待する            チャンネルで  /invite @じゅくAI
+           ↓                  ★ 忘れると永久に無反応です
+  ⑤ 紐付ける                  管理画面 → チャンネル設定 → 新規紐付け
+           ↓                  ★ 生徒を間違えると別の生徒の情報で答えます
+     生徒が質問できる状態</code></pre>
+
+<ul class="check">
+<li><input type="checkbox" id="s-1"><label for="s-1">① 生徒を登録した</label></li>
+<li><input type="checkbox" id="s-2"><label for="s-2">② AI 用プロフィールを書いた（氏名を書いていないことを確認した）</label></li>
+<li><input type="checkbox" id="s-3"><label for="s-3">③ Slack にチャンネルを作り、生徒本人を招待した</label></li>
+<li><input type="checkbox" id="s-4"><label for="s-4">④ <b><code>/invite @じゅくAI</code> で Bot を招待した</b></label></li>
+<li><input type="checkbox" id="s-5"><label for="s-5">⑤ チャンネル ID と生徒を確認して紐付けた</label></li>
+<li><input type="checkbox" id="s-6"><label for="s-6">実際にそのチャンネルで質問して、回答が返ることを確かめた</label></li>
+</ul>
+
+<h2 id="person">3-1. 生徒を登録する</h2>
+
+<p><b>生徒管理</b> → 右上の <b>新規生徒</b>。</p>
+
+<figure class="shot">
+<img src="images/03-person-new-form.png" alt="新規生徒の登録フォーム。上から「名前（必須）」「表示名（任意）」「学年（任意）」「ステータス（有効）」「保護者メール（任意）」の 5 つの入力欄が縦に並び、最下部に「保存」と「キャンセル」のボタンがある。学年の欄の下には「この欄の内容はそのまま AI に送られます」という注意書きが表示されている">
+<figcaption>新規生徒の登録フォーム。入力例はサンプルです。<b>学年</b>の欄だけが AI に送られる点に注意してください</figcaption>
+</figure>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>入力欄</th><th>必須</th><th>何を入れるか</th></tr></thead>
+<tbody>
+<tr><td><b>名前</b></td><td><span class="req y">必須</span></td><td>生徒の氏名（例：<code>山田太郎</code>）。<b>管理画面の中だけで使う名前です。AI には送られません</b></td></tr>
+<tr><td><b>表示名（任意）</b></td><td><span class="req n">任意</span></td><td>Bot が呼びかけに使う名前（例：<code>太郎くん</code>）</td></tr>
+<tr><td><b>学年（任意）</b></td><td><span class="req n">任意</span></td><td><b>学年だけ</b>を書きます（例：<code>中学3年</code>）。<b>この欄は AI に送られます</b> → 下の注意</td></tr>
+<tr><td><b>ステータス</b></td><td>—</td><td><b>有効</b> のまま。無効にすると Bot が応答しなくなります（<a href="#leave">3-8</a>）</td></tr>
+<tr><td><b>保護者メール（任意）</b></td><td><span class="req n">任意</span></td><td>記録として保存されるだけです。<b>いまはこのアドレスにメールは送られません</b>（<a href="06_このアプリでできること.html#cannot">第 6 章</a>）</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="dangerbox">
+<p><b>「学年」欄に氏名を混ぜないでください。</b></p>
+<p>学年欄の内容は<b>そのまま AI に送られます</b>。ここに <code>中3 山田</code> のように書くと、
+「氏名は AI に送らない」というこのアプリの設計を、あなたが手で破ってしまうことになります。</p>
+<ul>
+<li>正しい： <code>中学3年</code> ／ <code>高2</code> ／ <code>中3</code></li>
+<li>だめ： <code>中3 山田</code> ／ <code>山田（中3）</code> ／ <code>中3・A クラス山田</code></li>
+</ul>
+<p>クラスや担当講師を管理画面で見分けたいときは、<b>「名前」欄</b>に書いてください（名前欄は AI に送られません）。</p>
+</div>
+
+<p><b>保存</b> を押すと生徒一覧に戻り、<code>生徒を登録しました</code> と表示されます。
+一覧では<b>名前・学年・ステータス・登録日</b>が並びます。</p>
+
+<h2 id="profile">3-2. AI 用プロフィールの書き方 ★最重要</h2>
+
+<p><b>生徒管理</b> → 一覧で<b>生徒の名前をクリック</b> → ページ下部の <b>AI 用プロフィール</b>。</p>
+
+<p>画面にはこう書かれています。</p>
+
+<div class="okbox">
+<p>AI が回答時に参照する生徒の特徴・学習状況メモです。すべての質問への回答に使われます</p>
+</div>
+
+<div class="dangerbox">
+<p>ここに入力した内容はそのまま AI に送信されます。
+生徒の氏名は書かないでください（学年は生徒情報から自動で送られます）</p>
+</div>
+
+<figure class="shot sm">
+<img src="images/03-profile-form.png" alt="生徒詳細ページの「AI 用プロフィール」カード。冒頭に「ここに入力した内容はそのまま AI に送信されます。生徒の氏名は書かないでください」という注意書きのボックスがあり、その下に全体要約・学習スタイル・説明トーン・得意分野・苦手分野・指導上の注意の 5 つの入力欄、さらに「試験期間」の枠、最下部に「プロフィールを保存」ボタンが並んでいる">
+<figcaption>生徒詳細ページの「AI 用プロフィール」カード全体。記入例はサンプルです（実在の生徒ではありません）</figcaption>
+</figure>
+
+<h3>5 つの入力欄</h3>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>入力欄</th><th>何を書くか</th><th>長さの上限</th></tr></thead>
+<tbody>
+<tr>
+<td><b>全体要約</b></td>
+<td>いまの学習状況と、直近で力を入れたいこと。<b>この欄がいちばん効きます</b><br>
+<span class="small">画面の目安：200〜800 文字程度</span></td>
+<td>2000 文字</td>
+</tr>
+<tr>
+<td><b>学習スタイル・説明トーン</b></td>
+<td>どういう説明が入りやすいか。話しかけ方の好み<br>
+<span class="small">例：<code>図を使った説明が入りやすい。長文の説明は読み飛ばしがち。</code></span></td>
+<td>500 文字</td>
+</tr>
+<tr><td><b>得意分野</b></td><td>安定してできている単元・分野</td><td>500 文字</td></tr>
+<tr><td><b>苦手分野</b></td><td>つまずきやすい単元・分野と、<b>つまずき方</b></td><td>500 文字</td></tr>
+<tr>
+<td><b>指導上の注意</b></td>
+<td>この生徒に対してやってほしいこと・やらないでほしいこと<br>
+<span class="small">例：<code>答えをすぐ出すと写して終わりになりやすいので、まず考え方から。</code></span></td>
+<td>1000 文字</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<p>書き終えたら <b>プロフィールを保存</b> を押します。ボタンの横に <code>保存しました</code> と出ます
+（<b>ページは移動しません</b>ので、そのまま続けて直せます）。<b>次の質問からすぐ反映されます。</b></p>
+
+<h3 id="whatgoes">AI には何が送られるのか</h3>
+
+<p>送られるのは、<b>学年</b>と、<b>あなたが実際に書いた欄だけ</b>です。空欄の項目は送られません
+（「未設定」とも書かれません）。実際にはこんな形で AI に渡ります。</p>
+
+<pre class="nocopy"><code>学年: 中学3年
+要約: 数学は基礎計算は安定してきたが、文章題で条件を式に落とすところでつまずきやすい。
+      英語は単語量が足りていない。
+学習スタイル: 図を使った説明が入りやすい。長文の説明は読み飛ばしがち。
+得意: 一次関数の計算、比の計算
+苦手: 文章題（速さ・割合）、証明の書き出し
+指導メモ: 答えをすぐ出すと写して終わりになりやすいので、まず考え方から。</code></pre>
+
+<p><b>氏名も生徒番号も入っていません。</b>これは意図してそう作られています。
+だからこそ、あなたが自由記述の欄に氏名を書いてしまうと、そこだけが例外になってしまいます。</p>
+
+<div class="dangerbox">
+<p><b>なぜ氏名を書いてはいけないのか</b></p>
+<ul>
+<li>この文章は<b>塾の外にある AI のサービスに送られます</b>。氏名を送らなければ、万が一の情報漏れでも「誰のことか」が分かりません</li>
+<li>氏名は<b>答えの質を上げません</b>。AI が知りたいのは「どこでつまずくか」だけです</li>
+<li>保護者に「お子さまの氏名は AI に渡していません」と説明できる状態を保てます（<a href="07_安全のしくみ.html#privacy">第 7 章 7-3</a>）</li>
+</ul>
+<p>生徒を指すときは <b>「本人」「この生徒」</b> と書いてください。
+<span class="small">だめな例：<code>山田くんは文章題が苦手</code> → よい例：<code>文章題で条件を式に落とすところでつまずきやすい</code></span></p>
+</div>
+
+<h3>悪い例と良い例</h3>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>悪い例</th><th>なぜだめか</th><th>良い例</th></tr></thead>
+<tbody>
+<tr>
+<td><code>頑張っている</code></td>
+<td>AI が回答を変えるための手がかりがゼロ。何も起きません</td>
+<td><code>宿題は毎回提出できている。分からない問題を飛ばさず質問する習慣がついてきた</code></td>
+</tr>
+<tr>
+<td><code>数学が苦手</code></td>
+<td>「数学」は広すぎます。どの単元の、どういうつまずき方かが分かりません</td>
+<td><code>数学は計算は安定しているが、文章題で「何を x にするか」を決められずに止まる</code></td>
+</tr>
+<tr>
+<td><code>まあまあできる</code></td>
+<td>できる／できないの線が AI に伝わりません</td>
+<td><code>一次関数の式は書けるが、グラフから式を読み取る向きになると迷う</code></td>
+</tr>
+<tr>
+<td><code>山田くんは真面目</code></td>
+<td><b>氏名が入っている</b>。性格の評価は回答に使えません</td>
+<td><code>解き方を教えるとその場では納得するが、翌週に同じところでつまずくことが多い</code></td>
+</tr>
+<tr>
+<td><code>志望校は○○高校。内申は 32。</code></td>
+<td>回答の作り方に影響しない情報です（AI に送る量だけ増えます）</td>
+<td><code>入試の関数・図形の記述問題を秋までに書けるようにしたい</code></td>
+</tr>
+<tr>
+<td><code>やる気がない</code></td>
+<td>AI が生徒に否定的な言い方をしかねません</td>
+<td><code>長い説明は読み飛ばしがちなので、要点を先に短く伝えると読んでもらえる</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<h3>書き方のコツ</h3>
+
+<ul>
+<li><b>「単元 ＋ つまずき方」をセットで書く。</b>これだけで回答がはっきり変わります</li>
+<li><b>「苦手」より「つまずきやすい」。</b>AI はこの表現を引き継いで生徒に話します。断定的な言い方は避けてください</li>
+<li><b>やってほしくないことは「指導上の注意」に書く。</b>「答えだけ先に出さない」「英単語は日本語訳だけでなく例文も」など</li>
+<li><b>長く書きすぎない。</b>全体要約は 200〜800 文字が目安です。情報が多すぎると、大事な点がぼやけます</li>
+<li><b>3 か月に 1 回は見直す。</b><a href="02_毎日の確認.html#conv">会話ログ</a>を読んで、
+「説明が長すぎる」「学年に合っていない」と感じたら書き足します</li>
+<li><b>白紙でも動きます。</b>ただし学年だけを見た一般的な回答になります。<b>全体要約だけでも書いてあると効果が大きい</b>です</li>
+</ul>
+
+<h2 id="exam">3-3. 試験期間（任意・余裕があれば）</h2>
+
+<div class="note">
+<p><b>ふだんは「未設定」が通常の状態です。</b>設定は完全に任意で、設定しなくても何の問題もありません。
+定期テスト前で余裕があれば設定する、くらいの位置づけで考えてください。</p>
+</div>
+
+<p>AI 用プロフィールの下にある <b>試験期間</b> の枠で設定します。</p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>項目</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td><b>試験期間中にする</b></td><td>チェックを入れると設定されます</td></tr>
+<tr><td><b>最終日</b></td><td>チェックを入れた場合は必須。<b>この日いっぱいまで</b>試験期間として扱われます</td></tr>
+<tr><td><b>試験科目（任意）</b></td><td>カンマ区切りで入力（例：<code>数学, 英語</code>）。<b>試験期間中だけ</b> AI に伝わります</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><b>何が変わるか</b>：画面の説明どおり、</p>
+
+<div class="okbox">
+<p>試験期間中は、確認の質問をはさまず、要点をすばやく伝える回答に切り替わります。
+最終日を過ぎると自動で通常の回答に戻ります</p>
+</div>
+
+<ul>
+<li><b>解除の操作は要りません。</b>最終日を過ぎれば自動で通常に戻ります</li>
+<li>設定中は、生徒一覧のステータス欄に <b>試験期間中</b> のバッジが付きます</li>
+<li>保存は AI 用プロフィールと同じ <b>プロフィールを保存</b> ボタンです</li>
+</ul>
+
+<figure class="shot sm">
+<img src="images/03-exam-period.png" alt="AI 用プロフィールの中の「試験期間」の枠。「試験期間中にする」のチェックボックスがオンになっており、その下に「最終日」の日付入力（2026/09/11 が入っている）と「試験科目（任意）」の入力欄（数学, 英語, 理科）が並んでいる">
+<figcaption>「試験期間」の枠。チェックを入れると<b>最終日</b>が入力できるようになります</figcaption>
+</figure>
+
+<figure class="shot">
+<img src="images/03-persons-list-exam-badge.png" alt="生徒一覧の表。名前・学年・ステータス・登録日の列があり、真ん中の行のステータス欄には緑色の「有効」バッジの隣に橙色の「試験期間中」バッジが並んで表示されている">
+<figcaption>試験期間を設定している生徒には、生徒一覧のステータス欄に <b>試験期間中</b> のバッジが付きます</figcaption>
+</figure>
+
+<h2 id="channel">3-4. Slack にチャンネルを作る</h2>
+
+<ol>
+<li>Slack で <b>＋</b> → <b>チャンネルを作成</b></li>
+<li>名前を分かりやすく付ける（例：<code>study-taro</code> ／ <code>質問-山田太郎</code>）</li>
+<li>公開／非公開は、塾で決めた方針にそろえる</li>
+<li><b>生徒本人を招待する</b>（必要なら保護者や担当講師も）</li>
+</ol>
+
+<p class="small">原則 <b>生徒 1 人 = チャンネル 1 つ</b> です。1 つのチャンネルに 2 人の生徒を入れることはできません
+（「このチャンネルの質問は誰のものか」を 1 人に決める必要があるためです）。</p>
+
+<h2 id="invite">3-5. Bot を招待する ★忘れると動きません</h2>
+
+<div class="dangerbox">
+<p><b>これを忘れると、じゅくAI は永久に無反応です。</b>
+Slack は、アプリが参加していないチャンネルの発言をアプリに届けません。
+そのため<b>エラーの記録さえ残りません</b>（そもそも届いていないので）。原因究明がいちばん面倒なミスです。</p>
+</div>
+
+<p>そのチャンネルの入力欄で、次のように打って送信します。</p>
+
+<pre><code>/invite @じゅくAI</code></pre>
+
+<p>「じゅくAI がチャンネルに参加しました」と表示されれば完了です。</p>
+
+<p><b>確認のしかた</b>：チャンネル名をクリック → <b>インテグレーション</b> タブに「じゅくAI」が並んでいれば入っています。</p>
+
+<!-- SCREENSHOT: Slack のチャンネルで /invite @じゅくAI を実行し、「じゅくAI がチャンネルに参加しました」と表示された状態 -->
+<!-- SCREENSHOT: チャンネル詳細の「インテグレーション」タブに じゅくAI アプリが表示されている状態 -->
+<!-- 上記 2 枚は実際の Slack の画面。管理画面ではないため撮影できないので、文章で補っている -->
+
+<div class="note">
+<p><b>ここは Slack の画面なので、この手引きには画像を貼れません。</b>実際の画面で次を確認してください。</p>
+<ul>
+<li><b>送信した直後</b>：チャンネルの本文中に、そのチャンネルにいる人にだけ見える小さな文字で
+<b>「じゅくAI がチャンネルに参加しました」</b>（英語表示なら <code>added じゅくAI to this channel</code>）と出ます</li>
+<li><b>あとから確認するとき</b>：チャンネル名をクリック →
+上部のタブから <b>インテグレーション</b>（英語表示なら <b>Integrations</b>）→
+<b>アプリ</b> の欄に <b>じゅくAI</b> が並んでいれば入っています。並んでいなければ入っていません</li>
+</ul>
+<p class="small">迷ったら、そのチャンネルで <code>@じゅくAI テストです</code> と送ってみるのが確実です。
+🤔 が付けば入っています。何も起きなければ入っていません。</p>
+</div>
+
+<p class="small">生徒を追加するたびに<b>チャンネル作成 → 招待</b>がセットで必要です。
+Bot をチャンネルから外すと、その時点で反応しなくなります（<code>SLACK_POST_FAILED</code> のエラーが出ることもあります）。</p>
+
+<h2 id="channelid">3-6. チャンネル ID の調べ方</h2>
+
+<div class="note">
+<p><b>必要なのはチャンネル「名」ではなく「ID」です。</b>
+チャンネル名は後から変えられてしまうため、このアプリは<b>変わらない値であるチャンネル ID</b> を
+「誰の質問か」の判定に使っています。管理画面に入れるチャンネル名は<b>一覧での見た目のため</b>だけです。</p>
+</div>
+
+<h3>チャンネル ID（<code>C</code> で始まる）</h3>
+<ol>
+<li>Slack で<b>チャンネル名をクリック</b>してチャンネル詳細を開く</li>
+<li>出てきた画面を<b>一番下までスクロール</b>する</li>
+<li><b>チャンネル ID: C01ABCDEFGH</b> と表示されている → 横のコピーボタンでコピー</li>
+</ol>
+
+<!-- SCREENSHOT: Slack のチャンネル詳細ダイアログの最下部。「チャンネル ID: C0...」とコピーボタンが写っている状態 -->
+<!-- 上記は実際の Slack の画面。管理画面ではないため撮影できないので、文章で補っている -->
+
+<div class="note">
+<p><b>ここも Slack の画面なので、この手引きには画像を貼れません。</b>見分けるポイントだけ補っておきます。</p>
+<ul>
+<li>探すのはダイアログの<b>いちばん下</b>、灰色の小さな文字で <b>チャンネル ID:</b> と書かれた行です
+（上のほうにある「チャンネル名」の欄ではありません）</li>
+<li>ID の<b>右側にあるコピーのアイコン</b>を押してクリップボードへ入れます。<b>手で写すと打ち間違えます</b></li>
+<li>見つからないときは、ダイアログの下端まで確実にスクロールできているか確認してください</li>
+</ul>
+</div>
+
+<p class="small">ブラウザで Slack を使っている場合は、アドレス欄の末尾（<code>.../messages/<span class="ph">C01ABCDEFGH</span></code>）でも確認できます。
+非公開チャンネルでは <code>G</code> で始まることもあります。どちらでも登録できます。</p>
+
+<h3>ワークスペース ID（<code>T</code> で始まる）</h3>
+<p>塾のワークスペース全体で 1 つの値なので、<b>生徒ごとに調べ直す必要はありません</b>。一度メモしておけば使い回せます。</p>
+<p>ブラウザで Slack を開いたときのアドレス
+<code>https://app.slack.com/client/<span class="ph">T01ABCDEFGH</span>/C01...</code> の<b>最初の ID</b> がそれです。
+分からない場合は管理者に聞いてください。</p>
+
+<h2 id="binding">3-7. チャンネルと生徒を紐付ける ★事故に注意</h2>
+
+<p><b>紐付け</b>とは、<b>「このチャンネルに来た質問は、誰のものか」を決める設定</b>です。
+じゅくAI は生徒が名乗るのを待ちません。<b>チャンネル ID だけを見て「誰の質問か」を決めます。</b></p>
+
+<div class="dangerbox">
+<p><b>紐付けを間違えると、別の生徒の学習履歴とレポートを使って回答します。</b></p>
+<p>たとえば A さんのチャンネルを間違えて B さんに紐付けると、A さんの質問に対して
+<b>B さんの AI 用プロフィールと B さんの月次レポート</b>を踏まえた回答が返ります。
+AI が「レポートを見る限り、〜が課題だったね」と、他人の情報を A さんに向かって話してしまう状態です。
+<b>これは個人情報の事故です。</b></p>
+<p>気づいたときの手順は <a href="05_困ったとき.html#wrongperson">第 5 章</a> にあります。まず管理者に緊急停止を依頼してください。</p>
+</div>
+
+<h3>手順</h3>
+
+<p><b>チャンネル設定</b>（開くと「チャンネル紐付け」）→ 右上の <b>新規紐付け</b>。</p>
+
+<figure class="shot">
+<img src="images/03-binding-new-form.png" alt="新規チャンネル紐付けのフォーム。上から「SlackチャンネルID（必須）」「ワークスペースID（必須）」「チャンネル名（任意）」「生徒（必須・選択式）」「既定レポート（任意・選択式）」の 5 項目が縦に並び、最下部に「紐付ける」と「キャンセル」のボタンがある">
+<figcaption>新規チャンネル紐付けのフォーム。入力値はサンプルです。<b>生徒</b>の選択を必ず声に出して確認してください</figcaption>
+</figure>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>入力欄</th><th>必須</th><th>入れる値</th><th>注意</th></tr></thead>
+<tbody>
+<tr><td><b>SlackチャンネルID</b></td><td><span class="req y">必須</span></td><td><a href="#channelid">3-6</a> で調べた <code>C01ABCDEFGH</code></td>
+<td>大文字・数字のみ。小文字が混ざったり <code>#</code> を付けると
+<code>チャンネルIDの形式が正しくありません（例: C01ABCDEFGH）</code> と出ます</td></tr>
+<tr><td><b>ワークスペースID</b></td><td><span class="req y">必須</span></td><td><code>T01ABCDEFGH</code></td><td>塾で 1 つの値です</td></tr>
+<tr><td><b>チャンネル名（任意）</b></td><td><span class="req n">任意</span></td><td><code>study-taro</code>（<code>#</code> は不要）</td>
+<td><b>一覧での表示用だけ</b>です。Bot の動作にはチャンネル ID が使われます</td></tr>
+<tr><td><b>生徒</b></td><td><span class="req y">必須</span></td><td>このチャンネルの持ち主</td><td><b>ここを間違えないでください。</b>有効な生徒だけが選択肢に出ます</td></tr>
+<tr><td><b>既定レポート（任意）</b></td><td><span class="req n">任意</span></td><td>ふだんは <b>指定しない</b> のままで大丈夫</td>
+<td>生徒を選ぶまで操作できません。<b>承認済み</b>のレポートだけが候補に出ます</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><b>紐付ける</b> を押すと、確認のダイアログが出ます。</p>
+
+<div class="warnbox">
+<p><b>この生徒に紐付けますか？</b></p>
+<p><code>#study-taro</code> を <code>山田太郎</code> さんに紐付けます。このチャンネルでの質問には、この生徒の学習履歴とレポートが使われます。
+生徒を間違えると、別の生徒の情報で回答してしまいます。</p>
+</div>
+
+<p><b>ここで必ず、チャンネルと生徒名の組み合わせを声に出して読んで確かめてください。</b>
+合っていれば <b>紐付けを確定する</b>、違っていれば <b>キャンセル</b> です。
+確定すると <code>チャンネルを紐付けました</code> と表示されて一覧に戻ります。</p>
+
+<figure class="shot sm">
+<img src="images/03-binding-confirm-dialog.png" alt="「この生徒に紐付けますか？」という確認ダイアログ。本文にチャンネル名「#study-taro」と生徒名「山田 太郎」が太字で入り、「このチャンネルでの質問には、この生徒の学習履歴とレポートが使われます。生徒を間違えると、別の生徒の情報で回答してしまいます。」と書かれている。下部に「キャンセル」と「紐付けを確定する」のボタンがある">
+<figcaption>確認ダイアログ。<b>チャンネル名と生徒名の組み合わせ</b>を声に出して読んでから確定してください</figcaption>
+</figure>
+
+<h3>事故を防ぐ 3 つの確認</h3>
+
+<ol>
+<li><b>貼り付けた直後に見比べる</b>：Slack でコピーしたチャンネル ID と、入力欄の値の<b>末尾 3 文字</b>が同じか</li>
+<li><b>確認ダイアログを読む</b>：チャンネル名と生徒名の組み合わせが正しいか</li>
+<li><b>実際に質問してみる</b>：そのチャンネルで <code>@じゅくAI テストです</code> と送り、返ってきた回答が<b>その生徒あて</b>の内容になっているか
+（<a href="02_毎日の確認.html#conv">会話ログ</a>でも、正しい生徒名の行として記録されているか確認できます）</li>
+</ol>
+
+<div class="note">
+<p><b>あとから変更できるのは「チャンネル名（表示用）」と「ステータス」だけ</b>です。
+チャンネル ID と生徒の対応を間違えた場合は、<b>紐付けを作り直します</b>。</p>
+<ol>
+<li>間違っている紐付けを開いて、ステータスを <b>無効</b> にする</li>
+<li><b>新規紐付け</b> で正しい組み合わせを登録する</li>
+</ol>
+<p>紐付けの作成・変更は「情報」レベルの記録として<a href="02_毎日の確認.html#errors">エラーログ</a>に残ります
+（<code>CHANNEL_BINDING_CREATED</code> / <code>CHANNEL_BINDING_UPDATED</code>）。
+あとから「いつ誰が何を変えたか」をたどれます。</p>
+</div>
+
+<h3>よく出るエラー文言</h3>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>出たエラー</th><th>意味</th><th>対処</th></tr></thead>
+<tbody>
+<tr><td><code>このチャンネルはすでに紐付けされています</code></td><td>同じチャンネル ID の登録がもうある</td>
+<td>一覧から既存の紐付けを開いて内容を確認する（1 チャンネル = 1 生徒）</td></tr>
+<tr><td><code>チャンネルIDの形式が正しくありません</code></td><td>小文字混じり／<code>#</code> 付き／チャンネル名を入れている</td>
+<td><a href="#channelid">3-6</a> の手順で ID を取り直す</td></tr>
+<tr><td><code>ワークスペースIDの形式が正しくありません</code></td><td><code>T</code> で始まっていない</td><td>管理者にワークスペース ID を確認する</td></tr>
+<tr><td><code>ログインが必要です</code></td><td>ログインが切れた</td><td>ログインし直してからやり直す</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>一覧で確認する</h3>
+
+<p>チャンネル設定の一覧には <b>チャンネル・チャンネルID・生徒・既定レポート・ステータス・登録日</b> が並びます。
+<b>月に 1 回は、この一覧をひととおり見て、チャンネルと生徒の対応が合っているか確認してください。</b></p>
+
+<figure class="shot">
+<img src="images/03-bindings-list.png" alt="チャンネル紐付けの一覧画面。表にはチャンネル・チャンネルID・生徒・既定レポート・ステータス・登録日の列が並び、2 件の紐付けが表示されている。ステータス欄はどちらも緑色の「有効」バッジ。既定レポートは 1 件が「—」、もう 1 件にレポート名が入っている">
+<figcaption>チャンネル紐付けの一覧。月に 1 回、<b>チャンネルと生徒の対応</b>をひととおり見てください（表示内容はサンプルです）</figcaption>
+</figure>
+
+<h2 id="leave">3-8. 退塾・休塾のとき</h2>
+
+<div class="dangerbox">
+<p><b>生徒を削除しないでください。</b>
+会話ログ・月次レポート・利用実績がその生徒に紐付いています。消すと過去の記録が追えなくなります。
+正しい操作は<b>ステータスを「無効」にする</b>ことです。</p>
+</div>
+
+<h3>手順</h3>
+<ol>
+<li><b>生徒管理</b> → 対象の生徒をクリック</li>
+<li><b>ステータス</b> を <b>無効</b> に変更</li>
+<li><b>保存</b></li>
+</ol>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>無効にすると</th><th>どうなるか</th></tr></thead>
+<tbody>
+<tr><td>Bot の応答</td><td><b>完全に沈黙します。</b>メンションしても案内文すら返りません</td></tr>
+<tr><td>集計</td><td>ダッシュボードの生徒数や各種集計から外れます</td></tr>
+<tr><td>選択肢</td><td>レポート作成・チャンネル紐付けの「生徒」の選択肢に出なくなります</td></tr>
+<tr><td>記録</td><td><b>残ります。</b>生徒一覧・会話ログ・レポートから引き続き見られます</td></tr>
+<tr><td>記録されるログ</td><td>そのチャンネルで質問が来ると <code>PERSON_INACTIVE</code>（情報）が残ります</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><b>復塾したら</b>、ステータスを <b>有効</b> に戻すだけで元どおり動きます。</p>
+
+<h3>生徒は在籍のまま、チャンネルだけ止めたい場合</h3>
+<p><b>チャンネル設定</b> → 該当の行を開く → <b>ステータス</b> を <b>無効</b> に。
+この場合、そのチャンネルでの質問には
+「このチャンネルにはまだBotの設定が完了していないみたい…」という案内文が返るようになります。</p>
+
+<p class="small">Slack のチャンネル自体はアーカイブしておくと、生徒側にも「終わった」ことが伝わります。</p>
+
+<div class="nav">
+<a href="02_毎日の確認.html">← 第 2 章 毎日の確認</a>
+<a href="index.html">目次</a>
+<a href="04_月次レポート.html">第 4 章 月次レポート →</a>
+</div>
+
+</div>
+
+<script>
+/* チェックボックスの状態をこのブラウザに保存する（外部通信はしない） */
+(function(){
+  var key='jukuai-manual:'+location.pathname.split('/').pop();
+  document.querySelectorAll('ul.check input[type=checkbox]').forEach(function(cb){
+    var k=key+':'+cb.id;
+    try{if(localStorage.getItem(k)==='1')cb.checked=true;}catch(e){}
+    cb.addEventListener('change',function(){try{localStorage.setItem(k,cb.checked?'1':'0');}catch(e){}});
+  });
+})();
+</script>
+</body>
+</html>

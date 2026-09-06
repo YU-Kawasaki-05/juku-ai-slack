@@ -18,14 +18,10 @@ import {
 } from '@/components/ui/table'
 import { StatusBadge } from '@/components/admin/StatusBadge'
 import { formatDate, formatMonth } from '@/components/admin/formatDate'
-import { ChannelAdminOnlyNotice, hasChannelAdminAccess } from './adminOnly'
 
 export const metadata: Metadata = { title: 'チャンネル紐付け' }
 
 export default async function ChannelsPage() {
-  // EP-07: admin 限定。staff には生徒とチャンネルの対応も見せないので、判定を読み取りより先に置く
-  if (!(await hasChannelAdminAccess())) return <ChannelAdminOnlyNotice />
-
   const bindings = await getBindings(createServerClient())
 
   return (

@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第2章 毎日の確認</title>
+<style>
+:root{--fg:#191c21;--muted:#5c6470;--line:#d9dee6;--bg:#fff;--soft:#f6f8fa;--soft2:#eef2f7;--accent:#1f5fa9;--code:#0f2b46;
+--warn:#7a4d00;--warnbg:#fff8e8;--warnline:#e6c579;--danger:#96262c;--dangerbg:#fdf1f2;--dangerline:#e3adb1;
+--ok:#1a6444;--okbg:#f0f8f4;--okline:#a5d5bd;--info:#144a73;--infobg:#eef6fc;--infoline:#9dc6e4;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);line-height:1.85;font-size:16px;
+font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,-apple-system,"Segoe UI",sans-serif;}
+.wrap{max-width:940px;margin:0 auto;padding:28px 20px 90px}
+.topbar{border-bottom:1px solid var(--line);background:var(--soft);}
+.topbar .inner{max-width:940px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
+.topbar a{color:var(--accent);text-decoration:none}
+.topbar a:hover{text-decoration:underline}
+.crumb{font-size:13px;color:var(--muted)}
+h1{font-size:27px;line-height:1.45;margin:26px 0 8px;letter-spacing:.01em}
+h2{font-size:21px;margin:44px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--line)}
+h3{font-size:17px;margin:30px 0 8px}
+h4{font-size:15px;margin:22px 0 6px;color:var(--muted)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:1.6em}
+li{margin:5px 0}
+code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13.5px;
+background:var(--soft2);padding:1px 5px;border-radius:3px;word-break:break-all}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:14px 14px;overflow-x:auto;
+font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13px;line-height:1.7;color:var(--code);margin:12px 0}
+pre code{background:none;padding:0;font-size:13px;word-break:normal}
+.codewrap{position:relative}
+.codewrap>pre{padding-right:82px}
+.copy{position:absolute;top:8px;right:8px;font:inherit;font-size:12px;padding:3px 10px;border:1px solid var(--line);
+background:#fff;color:var(--muted);border-radius:4px;cursor:pointer}
+.copy:hover{color:var(--fg);border-color:var(--muted)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--soft2);font-weight:600;white-space:nowrap}
+td code{font-size:12.8px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scroll table{min-width:640px}
+.scroll.wide table{min-width:880px}
+.note,.warnbox,.dangerbox,.okbox{border:1px solid;border-radius:6px;padding:12px 14px;margin:16px 0;font-size:15px}
+.note{border-color:var(--infoline);background:var(--infobg);color:var(--info)}
+.warnbox{border-color:var(--warnline);background:var(--warnbg);color:var(--warn)}
+.dangerbox{border-color:var(--dangerline);background:var(--dangerbg);color:var(--danger)}
+.okbox{border-color:var(--okline);background:var(--okbg);color:var(--ok)}
+.note b,.warnbox b,.dangerbox b,.okbox b{font-weight:700}
+.note p:first-child,.warnbox p:first-child,.dangerbox p:first-child,.okbox p:first-child{margin-top:0}
+.note p:last-child,.warnbox p:last-child,.dangerbox p:last-child,.okbox p:last-child{margin-bottom:0}
+.note code,.warnbox code,.dangerbox code,.okbox code{background:rgba(255,255,255,.7)}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 6px}
+.meta div{flex:1 1 240px;border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--soft)}
+.meta .k{font-size:12px;color:var(--muted);display:block;margin-bottom:2px}
+.meta .v{font-size:15px;font-weight:600;line-height:1.6}
+.meta .v ul{margin:2px 0 0;padding-left:1.3em;font-weight:400;font-size:14px}
+ul.check{list-style:none;padding-left:0}
+ul.check li{margin:6px 0;display:flex;gap:9px;align-items:flex-start}
+ul.check input{margin-top:7px;flex:0 0 auto;width:15px;height:15px}
+ul.check label{cursor:pointer}
+.steps{list-style:none;padding-left:0;margin:20px 0}
+.steps li{border:1px solid var(--line);border-radius:7px;margin:10px 0;padding:0}
+.steps a{display:block;padding:13px 16px;text-decoration:none;color:inherit}
+.steps a:hover{background:var(--soft)}
+.steps .n{display:inline-block;min-width:74px;font-size:12px;color:#fff;background:var(--accent);border-radius:11px;
+padding:1px 9px;text-align:center;margin-right:10px;vertical-align:2px}
+.steps .n.alt{background:#6b7280}
+.steps .t{font-weight:600;font-size:16.5px}
+.steps .d{display:block;color:var(--muted);font-size:14px;margin-top:3px;padding-left:0}
+.steps .tm{float:right;color:var(--muted);font-size:13px;font-weight:400}
+.nav{display:flex;justify-content:space-between;gap:14px;margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:15px}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+.nav span{color:#b6bcc6}
+.ph{background:#fff5d6;border-bottom:1px dotted #b08a19;padding:0 2px;font-weight:600}
+.diagram{font-size:12.5px;line-height:1.55;background:#fff;border:1px solid var(--line)}
+.small{font-size:13.5px;color:var(--muted)}
+.req{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap}
+.req.y{background:#fde8e8;color:#96262c;border:1px solid #e3adb1}
+.req.n{background:#eef2f7;color:#5c6470;border:1px solid #d9dee6}
+.req.r{background:#fff3d9;color:#7a4d00;border:1px solid #e6c579}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+a{color:var(--accent)}
+/* 画面キャプチャ（figure + img + figcaption）。枠線・角丸・中央寄せで本文と馴染ませる */
+figure.shot{margin:20px 0 24px}
+figure.shot img{display:block;width:100%;max-width:100%;margin:0 auto;border:1px solid var(--line);
+border-radius:7px;background:var(--bg);box-shadow:0 1px 3px rgba(16,32,56,.07)}
+/* 要素だけを切り出したキャプチャは実寸を超えて拡大しない（にじみを防ぐ） */
+figure.shot.sm img{max-width:576px}
+figure.shot figcaption{margin-top:8px;font-size:13px;line-height:1.65;color:var(--muted);text-align:center}
+@media print{
+ .topbar,.nav,.copy{display:none}
+ body{font-size:11.5pt}
+ a{color:#000;text-decoration:none}
+ pre,table,.note,.warnbox,.dangerbox,.okbox,figure.shot{page-break-inside:avoid}
+ figure.shot img{box-shadow:none}
+ h2{page-break-after:avoid}
+}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="inner">
+<span class="crumb"><a href="index.html">目次</a> ／ 第 2 章 / 7 — 毎日の確認</span>
+<span class="crumb"><a href="03_生徒の登録と管理.html">次へ →</a></span>
+</div></div>
+
+<div class="wrap">
+
+<h1>第 2 章 — 毎日の確認</h1>
+
+<div class="note">
+<p><b>この章で分かること</b></p>
+<ul>
+<li>毎日 3 分で何を見ればよいか</li>
+<li>エラーが出ていたときの読み方と対応のしかた</li>
+<li>会話ログの見方（AI の答えの質を確かめる）</li>
+<li>「Bot が反応しない」と言われたときに、上から順に確認する手順</li>
+</ul>
+</div>
+
+<div class="warnbox">
+<p><b>なぜ毎日見る必要があるのか。</b>
+このアプリは、エラーが起きても Slack に自動で通知を飛ばしません
+（自動通知があるのは<a href="07_安全のしくみ.html#stop">緊急停止</a>の操作だけです）。
+つまり<b>人が画面を見に行かないと、失敗に気づけません</b>。朝いちばんの習慣にしてください。</p>
+</div>
+
+<h2 id="daily">2-1. 朝の 3 分チェック</h2>
+
+<p>管理画面の <b>ダッシュボード</b> を開きます。上から順に見るだけです。</p>
+
+<figure class="shot">
+<img src="images/02-dashboard-top.png" alt="ダッシュボードの上部。いちばん上に「AI応答」カードがあり、緑色の「稼働中」バッジと「AI応答を停止」ボタンが並んでいる。その下に今日の質問数 11、今月のコスト $0.23、未対応エラー 3、生徒数 2 の 4 つのカードが横並びになっている">
+<figcaption>ダッシュボード上部。上から「AI応答」→ 4 つのカードの順に見ます（数値はサンプルです）</figcaption>
+</figure>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>見るところ</th><th>正常</th><th>正常でないときは</th></tr></thead>
+<tbody>
+<tr>
+<td><b>AI応答</b>（一番上のカード）</td>
+<td>緑色で <b>稼働中</b><br><span class="small">「生徒からの質問に AI が回答しています」と書かれています</span></td>
+<td>赤色で <b>停止中</b> → 誰かが緊急停止したままです。カードに<b>理由と操作者</b>が書かれています。
+再開してよいか管理者に確認してください（<a href="07_安全のしくみ.html#stop">第 7 章 7-1</a>）</td>
+</tr>
+<tr>
+<td><b>未対応エラー</b></td>
+<td><b>0</b></td>
+<td>1 以上 → 下の 2-2 へ。数字の下の「エラー管理を開く →」を押します</td>
+</tr>
+<tr>
+<td><b>今日の質問数</b></td>
+<td>いつもと同じくらい</td>
+<td>ずっと 0 のまま → 誰も使えていない可能性。2-4 へ</td>
+</tr>
+<tr>
+<td><b>今月のコスト</b></td>
+<td>いつもの伸び方</td>
+<td>急に増えた（普段の 3 倍以上）→ <a href="05_困ったとき.html#call">第 5 章</a>の連絡基準へ。<b>$0.00</b> のまま増えない場合も開発者へ</td>
+</tr>
+<tr>
+<td><b>最近のエラー</b>（一番下）</td>
+<td>「エラーはありません」</td>
+<td>並んでいる行をクリックすると詳細が開きます</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<ul class="check">
+<li><input type="checkbox" id="d-1"><label for="d-1">AI応答が <b>稼働中</b>（緑）になっている</label></li>
+<li><input type="checkbox" id="d-2"><label for="d-2">未対応エラーが <b>0</b>（1 以上なら対応した）</label></li>
+<li><input type="checkbox" id="d-3"><label for="d-3">今日の質問数・今月のコストがいつもどおり</label></li>
+</ul>
+
+<h2 id="errors">2-2. エラーが出ていたときの見方</h2>
+
+<p><b>エラーログ</b>（開くと「エラー管理」）の一覧には、次の列が並びます。</p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>列</th><th>意味</th></tr></thead>
+<tbody>
+<tr><td><b>エラーコード</b></td><td><code>AI_TIMEOUT</code> のような英字の記号。クリックすると詳細が開きます</td></tr>
+<tr><td><b>生徒</b></td><td>誰の質問で起きたか（生徒に関係のないエラーは <code>—</code>）</td></tr>
+<tr><td><b>チャンネル</b></td><td>どのチャンネルで起きたか</td></tr>
+<tr><td><b>深刻度</b></td><td><b>エラー</b>（赤）／<b>警告</b>（黄）／<b>情報</b>（灰）</td></tr>
+<tr><td><b>対応状況</b></td><td><b>未対応</b>／<b>対応済み</b></td></tr>
+<tr><td><b>発生日時</b></td><td>いつ起きたか</td></tr>
+</tbody>
+</table>
+</div>
+
+<figure class="shot">
+<img src="images/02-errors-list.png" alt="エラー管理の一覧画面。上部に深刻度「エラー・警告（既定）」と対応状況「すべて」のフィルタがあり、表にはエラーコード・生徒・チャンネル・深刻度・対応状況・発生日時の列が並ぶ。赤い「エラー」バッジ 3 件と黄色い「警告」バッジ 1 件、橙色の「未対応」と緑色の「対応済み」のバッジが表示されている">
+<figcaption>エラー管理の一覧。深刻度（赤＝エラー／黄＝警告）と対応状況（未対応／対応済み）が色で分かります。対応済みの行は薄く表示されます</figcaption>
+</figure>
+
+<div class="note">
+<p><b>「情報」レベルは、ふだんは表示されません。</b>
+一覧は初期状態で <b>エラー・警告（既定）</b> に絞られています。
+「情報」は正常な動作の記録（質問回数の上限に達した・退塾生のチャンネルで質問された・紐付けを作成した など）なので、隠されています。
+探したいときは <b>深刻度</b> のフィルタを <b>すべて</b> に変えてください。</p>
+</div>
+
+<h3>詳細画面の見方</h3>
+
+<p>エラーコードをクリックすると、次のことが分かります。</p>
+
+<ul>
+<li><b>ユーザーへ返した文言</b> … 生徒の画面に実際に届いたメッセージ。これが一番の手がかりです</li>
+<li><b>内部エラー詳細</b> … 技術的な内容。開発者に連絡するときは<b>ここをそのままコピー</b>して伝えます</li>
+<li><b>Slack で開く</b> … その質問のスレッドに直接飛べます（実際のやり取りを確認できます）</li>
+<li><b>対応済みにする</b>／<b>対応メモ</b> … 対応が終わったら押して、何をしたか書き残します</li>
+</ul>
+
+<figure class="shot">
+<img src="images/02-error-detail.png" alt="エラー詳細画面。見出しにエラーコード AI_TIMEOUT、その下に「エラー」「未対応」のバッジ、右上に「対応済みにする」ボタン。発生日時・生徒・チャンネル・Slack スレッド（Slack で開く）の帯が続き、「ユーザーへ返した文言」カードに生徒へ届いたメッセージ、「内部エラー詳細」カードに技術的なログ、最下部に「対応メモ」の入力欄と「メモを保存」ボタンがある">
+<figcaption>エラー詳細。<b>ユーザーへ返した文言</b>が生徒に実際に届いた文です。開発者へ連絡するときは<b>内部エラー詳細</b>をそのままコピーします</figcaption>
+</figure>
+
+<h3>よく出るエラーコードと、やること</h3>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>コード</th><th>何が起きたか（平たく言うと）</th><th>やること</th><th>急ぎ度</th></tr></thead>
+<tbody>
+<tr><td><code>AI_RESPONSE_FAILED</code></td><td>AI が回答を作れなかった</td><td>1 件なら様子見。<b>連続して出るなら開発者へ連絡</b>（<a href="05_困ったとき.html#call">第 5 章</a>）</td><td><span class="req y">高</span></td></tr>
+<tr><td><code>AI_RATE_LIMITED</code></td><td>AI のサービス側が混み合っていた</td><td>自動でやり直します（5 秒 → 15 秒 → 45 秒待って再挑戦）。頻発するなら開発者へ</td><td><span class="req r">中</span></td></tr>
+<tr><td><code>AI_TIMEOUT</code><br><code>JOB_TIMEOUT</code></td><td>回答づくりに時間がかかりすぎた</td><td>生徒には「もう一度送ってみてね」と返っています。頻発するなら開発者へ</td><td><span class="req r">中</span></td></tr>
+<tr><td><code>SLACK_POST_FAILED</code></td><td>Slack に書き込めなかった</td><td><b>Bot がチャンネルから外れていないか</b>確認。外れていたら <code>/invite @じゅくAI</code> をやり直す</td><td><span class="req y">高</span></td></tr>
+<tr><td><code>CHANNEL_NOT_BOUND</code></td><td>紐付けのないチャンネルで呼ばれた</td><td>正しいチャンネルなら紐付けを登録（<a href="03_生徒の登録と管理.html#binding">第 3 章 3-7</a>）。関係ないチャンネルなら Bot を退出させる</td><td><span class="req n">低</span></td></tr>
+<tr><td><code>UNSUPPORTED_FILE_TYPE</code><br><code>IMAGE_TOO_LARGE</code></td><td>生徒が送ったファイルの形式・サイズが対象外</td><td>生徒に伝える：<b>画像は jpg / png、20MB 以下</b>。PDF や Word は読めません</td><td><span class="req n">低</span></td></tr>
+<tr><td><code>SLACK_FILE_DOWNLOAD_FAILED</code></td><td>画像を取り込めなかった</td><td>1 件なら Slack 側の一時的な不調。頻発するなら開発者へ</td><td><span class="req n">低</span></td></tr>
+<tr><td><code>IMAGE_MODEL_NOT_CONFIGURED</code></td><td>画像を読むための設定が入っていない</td><td><b>開発者へ連絡</b>（スタッフ側では直せません）</td><td><span class="req r">中</span></td></tr>
+<tr><td><code>PERSON_INACTIVE</code>（情報）</td><td>「無効」にした生徒のチャンネルで質問された</td><td>正常な動作。復塾したなら生徒のステータスを <b>有効</b> に戻す</td><td><span class="req n">—</span></td></tr>
+<tr><td><code>RATE_LIMITED</code>（情報）</td><td>その生徒が 1 時間に 10 回の上限に達した</td><td>正常な動作（<a href="07_安全のしくみ.html#limit">第 7 章 7-2</a>）</td><td><span class="req n">—</span></td></tr>
+<tr><td><code>CHANNEL_BINDING_CREATED</code><br><code>CHANNEL_BINDING_UPDATED</code>（情報）</td><td>誰かが紐付けを作成・変更した記録</td><td>正常な動作。「いつ誰が紐付けを変えたか」を後から追うために残しています</td><td><span class="req n">—</span></td></tr>
+<tr><td><code>THREAD_SUMMARY_FAILED</code><br><code>EVALUATOR_FAILED</code></td><td>回答を送ったあとの内部処理が失敗した</td><td><b>回答自体は生徒に届いています。</b>ときどきなら気にしなくてよい</td><td><span class="req n">低</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>対応が終わったら</h3>
+<ol>
+<li>詳細画面で <b>対応済みにする</b> を押す</li>
+<li><b>対応メモ</b> に何をしたか書く（例：<code>Bot が退出していたので再招待した</code>）</li>
+</ol>
+<p class="small">未対応のままにしておくと、翌朝のダッシュボードにも数字が残ります。
+「見たけれど対応不要と判断した」ものも、その旨をメモして対応済みにしておくと、翌日の自分が迷いません。</p>
+
+<h2 id="conv">2-3. 会話ログの見方</h2>
+
+<p><b>会話ログ</b>は、生徒とじゅくAI のやり取りが<b>スレッド 1 本 = 1 行</b>で並ぶ画面です。
+「AI がちゃんと答えられているか」を確かめる場所です。</p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>列</th><th>意味</th></tr></thead>
+<tbody>
+<tr><td><b>生徒</b></td><td>誰の会話か。クリックすると中身が開きます</td></tr>
+<tr><td><b>チャンネル</b></td><td>どのチャンネルか</td></tr>
+<tr><td><b>概要</b></td><td>長いスレッドを AI が短くまとめたもの（短いスレッドでは <code>—</code>）</td></tr>
+<tr><td><b>件数</b></td><td>そのスレッドのメッセージ数</td></tr>
+<tr><td><b>状態</b></td><td>画像が使われたか／エラーが起きたか（アイコン）</td></tr>
+<tr><td><b>最終メッセージ</b></td><td>最後のやり取りの日時</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>上のフィルタで <b>生徒</b>・<b>期間</b>・<b>モデル</b>・<b>画像ありのみ</b>・<b>エラーありのみ</b> に絞り込めます。</p>
+
+<figure class="shot">
+<img src="images/02-conversations-list.png" alt="会話ログの一覧画面。上部に「生徒」「期間」「モデル」「絞り込み」の 4 つのフィルタがあり、表には生徒・チャンネル・概要・件数・状態・最終メッセージの列が並ぶ。3 件のスレッドが表示され、1 行目は概要つきで件数 4、2 行目は概要が「—」で状態にエラーのアイコン、3 行目は状態に画像のアイコンが出ている">
+<figcaption>会話ログの一覧。上のフィルタで生徒・期間・モデル・画像あり・エラーありに絞り込めます。<b>状態</b>の欄のアイコンは画像添付（□）とエラー発生（△）です</figcaption>
+</figure>
+
+<p>行をクリックすると、生徒とじゅくAI の吹き出しが時系列で並びます（右が生徒、左が <b>じゅくAI</b>）。
+画像を送った発言には「画像添付あり」と表示されます。</p>
+
+<figure class="shot">
+<img src="images/02-conversation-detail.png" alt="会話ログの詳細画面。上部に「スレッド要約」カードがあり、その下に生徒の発言（濃い色の吹き出し・右寄せ）とじゅくAI の回答（薄い色の吹き出し・左寄せ）が時系列で交互に並んでいる">
+<figcaption>会話ログの詳細。右が生徒、左が <b>じゅくAI</b> の発言です。長いスレッドでは上に<b>スレッド要約</b>が付きます（内容はサンプルです）</figcaption>
+</figure>
+
+<div class="okbox">
+<p><b>ここが AI 用プロフィールを直す材料になります。</b>
+たとえば「説明が長すぎて生徒が読み飛ばしている」「学年に合わない難しい説明をしている」と気づいたら、
+<a href="03_生徒の登録と管理.html#profile">AI 用プロフィール</a>の「学習スタイル・説明トーン」に書き足してください。次の質問からすぐ反映されます。</p>
+</div>
+
+<h2 id="noresponse">2-4. 「Bot が反応しない」と言われたとき</h2>
+
+<div class="note">
+<p><b>まず生徒にこう聞いてください：「どんな返事が返ってきた？」</b>
+返ってきた文面で原因がほぼ決まります。<b>何も返ってこなかった</b>のか、<b>何か文章が返ってきた</b>のかが分かれ目です。</p>
+</div>
+
+<h3>A. 何も返ってこない（🤔 も付かない）</h3>
+
+<p>頻度の高い順です。上から潰してください。</p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>#</th><th>原因</th><th>見分け方</th><th>対処</th></tr></thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><b>Bot がチャンネルに招待されていない</b><br><span class="small">いちばん多い</span></td>
+<td>チャンネル名をクリック → <b>インテグレーション</b> タブに「じゅくAI」が無い。<b>エラーログにも何も残らない</b></td>
+<td>そのチャンネルで <code>/invite @じゅくAI</code> と打つ（<a href="03_生徒の登録と管理.html#invite">第 3 章 3-5</a>）</td>
+</tr>
+<tr>
+<td>2</td>
+<td>生徒が <code>@じゅくAI</code> を付けていない</td>
+<td>チャンネルの一番下（スレッドの外）に、メンションなしの発言が並んでいる</td>
+<td>生徒に伝える：<b>新しい質問は <code>@じゅくAI</code> から始める</b>。返信を続けるときはスレッドの中でメンション不要</td>
+</tr>
+<tr>
+<td>3</td>
+<td>生徒のステータスが <b>無効</b> になっている</td>
+<td>生徒管理でその生徒のステータスが「無効」。エラーログを<b>深刻度「すべて」</b>にすると <code>PERSON_INACTIVE</code>（情報）がある</td>
+<td>在籍しているなら <b>有効</b> に戻す（<a href="03_生徒の登録と管理.html#leave">第 3 章 3-8</a>）</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Bot がスタッフの発言に反応しようとしている</td>
+<td>参加通知・ピン留めなどのシステムメッセージに反応していない</td>
+<td>仕様です。Bot 自身の発言や、Slack のシステムメッセージには反応しません</td>
+</tr>
+<tr>
+<td>5</td>
+<td>上のどれでもない</td>
+<td>—</td>
+<td><b>開発者へ連絡</b>（Slack 側の設定の可能性。<a href="05_困ったとき.html#call">第 5 章</a>）</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<h3>B. 何か文章が返ってきた</h3>
+
+<p>返ってきた文面ごとの原因です。生徒に文面をそのまま読んでもらうか、
+<a href="#conv">会話ログ</a>で確認してください。</p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>返ってきた文面</th><th>原因</th><th>対処</th></tr></thead>
+<tbody>
+<tr><td>このチャンネルにはまだBotの設定が完了していないみたい。<wbr>管理者に確認してもらえると助かります！</td>
+<td><b>紐付けが無い、または「無効」</b></td>
+<td>チャンネル設定でこのチャンネルを紐付ける／ステータスを <b>有効</b> にする（<a href="03_生徒の登録と管理.html#binding">第 3 章 3-7</a>）</td></tr>
+<tr><td>いまメンテナンス中でお返事ができないんだ</td><td><b>緊急停止中</b></td>
+<td>ダッシュボードの AI応答カードが赤。管理者に再開を依頼（<a href="07_安全のしくみ.html#stop">第 7 章 7-1</a>）</td></tr>
+<tr><td>今日はたくさん質問してくれてありがとう！<wbr>ちょっと休憩して、1時間ほどしてからまた質問してね</td>
+<td><b>1 時間に 10 回の上限</b></td><td>仕様です。1 時間待てば再び使えます（<a href="07_安全のしくみ.html#limit">第 7 章 7-2</a>）</td></tr>
+<tr><td>いま少し混み合ってるみたいで、すぐ答えられないや</td><td>AI のサービス側が混雑</td><td>1〜2 分待って送り直してもらう</td></tr>
+<tr><td>回答の生成に時間がかかりすぎてしまった</td><td>質問が重すぎた</td><td>質問を短く分けて送ってもらう</td></tr>
+<tr><td>質問が少し長すぎて処理できなかったよ</td><td>文章が長すぎる（目安 6000 文字）</td><td>短く分けて送ってもらう</td></tr>
+<tr><td>ごめん、そのファイル形式にはまだ対応してないんだ</td><td>PDF・Word などを送った</td><td><b>画像（jpg / png）</b>で送ってもらう。撮り直しでも可</td></tr>
+<tr><td>画像が少し大きすぎたみたい</td><td>1 枚 20MB 超</td><td>小さめに撮り直してもらう</td></tr>
+<tr><td>ごめん、いまは画像を読み取れないみたい</td><td>画像を読む設定が入っていない</td><td><b>開発者へ連絡</b></td></tr>
+<tr><td>うまく処理できなかったみたい<wbr>もう一度試してみて。続くようなら先生に教えてね。</td><td>内部エラー</td>
+<td>エラーログを見る（<a href="#errors">2-2</a>）。続くなら開発者へ</td></tr>
+<tr><td>対応する生徒情報が見つからなかったよ</td><td>紐付け先の生徒情報がおかしい</td><td><b>開発者へ連絡</b></td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>C. 🤔 は付いたが、回答が返ってこない</h3>
+
+<ol>
+<li>まず 1 分待つ（ふだんは 15〜30 秒で返ります）</li>
+<li>それでも来なければ <b>ジョブ</b> を開く（次の 2-5）</li>
+<li><b>失敗</b> に 1 件以上あれば <b>再実行</b> ボタンを押す</li>
+<li>それでも来なければ <b>開発者へ連絡</b></li>
+</ol>
+
+<div class="warnbox">
+<p>まれに、処理が途中で止まって <b>🤔 が付いたまま残る</b>ことがあります。
+生徒には「まだ考え中」に見えてしまうので、ジョブ画面から再実行して回答を届けてください。</p>
+</div>
+
+<h2 id="jobs">2-5. ジョブ画面（詰まっていないかの確認）</h2>
+
+<p>生徒の質問は 1 件ずつ順番に処理されます。<b>ジョブ</b>はその進行状況を見る画面です。
+ふだんは見なくてよく、「回答が来ない」と言われたときに開きます。</p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>カード</th><th>正常</th><th>たまっているときの意味</th></tr></thead>
+<tbody>
+<tr><td><b>待機中</b></td><td>滞留なし</td><td>受け付けたが処理が始まっていない。数分で消えるなら正常。<b>15 分以上残るなら開発者へ</b></td></tr>
+<tr><td><b>処理中</b></td><td>滞留なし</td><td>始まったまま終わっていない。<b>10 分以上は異常</b> → 開発者へ</td></tr>
+<tr><td><b>失敗</b></td><td>滞留なし</td><td><b>回答できなかった質問があります。生徒は待ちぼうけです。</b>最優先で対応</td></tr>
+</tbody>
+</table>
+</div>
+
+<figure class="shot">
+<img src="images/02-jobs.png" alt="ジョブ管理画面。待機中 1・処理中 1・失敗 2 の 3 つのカードが横に並び、その下のジョブ一覧に状態・エラーコード・試行・チャンネル・スレッド・経過・登録日時・更新日時・操作の列が表示されている。「失敗」の 2 行だけ右端の操作欄に「再実行」ボタンが出ている">
+<figcaption>ジョブ管理。3 つのカードが「滞留なし」なら正常です。<b>失敗</b>の行にだけ右端に「再実行」ボタンが出ます</figcaption>
+</figure>
+
+<h3>失敗した質問をやり直す</h3>
+
+<p><b>失敗</b> の行にだけ <b>再実行</b> ボタンが出ます。押すと確認のダイアログが表示されます。</p>
+
+<div class="scroll wide">
+<table>
+<thead><tr><th>ダイアログの文言</th><th>意味</th><th>AI の費用</th></tr></thead>
+<tbody>
+<tr><td>生成済みの回答が残っているため、AI を呼び直さず Slack への投稿だけをやり直します。</td>
+<td>回答は作れていたが、Slack への書き込みで失敗した</td><td>かからない</td></tr>
+<tr><td>AI 回答を生成し直して Slack に投稿します（API 利用コストが発生します）。</td>
+<td>回答づくり自体が失敗した</td><td>かかる</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="okbox">
+<p><b>安心して押して構いません。</b>
+再実行する直前に「同じスレッドにじゅくAI の返信がもう入っていないか」を必ず確認する仕組みが入っています。
+すでに届いていれば実行されず、
+<code>既に回答が配信済みのため再実行せず、完了として記録しました（二重返信の防止）</code>
+と表示されます。同じ回答が 2 回投稿されることはありません。</p>
+</div>
+
+<p class="small">この画面を開くと、止まってしまった処理の後片付けが自動で走ります（1 分に 1 回まで）。
+<b>スイープ実行</b> ボタンで手動でも走らせられます。後片付けで「失敗」に変わっても<b>生徒には何も通知されません</b>
+（すでに回答が届いている可能性があり、二重に案内すると混乱するためです）。人が判断して再実行してください。</p>
+
+<div class="nav">
+<a href="01_はじめに.html">← 第 1 章 はじめに</a>
+<a href="index.html">目次</a>
+<a href="03_生徒の登録と管理.html">第 3 章 生徒の登録と管理 →</a>
+</div>
+
+</div>
+
+<script>
+/* チェックボックスの状態をこのブラウザに保存する（外部通信はしない） */
+(function(){
+  var key='jukuai-manual:'+location.pathname.split('/').pop();
+  document.querySelectorAll('ul.check input[type=checkbox]').forEach(function(cb){
+    var k=key+':'+cb.id;
+    try{if(localStorage.getItem(k)==='1')cb.checked=true;}catch(e){}
+    cb.addEventListener('change',function(){try{localStorage.setItem(k,cb.checked?'1':'0');}catch(e){}});
+  });
+})();
+</script>
+</body>
+</html>

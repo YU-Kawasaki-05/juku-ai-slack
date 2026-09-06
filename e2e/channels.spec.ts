@@ -11,6 +11,7 @@ import {
 /**
  * チャンネル紐付け（FR-07）。channel_id が信頼の基点なので、
  * 形式チェックと UNIQUE 制約（重複登録の日本語エラー）を確認する。
+ * 保存は必ず確認ダイアログを経由する（権限設計 3.1 の防御 1）。
  */
 test.use({ storageState: ADMIN_STATE })
 
@@ -40,6 +41,12 @@ async function fillBinding(
   await page.getByRole('option', { name: args.person }).click()
 }
 
+/** 「紐付ける」は確認ダイアログを開くだけ。実際の保存はダイアログの確定ボタン */
+async function confirmBinding(page: import('@playwright/test').Page): Promise<void> {
+  await page.getByRole('button', { name: '紐付ける' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: '紐付けを確定する' }).click()
+}
+
 test('生徒を選んでチャンネルを紐付けると一覧に表示される', async ({ page }) => {
   const person = await createPerson(`E2E生徒_紐付け_${uniqueSuffix()}`)
   personIds.push(person.id)
@@ -47,7 +54,7 @@ test('生徒を選んでチャンネルを紐付けると一覧に表示され�
   channelIds.push(channel)
 
   await fillBinding(page, { channel, name: 'e2e-study', person: person.name })
-  await page.getByRole('button', { name: '紐付ける' }).click()
+  await confirmBinding(page)
 
   await expect(page).toHaveURL(/\/admin\/channels$/)
   const row = page.getByRole('row').filter({ hasText: channel })
@@ -64,11 +71,11 @@ test('同じチャンネルIDを二重登録すると日本語エラーで拒否
   channelIds.push(channel)
 
   await fillBinding(page, { channel, person: person.name })
-  await page.getByRole('button', { name: '紐付ける' }).click()
+  await confirmBinding(page)
   await expect(page).toHaveURL(/\/admin\/channels$/)
 
   await fillBinding(page, { channel, person: person.name })
-  await page.getByRole('button', { name: '紐付ける' }).click()
+  await confirmBinding(page)
 
   await expect(alert(page)).toContainText('このチャンネルはすでに紐付けされています')
   await expect(page).toHaveURL(/\/admin\/channels\/new$/)
@@ -79,7 +86,7 @@ test('チャンネルIDの形式が不正だとフィールドエラーになる
   personIds.push(person.id)
 
   await fillBinding(page, { channel: 'not-a-channel', person: person.name })
-  await page.getByRole('button', { name: '紐付ける' }).click()
+  await confirmBinding(page)
 
   await expect(alert(page)).toContainText('入力内容を確認してください')
   await expect(page.locator('#slackChannelId-error')).toHaveText(

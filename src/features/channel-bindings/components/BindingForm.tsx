@@ -2,11 +2,14 @@
  * 機能: チャンネル紐付け 新規作成フォーム（生徒・既定レポートを選択）
  * 備考: H-8 全フィールドの fieldErrors 描画 + maxLength、H-9 二重送信防止、
  *   H-11 default_report_id の選択 UI。既定レポートは選択中の生徒の「承認済み/送信済み」に絞る
+ * セキュリティ: 生徒を間違えると、そのチャンネルの質問に別生徒の学習履歴とレポートで
+ *   回答してしまう（BR-07-01 の信頼の基点）。EP-07〜09 を staff に開いた代わりに、
+ *   確定前に「どのチャンネルを誰に紐付けるか」を生徒名つきで確認させる
  * @implements FR-15, AC-15-01, AC-15-03
  */
 'use client'
 
-import { useActionState, useEffect, useState } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AlertCircle, Loader2 } from 'lucide-react'
@@ -15,6 +18,14 @@ import { NO_DEFAULT_REPORT } from '../schemas/bindingSchema'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -48,6 +59,10 @@ export function BindingForm({
     undefined,
   )
   const [personId, setPersonId] = useState('')
+  const formRef = useRef<HTMLFormElement>(null)
+  /** 確認ダイアログを通したかの印。state ではなく ref なのは requestSubmit と同じターンで読むため */
+  const confirmedRef = useRef(false)
+  const [confirming, setConfirming] = useState<{ channel: string; personName: string } | null>(null)
 
   useEffect(() => {
     if (state?.ok) {
@@ -58,11 +73,35 @@ export function BindingForm({
 
   const err = state && !state.ok ? state : undefined
   const personReports = personId ? reports.filter((r) => r.personId === personId) : []
+  const selectedPerson = persons.find((p) => p.id === personId)
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    if (confirmedRef.current) {
+      confirmedRef.current = false
+      return
+    }
+    // 生徒が未選択だと確認文が「誰に紐付けるか」を言えない。そのままサーバー側の検証に任せる
+    if (!selectedPerson) return
+    e.preventDefault()
+    const data = new FormData(e.currentTarget)
+    const channelName = String(data.get('slackChannelName') ?? '').trim()
+    const channelId = String(data.get('slackChannelId') ?? '').trim()
+    setConfirming({
+      channel: channelName ? `#${channelName}` : channelId,
+      personName: selectedPerson.name,
+    })
+  }
+
+  function submitConfirmed() {
+    confirmedRef.current = true
+    setConfirming(null)
+    formRef.current?.requestSubmit()
+  }
 
   return (
     <Card className="max-w-xl">
       <CardContent className="pt-6">
-        <form action={formAction} className="space-y-5">
+        <form ref={formRef} action={formAction} onSubmit={handleSubmit} className="space-y-5">
           {err && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" aria-hidden="true" />
@@ -215,6 +254,31 @@ export function BindingForm({
             </Button>
           </div>
         </form>
+
+        <Dialog
+          open={confirming !== null}
+          onOpenChange={(next) => !next && setConfirming(null)}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>この生徒に紐付けますか？</DialogTitle>
+              <DialogDescription>
+                <strong className="font-semibold text-foreground">{confirming?.channel}</strong> を{' '}
+                <strong className="font-semibold text-foreground">{confirming?.personName}</strong>{' '}
+                さんに紐付けます。このチャンネルでの質問には、この生徒の学習履歴とレポートが使われます。
+                生徒を間違えると、別の生徒の情報で回答してしまいます。
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              <Button type="button" variant="outline" onClick={() => setConfirming(null)}>
+                キャンセル
+              </Button>
+              <Button type="button" onClick={submitConfirmed}>
+                紐付けを確定する
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   )

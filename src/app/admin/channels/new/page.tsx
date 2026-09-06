@@ -8,7 +8,6 @@ import { getPersons } from '@features/persons'
 import { getReports } from '@features/reports'
 import { BindingForm } from '@features/channel-bindings/components/BindingForm'
 import { formatMonth } from '@/components/admin/formatDate'
-import { ChannelAdminOnlyNotice, hasChannelAdminAccess } from '../adminOnly'
 
 export const metadata: Metadata = { title: '新規チャンネル紐付け' }
 
@@ -20,9 +19,6 @@ export const metadata: Metadata = { title: '新規チャンネル紐付け' }
 const DEFAULT_REPORT_STATUSES = ['approved', 'sent'] as const
 
 export default async function NewBindingPage() {
-  // EP-07: admin 限定。生徒・レポートの一覧を読む前に弾く
-  if (!(await hasChannelAdminAccess())) return <ChannelAdminOnlyNotice />
-
   const db = createServerClient()
   const [persons, approved, sent] = await Promise.all([
     getPersons(db),

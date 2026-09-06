@@ -1,6 +1,7 @@
 /** @file
- * 検証: 生徒フォームの fieldErrors 全項目描画（H-8）と二重送信防止（H-9）
- * @verifies FR-14, H-8, H-9
+ * 検証: 生徒フォームの fieldErrors 全項目描画（H-8）、二重送信防止（H-9）、
+ *   ヘルプ文が LLM に渡る範囲の実装と一致していること（学年は送る / 表示名は送らない）
+ * @verifies FR-14, FR-09, H-8, H-9
  */
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
@@ -84,5 +85,49 @@ describe('PersonForm（H-9: 二重送信で二重登録させない）', () => {
 
     await screen.findByText('保存に失敗しました')
     expect(screen.getByRole('button', { name: '保存' })).toBeEnabled()
+  })
+})
+
+describe('PersonForm（ヘルプ文が実装と一致している）', () => {
+  it('学年欄は AI に送られることと学年だけを書くことを伝える', () => {
+    render(<PersonForm action={vi.fn()} />)
+
+    const help = screen.getByText(
+      /この欄の内容はそのまま AI に送られます。学年だけを書いてください/,
+    )
+    expect(help).toBeInTheDocument()
+    expect(help).toHaveTextContent(/氏名や講師名は書かない/)
+    expect(screen.getByLabelText('学年（任意）')).toHaveAttribute(
+      'aria-describedby',
+      'grade-help',
+    )
+  })
+
+  it('学年欄のエラー時もヘルプ文が読み上げ対象に残る', async () => {
+    const action = vi.fn(async () => ({
+      ok: false as const,
+      error: '入力内容を確認してください',
+      fieldErrors: { grade: '学年が長すぎます' },
+    }))
+    const user = userEvent.setup()
+    render(<PersonForm action={action} />)
+
+    await user.type(screen.getByLabelText(/名前/), '太郎')
+    await user.click(screen.getByRole('button', { name: '保存' }))
+
+    await screen.findByText('学年が長すぎます')
+    expect(screen.getByLabelText('学年（任意）')).toHaveAttribute(
+      'aria-describedby',
+      'grade-error grade-help',
+    )
+  })
+
+  // display_name は getStudentProfile / buildPrompt のどちらにも渡っていないので、
+  // 「Bot が呼びかけに使う」と書くと実装に無い挙動を約束してしまう
+  it('表示名欄は AI に送られないことを明示し、呼びかけに使うとは書かない', () => {
+    render(<PersonForm action={vi.fn()} />)
+
+    expect(screen.getByText(/AI には送られません/)).toBeInTheDocument()
+    expect(screen.queryByText(/呼びかけ/)).not.toBeInTheDocument()
   })
 })

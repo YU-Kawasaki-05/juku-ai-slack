@@ -137,6 +137,115 @@ a{color:var(--accent)}
 
 <p>スタッフが複数いる場合は、この時点で全員ぶん作っておくと後が楽です。</p>
 
+<h3 id="invite">スタッフを追加するとき（推奨: 招待リンクを配る）</h3>
+
+<p>2 人目以降のスタッフは、上のダッシュボード手作業ではなく <b>招待リンク方式</b>を使ってください。
+<code>scripts/invite-staff.mjs</code> が「<b>誰もパスワードを知らないアカウント</b>」を作り、
+<b>本人専用のパスワード設定リンク</b>を出力します。本人はそのリンクを開いて自分でパスワードを決めます。</p>
+
+<div class="dangerbox">
+<p><b>パスワードを「集める」「送る」運用はしないでください。</b>
+Google フォームで集めるとスプレッドシートに<b>平文が残り続け</b>、
+管理者が決めて連絡する方式も<b>チャットやメールの履歴に平文が残ります</b>。
+どちらも後から消しきれません。招待リンク方式なら、誰もパスワードを知らないまま本人だけが決められます。</p>
+</div>
+
+<h4>0. 先に Supabase 側で済ませておく設定（2 つ）</h4>
+
+<div class="warnbox">
+<p><b>① Redirect URLs に <code>/set-password</code> を登録する</b><br>
+Supabase → <b>Authentication</b> → <b>URL Configuration</b> → <b>Redirect URLs</b> に
+<code>https://<span class="ph">&lt;あなたのドメイン&gt;</span>/set-password</code> を追加してください。
+<b>未登録だと、リンクは黙って Site URL（トップページ）に着地します</b>
+（エラーにはなりません）。スクリプトは着地先が指定と違う場合に警告を出します。</p>
+<p><b>② Minimum password length を 8 にする</b><br>
+Supabase → <b>Authentication</b> → <b>Sign In / Providers</b> → <b>Email</b> の
+<b>Minimum password length</b>。既定は 6 ですが、画面には「8 文字以上」と表示されるため
+8 に合わせておきます（<code>supabase/config.toml</code> のローカル設定も 8 です）。</p>
+</div>
+
+<div class="note">
+<p><b>ローカルで試すときの注意。</b><code>--app-url</code> は
+<code>http://127.0.0.1:3000</code> のように <b>IP で</b>書いてください。
+<code>http://localhost:3000</code> は Supabase の許可判定を通らず、黙って Site URL に差し替えられます。</p>
+</div>
+
+<h4>1. リンクを発行する（管理者の手元で実行）</h4>
+
+<p>リポジトリのルートで実行します。<code>.env.local</code> の
+<code>NEXT_PUBLIC_SUPABASE_URL</code> と <code>SUPABASE_SERVICE_ROLE_KEY</code> を自動で読みます。</p>
+
+<pre><code>node scripts/invite-staff.mjs \
+  --email tanaka@example.com \
+  --role staff \
+  --app-url https://<span class="ph">&lt;あなたのドメイン&gt;</span></code></pre>
+
+<div class="scroll">
+<table>
+<thead><tr><th>引数</th><th>指定するもの</th></tr></thead>
+<tbody>
+<tr><td><code>--email</code></td><td>招待するスタッフのメールアドレス</td></tr>
+<tr><td><code>--role</code></td><td><code>staff</code> か <code>admin</code>（違いは 7-2 の表）。<b>この時点で付与される</b>ので、7-2 の SQL は不要</td></tr>
+<tr><td><code>--app-url</code></td><td>管理画面の URL。リンクはこの URL の <code>/set-password</code> に着地する。環境変数 <code>APP_URL</code> でも指定できる</td></tr>
+<tr><td><code>--reissue-only</code></td><td>既存ユーザー専用。うっかり新規作成しないための安全弁</td></tr>
+<tr><td><code>--help</code></td><td>使い方を表示</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>実行すると、Slack DM にそのまま貼れる形で出力されます。</p>
+
+<pre class="nocopy"><code>ユーザーを作成しました: tanaka@example.com
+役割 (app_metadata.role): staff
+
+--- ここから下を Slack DM で本人に送る -------------------------------
+
+管理画面のアカウントを用意しました。下のリンクを開いて、ご自身でパスワードを設定してください。
+（リンクは 60 分で期限切れになり、1 回しか使えません。切れたら再発行します）
+
+https://xxxx.supabase.co/auth/v1/verify?token=...&amp;type=recovery&amp;redirect_to=...
+
+----------------------------------------------------------------------
+
+有効期限: 発行から 60 分（3600 秒）= ... 頃まで
+使用回数: 1 回のみ（開いた時点で失効）</code></pre>
+
+<div class="dangerbox">
+<p><b>このリンクは単体でそのアカウントにログインできる資格情報です。</b>
+本人だけが読める経路（Slack の DM）で渡し、チャンネルに貼ったりターミナルのログを共有したりしないでください。</p>
+</div>
+
+<h4>2. 本人がパスワードを設定する</h4>
+
+<ol>
+<li>本人がリンクを開くと <code>/set-password</code>（<b>パスワードの設定</b>）が表示される</li>
+<li>新しいパスワードを 2 回入力する（<b>8 文字以上</b>。2 つが一致しないと保存されない）</li>
+<li>保存すると、そのまま <code>/admin</code> のダッシュボードに入れる</li>
+<li>以降は <code>/login</code> でそのメールアドレスと本人が決めたパスワードでログインする</li>
+</ol>
+
+<div class="note">
+<p><b>メールは 1 通も送りません。</b>Supabase 無料枠のメール送信は 1 時間に数通しか送れないため、
+この方式は<b>リンクを標準出力に出して人が手で渡す</b>ようにしています
+（アカウントは <code>email_confirm: true</code> で作るので、確認メールも不要です）。</p>
+</div>
+
+<h4>3. 期限が切れたら再発行する</h4>
+
+<p>リンクは<b>発行から 60 分</b>・<b>1 回だけ</b>有効です。
+期限切れ・使用済みのリンクを開くと、画面に
+<code>リンクの有効期限が切れています（発行から 1 時間、かつ 1 回限り有効）。管理者に再発行を依頼してください。</code>
+と表示されます。同じコマンドをもう一度実行すれば、<b>ユーザーは作り直さずリンクだけ</b>再発行されます。</p>
+
+<pre><code>node scripts/invite-staff.mjs \
+  --email tanaka@example.com \
+  --role staff \
+  --app-url https://<span class="ph">&lt;あなたのドメイン&gt;</span> \
+  --reissue-only</code></pre>
+
+<p class="small">有効期限は Supabase の <b>Authentication → Sign In / Providers → Email → Email OTP Expiration</b> の設定値（既定 3600 秒）です。
+変えるとリンクの寿命も変わります。</p>
+
 <h2 id="role">7-2. 【必須】ロールを付与する</h2>
 
 <div class="dangerbox">
@@ -145,6 +254,13 @@ a{color:var(--accent)}
 ロールが無いアカウントは<b>ログインには成功しますが</b>、生徒情報などは一切表示されず
 <code>/admin/no-access</code>（「このアカウントには管理画面の利用権限が設定されていません」）に案内されます。</p>
 <p><b><code>user_metadata</code> ではありません</b> — そちらはログイン中の本人が書き換えられるため、権限判定に使うと権限昇格の穴になります。</p>
+</div>
+
+<div class="okbox">
+<p><b><a href="#invite">招待リンク方式</a>（<code>scripts/invite-staff.mjs</code>）で作ったユーザーは、
+<code>--role</code> の値が作成時に <code>app_metadata.role</code> へ入るので、この SQL は不要です。</b>
+下の手順が必要なのは、<b>Supabase のダッシュボードから手で作ったユーザー</b>と、
+<b>後からロールを変えたいユーザー</b>です。</p>
 </div>
 
 <p>Supabase → <b>SQL Editor</b> で実行します（メールアドレスは対象ユーザーのものに置き換え）。</p>
@@ -178,9 +294,12 @@ where email = 'staff@example.com';</code></pre>
 </div>
 
 <div class="warnbox">
-<p><b>セットアップ作業をするあなた自身は必ず <code>admin</code> にしてください。</b>
-このあとの 7-8（チャンネル紐付け）が <code>staff</code> では実行できず、
-<code>この操作は管理者のみ実行できます</code> で弾かれます。</p>
+<p><b>セットアップ作業をするあなた自身は <code>admin</code> にしてください。</b>
+<code>admin</code> だけができるのは <b>AI の緊急停止</b>と <b>Embedding の再生成</b>です。
+生徒の登録・レポート・チャンネル紐付け（7-8）は <code>staff</code> でも実行できます
+（各スタッフが紐付けを行う運用のため、2026-09-04 に <code>staff</code> へ開放しました。
+誤って別の生徒に紐付ける事故を防ぐため、確定前に生徒名を出す確認ダイアログと、
+誰がいつ変更したかの記録が入っています）。</p>
 </div>
 
 <h3>反映には再ログインが必要</h3>
@@ -229,7 +348,7 @@ order by created_at;</code></pre>
 <thead><tr><th>項目</th><th>必須</th><th>入れ方</th></tr></thead>
 <tbody>
 <tr><td><b>名前</b></td><td><span class="req y">必須</span></td><td>本名（例 <code>山田 太郎</code>）。100 文字まで。管理画面の一覧や集計に出る</td></tr>
-<tr><td><b>表示名（任意）</b></td><td><span class="req n">任意</span></td><td><b>Bot が呼びかけに使う名前</b>（例 <code>太郎くん</code>）。未設定なら名前が使われる</td></tr>
+<tr><td><b>表示名（任意）</b></td><td><span class="req n">任意</span></td><td>管理画面の生徒一覧に併記される名前（例 <code>太郎くん</code>）。<b>AI には送られません</b></td></tr>
 <tr><td><b>学年（任意）</b></td><td><span class="req n">任意</span></td><td>例 <code>中学3年</code>。AI の回答レベル調整の材料になる</td></tr>
 <tr><td><b>ステータス</b></td><td><span class="req y">必須</span></td><td><b>有効</b>のまま。<b>無効</b>にすると Bot が完全に沈黙し、集計や選択肢からも外れる（退塾時に使う → <a href="step9_運用ガイド.html#taijuku">STEP 9</a>）</td></tr>
 <tr><td><b>保護者メール（任意）</b></td><td><span class="req n">任意</span></td><td>現時点でメール送信機能は未実装。記録用</td></tr>
@@ -390,7 +509,7 @@ order by created_at;</code></pre>
 <table>
 <thead><tr><th>出たエラー</th><th>意味</th><th>対処</th></tr></thead>
 <tbody>
-<tr><td><code>この操作は管理者のみ実行できます</code></td><td>ログイン中のユーザーが <code>staff</code></td><td><a href="#role">7-2</a> で <code>admin</code> を付与 → <b>再ログイン</b></td></tr>
+<tr><td><code>この操作は管理者のみ実行できます</code></td><td>AI の緊急停止か Embedding 再生成を <code>staff</code> で実行した（チャンネル紐付けは <code>staff</code> でも可）</td><td><a href="#role">7-2</a> で <code>admin</code> を付与 → <b>再ログイン</b></td></tr>
 <tr><td><code>このチャンネルはすでに紐付けされています</code></td><td>同じチャンネル ID の登録が既にある</td><td>一覧から既存の紐付けを開いて内容を確認・修正する（1 チャンネル = 1 生徒）</td></tr>
 <tr><td><code>チャンネルIDの形式が正しくありません</code></td><td>小文字混じり・<code>#</code> 付き・チャンネル名を入れている</td><td>7-7 の手順で ID を取り直す</td></tr>
 </tbody>
