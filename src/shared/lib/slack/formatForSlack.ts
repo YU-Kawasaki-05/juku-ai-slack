@@ -221,16 +221,36 @@ function convertMathBody(input: string, bare = false): string {
 }
 
 /**
+ * `$...$` の中身を数式とみなすか、通貨表記とみなすかを判定する。
+ *
+ * **軸は「LaTeX らしい記号を含むか」ではない。** 当初はそれで判定していたが、
+ * `$D > 0$` `$D$` のような**記号を含まない普通の数式が素通しされ、
+ * ドル記号のまま生徒の画面に出ていた**（要件②「数式が一貫した形で読める」に違反）。
+ *
+ * 通貨と数式を分けているのは次の2点:
+ *   - 通貨は日本語の文の中に現れる（「ランチは$5、ディナーは$10でした」）。
+ *     2つの `$` に挟まれた部分に**日本語が入る**のは通貨の並びのとき。
+ *   - 通貨の金額は数字と区切り記号だけで、**英字（変数）を含まない**。
+ * よって「LaTeX 記号を含む」か「日本語を含まず、かつ英字を含む」なら数式とみなす。
+ * `\text{答え} = 5` のように日本語を含む数式は前者で拾える。
+ */
+function looksLikeMath(inner: string): boolean {
+  if (/[\\^_]/.test(inner)) return true
+  const hasJapanese = /[ぁ-んァ-ヶ一-鿿]/.test(inner)
+  const hasLetter = /[A-Za-zα-ωΑ-Ω]/.test(inner)
+  return !hasJapanese && hasLetter
+}
+
+/**
  * LaTeX の区切り記号を判定して中身を convertMathBody に通す。
- * `$...$` は通貨表記（例:「$5 です」）と衝突しうるため、`\` `^` `_` など
- * 数式らしい記号を含む場合だけ数式として扱う（含まなければ $ 記号ごと素通しする）。
+ * `$...$` は通貨表記と衝突しうるので looksLikeMath で切り分ける。
  */
 export function convertMath(text: string): string {
   let out = text.replace(/\\\[([\s\S]*?)\\\]/g, (_m, inner) => convertMathBody(inner))
   out = out.replace(/\\\(([\s\S]*?)\\\)/g, (_m, inner) => convertMathBody(inner))
   out = out.replace(/\$\$([\s\S]*?)\$\$/g, (_m, inner) => convertMathBody(inner))
   out = out.replace(/\$([^\n$]+?)\$/g, (m, inner) =>
-    /[\\^_]/.test(inner) ? convertMathBody(inner) : m
+    looksLikeMath(inner) ? convertMathBody(inner) : m
   )
   // 区切り記号を使わずに書かれた素の LaTeX コマンドや ^ _ も拾う。
   // ただし地の文なので、下付きの判定だけは絞る（bare = true）
@@ -266,7 +286,7 @@ export function convertMarkdownToMrkdwn(text: string): string {
   //    Slack に太字＋斜体の複合記法は無いので、太字に寄せるのが素直。
   out = out.replace(/\*{3,}/g, '**')
 
-  // 0-c. **半角スペースで挟まれた `**` は「べき乗の演算子」として先に退避する。**
+  // 0-c. **べき乗の演算子として使われている `**` を先に退避する。**
   //    これをやらないと、演算子が2つある文（`a ** 2 で、b ** 2 です`）で
   //    1個目と2個目が太字の対と誤認され、**間の本文がまるごと太字になり、
   //    後ろにある本物の `**太字**` まで巻き込まれて壊れる**
@@ -275,8 +295,14 @@ export function convertMarkdownToMrkdwn(text: string): string {
   //    **対の検出そのものが先に誤るので、後始末では間に合わなかった。**
   //    予防（対の候補から外す）と後始末（対にならなかったものを落とす）は別の仕事で、
   //    後者に前者の役目をさせていたのが誤り。
+  //
+  //    ⚠️ **「前後が空白」だけで演算子と決めてはいけない**（独立監査 2026-09-12・6巡目・P0）。
+  //    最初はそう書いたが、それだと `これは ** 太字のつもり ** だよ` のように
+  //    **空白を空けて書かれた強調まで演算子とみなし、太字変換が丸ごと効かなくなった。**
+  //    べき乗を名乗れるのは**両隣に演算の対象（ASCII の英数字）がある**ときだけ。
+  //    `base ** 2` は該当し、`これは ** 太字` は該当しない（隣が日本語）。
   const operatorPlaceholders: string[] = []
-  out = out.replace(/(?<=[ \t])\*{2,}(?=[ \t])/g, (m) => {
+  out = out.replace(/(?<=[A-Za-z0-9_)\]][ \t])\*{2,}(?=[ \t][A-Za-z0-9_(\[])/g, (m) => {
     operatorPlaceholders.push(m)
     return `${MARK}OP${operatorPlaceholders.length - 1}${MARK}`
   })
