@@ -267,14 +267,24 @@ describe('formatForSlack（独立検査で見つかった破壊の回帰防止�
       )
     })
 
-    // 6巡目・P0。べき乗の退避を「前後が空白」だけで判定したら、
-    // **空白を空けて書かれた強調まで演算子扱いになり、太字が丸ごと死んだ**。
-    // べき乗を名乗れるのは両隣に演算の対象（ASCII の英数字）があるときだけ。
-    it('空白を空けて書かれた強調を、べき乗と取り違えない', () => {
-      expect(formatForSlack('これは ** 太字のつもり ** だよ')).toBe('これは * 太字のつもり * だよ')
+    // 内側が空いた `** text **` は Markdown の太字ではない（CommonMark の flanking 規則）。
+    // Slack も `* x *` を強調として描かないので、記号を残しても生徒には記号が見えるだけ。
+    // **記号を落として地の文にする**方を選んだ。emphasis を1つ失うが、画面は汚れない。
+    it('内側が空いた ** は太字にせず、記号も残さない', () => {
+      expect(formatForSlack('これは ** 太字のつもり ** だよ')).toBe('これは  太字のつもり  だよ')
       expect(formatForSlack('参考: ** ヒント1 ** と ** ヒント2 ** を見て')).toBe(
-        '参考: * ヒント1 * と * ヒント2 * を見て',
+        '参考:  ヒント1  と  ヒント2  を見て',
       )
+    })
+
+    // 7巡目・P0。演算子かどうかを「隣が ASCII 英数字か」で当てにいったら、
+    // **全角数字や引用符の隣にある ** が後ろの本物の太字のマーカーを奪った**。
+    // 対の検出を flanking 規則に移したので、隣に何があっても奪えなくなった。
+    it('全角や記号の隣にある ** が、後ろの本物の太字を壊さない', () => {
+      expect(formatForSlack('１ ** ２ のあと **重要** って書く')).toBe(
+        '１ ** ２ のあと *重要* って書く',
+      )
+      expect(formatForSlack('"base" ** "exp" のあと **重要** って書く')).toContain('*重要*')
     })
 
     it('コードブロックの中のべき乗も当然そのまま', () => {
@@ -340,6 +350,27 @@ describe('formatForSlack（独立検査で見つかった破壊の回帰防止�
     // 中高数学では係数つきの変数が頻出する。基底の長さで絞ると、ここを丸ごと取りこぼす。
     it('係数つきの変数の添字も変換する（ax_1 / bx_2）', () => {
       expect(formatForSlack('ax_1 + bx_2 = c')).toBe('ax₁ + bx₂ = c')
+    })
+  })
+
+  describe('プレースホルダの入れ子（不変条件テストで発見）', () => {
+    // 7巡の独立検査がどれも試さなかった組み合わせ。見出しの中に太字があると、
+    // 太字を退避した文字列ごと見出しとして再度退避され、目印の中に目印が入る。
+    // String.replace は置換結果を読み直さないので、1回だけ復元すると
+    // **内部の目印（制御文字）がそのまま生徒の画面に出ていた**。
+    it('見出しの中に太字があっても内部の目印が漏れない', () => {
+      const result = formatForSlack('## まとめ **大事** です')
+      expect(result).not.toContain('\u0000')
+      // 見出しは行全体が太字になるので、中の太字は入れ子にせず平らにする
+      expect(result).toBe('*まとめ 大事 です*')
+    })
+
+    it('見出しがまるごと太字のときは二重にしない（従来どおり）', () => {
+      expect(formatForSlack('### **重要な公式**')).toBe('*重要な公式*')
+    })
+
+    it('中身の無い見出し記号は落とす', () => {
+      expect(formatForSlack('abc\n\n## ')).toBe('abc\n\n')
     })
   })
 
@@ -413,5 +444,61 @@ describe('formatForSlack（独立検査で見つかった破壊の回帰防止�
       const text = '一緒に整理しよう！次のステップに進むよ。'
       expect(formatForSlack(formatForSlack(text))).toBe(text)
     })
+  })
+})
+
+// 独立検査を7巡かけても出なかった欠陥（見出しの中に太字があると内部の目印が漏れる）を、
+// この不変条件テストは1秒未満で見つけた。**個別のケースを足し続けるのをやめ、
+// 「どんな入力でも成り立つべきこと」を決めて組み合わせで殴る。**
+// 検査官は与えた基準の中でしか探さない。基準に無い組み合わせはここで拾う。
+describe('不変条件（部品の組み合わせを総当たりする）', () => {
+  // 実際の LLM 出力に現れる部品。増やすと自動で組み合わせが増える
+  const PARTS = [
+    '', ' ', '\n', '\n\n',
+    '二次方程式を解こう', 'ポイント', 'x', 'abc', '123', '答え',
+    '**', '*', '***', '****', '_', '__', '#', '## ', '### ', '- ', '~~', '`', '```', '$', '$$',
+    '\\frac{1}{2}', '\\times', '\\leq', 'x^2', 'x_1', 'ax_1', 'user_name', '__init__',
+    ' ** ', ' * ', '---', '***\n', '|---|---|', '> 引用', '1. 番号',
+  ]
+  const NUL = String.fromCharCode(0)
+  const count = (s: string, c: string) => s.split(c).length - 1
+
+  /** 生成した入力をすべて流し、条件を満たさない最初の1件を返す */
+  function findCounterexample(holds: (input: string, output: string) => boolean) {
+    const at = (n: number) => PARTS[n % PARTS.length]
+    for (let a = 0; a < PARTS.length; a += 1) {
+      for (let b = 0; b < PARTS.length; b += 1) {
+        for (let c = 0; c < 12; c += 1) {
+          const input = at(a) + at(b) + at(a + c) + at(b * 2 + c)
+          const output = formatForSlack(input)
+          if (!holds(input, output)) return { input, output }
+        }
+      }
+    }
+    return null
+  }
+
+  it('内部の目印を出力に漏らさない', () => {
+    expect(findCounterexample((_i, o) => !o.includes(NUL))).toBeNull()
+  })
+
+  it('入力に無い "undefined" を作らない', () => {
+    expect(
+      findCounterexample((i, o) => !o.includes('undefined') || i.includes('undefined')),
+    ).toBeNull()
+  })
+
+  it('< > & を新たに生成しない（escapeSlackText との整合・C-3）', () => {
+    expect(
+      findCounterexample((i, o) => ['<', '>', '&'].every((ch) => count(o, ch) <= count(i, ch))),
+    ).toBeNull()
+  })
+
+  it('入力に無い日本語の文字を作らない', () => {
+    expect(
+      findCounterexample((i, o) =>
+        [...o].every((ch) => !/[ぁ-んァ-ヶ一-鿿]/.test(ch) || i.includes(ch)),
+      ),
+    ).toBeNull()
   })
 })

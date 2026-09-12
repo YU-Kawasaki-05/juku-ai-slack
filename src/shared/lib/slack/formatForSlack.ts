@@ -286,42 +286,44 @@ export function convertMarkdownToMrkdwn(text: string): string {
   //    Slack に太字＋斜体の複合記法は無いので、太字に寄せるのが素直。
   out = out.replace(/\*{3,}/g, '**')
 
-  // 0-c. **べき乗の演算子として使われている `**` を先に退避する。**
-  //    これをやらないと、演算子が2つある文（`a ** 2 で、b ** 2 です`）で
-  //    1個目と2個目が太字の対と誤認され、**間の本文がまるごと太字になり、
-  //    後ろにある本物の `**太字**` まで巻き込まれて壊れる**
-  //    （独立監査 2026-09-12・5巡目・P0）。
-  //    以前は後始末（step 7）の側で「前後がスペースなら残す」と書いていたが、
-  //    **対の検出そのものが先に誤るので、後始末では間に合わなかった。**
-  //    予防（対の候補から外す）と後始末（対にならなかったものを落とす）は別の仕事で、
-  //    後者に前者の役目をさせていたのが誤り。
-  //
-  //    ⚠️ **「前後が空白」だけで演算子と決めてはいけない**（独立監査 2026-09-12・6巡目・P0）。
-  //    最初はそう書いたが、それだと `これは ** 太字のつもり ** だよ` のように
-  //    **空白を空けて書かれた強調まで演算子とみなし、太字変換が丸ごと効かなくなった。**
-  //    べき乗を名乗れるのは**両隣に演算の対象（ASCII の英数字）がある**ときだけ。
-  //    `base ** 2` は該当し、`これは ** 太字` は該当しない（隣が日本語）。
-  const operatorPlaceholders: string[] = []
-  out = out.replace(/(?<=[A-Za-z0-9_)\]][ \t])\*{2,}(?=[ \t][A-Za-z0-9_(\[])/g, (m) => {
-    operatorPlaceholders.push(m)
-    return `${MARK}OP${operatorPlaceholders.length - 1}${MARK}`
-  })
-
   // 1. 太字 **text** / __text__ を退避。
   //    **改行を1つまたぐ太字も拾う**（独立監査 2026-09-12・P1）。LLM は段落全体を太字にすることがあり、
   //    改行を除外していると `**` が生徒の画面にそのまま残っていた。
   //    空行（段落の切れ目）はまたがない——またぐと、閉じ忘れた `**` が文書全体を飲み込む。
+  //    **対にできるかどうかは CommonMark の flanking 規則で決める**
+  //    （開きの直後と閉じの直前が空白でないこと）。
+  //    これだけで `a ** 2` のべき乗は「開けも閉じもできない記号」になり、
+  //    後ろにある本物の `**太字**` のマーカーを奪えなくなる。
+  //    5・6・7巡目の P0 はすべて「隣の文字を見て演算子か強調かを当てる」当て推量が
+  //    原因だった（空白だけで判定→強調が死ぬ→ASCII英数字で判定→全角で死ぬ）。
+  //    **当てるのをやめて、記法の側の規則で決める。**
   const boldInner = String.raw`(?:[^*\n]|\n(?!\s*\n))+?`
   const underInner = String.raw`(?:[^_\n]|\n(?!\s*\n))+?`
-  out = out.replace(new RegExp(`\\*\\*(${boldInner})\\*\\*`, 'g'), (_m, inner) => pushBold(inner))
-  out = out.replace(new RegExp(`__(${underInner})__`, 'g'), (_m, inner) => pushBold(inner))
+  out = out.replace(
+    new RegExp(String.raw`\*\*(?=\S)(${boldInner})(?<=\S)\*\*`, 'g'),
+    (_m, inner) => pushBold(inner),
+  )
+  out = out.replace(
+    new RegExp(String.raw`__(?=\S)(${underInner})(?<=\S)__`, 'g'),
+    (_m, inner) => pushBold(inner),
+  )
 
   // 2. 見出し # 〜 ###### → Slack に見出し記法は無いので太字1行にする
   //    （見出し全体が既に太字プレースホルダだけの場合は二重に太字化しない）
   out = out.replace(/^ {0,3}#{1,6}[ \t]+(.+)$/gm, (_m, inner: string) => {
     const already = inner.trim().match(boldTokenRe)
-    return already ? `${MARK}B${already[1]}${MARK}` : pushBold(inner)
+    if (already) return `${MARK}B${already[1]}${MARK}`
+    // 見出しは行全体が太字になるので、**中にある太字は入れ子にせず中身だけ取り出す**。
+    // 入れ子のまま退避すると `*見出し *太字* です*` と二重になり、Slack では記号が見える。
+    const flattened = inner.replace(
+      new RegExp(`${MARK}B(\\d+)${MARK}`, 'g'),
+      (m, idx) => boldPlaceholders[Number(idx)] ?? m,
+    )
+    return pushBold(flattened)
   })
+
+  // 2-b. 中身の無い見出し（`## ` だけの行）。記号を残す意味が無いので落とす
+  out = out.replace(/^ {0,3}#{1,6}[ \t]*$/gm, '')
 
   // 3. 打ち消し線 ~~text~~ → Slack は単一チルダ
   out = out.replace(/~~([^~\n]+?)~~/g, '~$1~')
@@ -335,11 +337,25 @@ export function convertMarkdownToMrkdwn(text: string): string {
 
   // 6. 太字プレースホルダを Slack の太字記法（単一アスタリスク）へ復元
   const restoreRe = new RegExp(`${MARK}B(\\d+)${MARK}`, 'g')
-  // 自分が退避していない番号なら、"undefined" を出さず元の文字列のまま返す
-  out = out.replace(restoreRe, (m, idx) => {
-    const inner = boldPlaceholders[Number(idx)]
-    return inner === undefined ? m : `*${inner}*`
-  })
+  // ⚠️ **プレースホルダは入れ子になる。** 見出しの中に太字があると
+  //    （`## まとめ **大事** です`）、太字を退避した文字列ごと見出しとして
+  //    もう一度退避されるため、目印の中に目印が入る。
+  //    String.replace は**置換した結果を読み直さない**ので、1回だけ回すと
+  //    内側の目印（制御文字）がそのまま生徒の画面に出る。安定するまで繰り返す。
+  //    ⚠️ ただし**現在この繰り返しはテストで到達できない**。見出しの側で中の太字を
+  //    平らにする修正（下の step 2）が入れ子そのものを無くしたため。
+  //    ミューテーション検査（上限を 1 に戻す）でも落ちるテストは0件だった。
+  //    「テストで守られている」とは書かない。入れ子を作る変換を将来足したら、
+  //    ここが2枚目として効く、という位置づけで残している。
+  for (let pass = 0; pass < 10 && out.includes(`${MARK}B`); pass += 1) {
+    const before = out
+    // 自分が退避していない番号なら、"undefined" を出さず元の文字列のまま返す
+    out = out.replace(restoreRe, (m, idx) => {
+      const inner = boldPlaceholders[Number(idx)]
+      return inner === undefined ? m : `*${inner}*`
+    })
+    if (out === before) break
+  }
 
   // 7. **閉じないアスタリスクの後始末。** ここまでで正しく対になった太字は単一の `*` に
   //    なっているので、**2つ以上続くアスタリスクが残っていたら、それは閉じ損ねた記号**。
@@ -351,12 +367,21 @@ export function convertMarkdownToMrkdwn(text: string): string {
   //    という1つの規則にしてある。トークン上限で開き `**` の直後に切れる経路
   //    （executeProcessMessage の TRUNCATED_ANSWER_NOTICE）が実運用で必ず通る。
   //
-  //    べき乗の演算子は 0-c で退避済みなので、ここに残っているものは全部落としてよい。
-  out = out.replace(/\*{2,}/g, '')
-
-  // 8. 退避しておいたべき乗の演算子を戻す
-  const opRestoreRe = new RegExp(`${MARK}OP(\\d+)${MARK}`, 'g')
-  out = out.replace(opRestoreRe, (m, idx) => operatorPlaceholders[Number(idx)] ?? m)
+  //    残すのは**演算の対象に挟まれたもの**（`a ** 2` `１ ** ２`）だけ。
+  //    `これは ** 太字のつもり ** だよ` のように隣が地の文なら落とす。Slack は
+  //    `* x *` のように内側が空いた記号を強調として描かないので、残しても生徒には
+  //    記号が見えるだけになる。**ここでの判定を外しても本物の太字は壊れない**
+  //    （対の検出は上の flanking で既に終わっているため）。7巡目までの事故は
+  //    この判定を「対の検出」に使っていたことが原因だった。
+  const OPERAND_LEFT = /[A-Za-z0-9０-９Ａ-Ｚａ-ｚ_)\]）］]/
+  const OPERAND_RIGHT = /[A-Za-z0-9０-９Ａ-Ｚａ-ｚ_(\[（［]/
+  out = out.replace(/\*{2,}/g, (m, offset: number, full: string) => {
+    const left = /(\S)[ \t]$/.exec(full.slice(0, offset))
+    const right = /^[ \t](\S)/.exec(full.slice(offset + m.length))
+    const isExponent =
+      !!left && !!right && OPERAND_LEFT.test(left[1]) && OPERAND_RIGHT.test(right[1])
+    return isExponent ? m : ''
+  })
 
   return out
 }
