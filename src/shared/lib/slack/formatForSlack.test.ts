@@ -276,6 +276,32 @@ describe('formatForSlack（独立検査で見つかった破壊の回帰防止�
     })
   })
 
+  describe('水平線（Slack に記法が無い）', () => {
+    // 畳み込み処理を足したことで新たに壊れた箇所。`***` だけの行が `**` になって
+    // 画面に残っていた（独立監査 3巡目・P1）。
+    it('*** だけの行を Slack に出せる区切りに変える（** を残さない）', () => {
+      const result = formatForSlack('上の説明\n\n***\n\n下の説明')
+      expect(result).not.toContain('**')
+      expect(result).toBe('上の説明\n\n──────────\n\n下の説明')
+    })
+
+    it('--- と ___ と長い並びも同じ扱い', () => {
+      expect(formatForSlack('---')).toBe('──────────')
+      expect(formatForSlack('___')).toBe('──────────')
+      expect(formatForSlack('*****')).toBe('──────────')
+      expect(formatForSlack('- - -')).toBe('──────────')
+    })
+
+    it('箇条書きの行頭記号を水平線と誤認しない', () => {
+      expect(formatForSlack('- 一つ目\n- 二つ目')).toBe('• 一つ目\n• 二つ目')
+    })
+
+    it('コードブロックの中の区切り線は触らない', () => {
+      const input = '```\n***\n```'
+      expect(formatForSlack(input)).toBe(input)
+    })
+  })
+
   describe('連続アスタリスク', () => {
     it('*** や **** を太字に寄せる（Slack に太字＋斜体の複合記法は無い）', () => {
       expect(formatForSlack('***重要***')).toBe('*重要*')

@@ -15,6 +15,18 @@ describe('buildPrompt', () => {
     expect(system).toContain('APIキー') // 内部情報を出さないルール
   })
 
+  // T-0110: Slack は標準 Markdown / LaTeX を正しく表示できない。変換層（formatForSlack）と
+  // プロンプトの両方で防ぐ設計なので、プロンプト側の指示が消えたら気づけるようにする。
+  // この指示が無いと、変換層が取りこぼした記法がそのまま生徒の画面に出る。
+  it('全モード共通で Slack 向けの出力形式を指示する（T-0110）', () => {
+    for (const mode of ['direct', 'socratic', 'confirmation'] as const) {
+      const { system } = buildPrompt({ ...base, mode })
+      expect(system).toContain('見出し記法')
+      expect(system).toContain('二重アスタリスク')
+      expect(system).toContain('LaTeX')
+    }
+  })
+
   it('direct はワークド例題（条件・行動・目的）を指示（AC-05-02）', () => {
     const { system } = buildPrompt({ ...base, mode: 'direct' })
     expect(system).toContain('条件・行動・目的')

@@ -1,0 +1,8 @@
+# Cloudflare Pages に置いたときの HTTP ヘッダ。
+# 検索エンジンに載せないための指定（本人の判断 2026-09-12 / ops Q-0060「Cloudflareかな」）。
+# 各 HTML の <meta name="robots"> と二重にしてある。別のホスティングに移しても
+# meta 側が残るようにしつつ、Pages ではヘッダの方が確実に効くため。
+/*
+  X-Robots-Tag: noindex, nofollow
+  Referrer-Policy: no-referrer
+  X-Content-Type-Options: nosniff
