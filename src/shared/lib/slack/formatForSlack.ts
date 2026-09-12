@@ -30,6 +30,9 @@
  *     対象が中高数学であること、buildPrompt が `__` の使用を禁じていることから、
  *     条件を足して複雑にするより、この挙動を受け入れる方を選んだ（テストで固定してある）。
  *   - 番号付きリスト・引用（`>`）・表。Slack に対応する記法が無く、素通しで読めるため。
+ *   - **記号が混在した擬似的な水平線**（`*-*-*` など）。CommonMark の thematic break は
+ *     同じ記号の繰り返しなので水平線として扱わず、`*` が1つ残ることがある。
+ *     LLM がこの形を出す動機が無いため対応しない。
  * @implements T-0110
  */
 
@@ -263,6 +266,21 @@ export function convertMarkdownToMrkdwn(text: string): string {
   //    Slack に太字＋斜体の複合記法は無いので、太字に寄せるのが素直。
   out = out.replace(/\*{3,}/g, '**')
 
+  // 0-c. **半角スペースで挟まれた `**` は「べき乗の演算子」として先に退避する。**
+  //    これをやらないと、演算子が2つある文（`a ** 2 で、b ** 2 です`）で
+  //    1個目と2個目が太字の対と誤認され、**間の本文がまるごと太字になり、
+  //    後ろにある本物の `**太字**` まで巻き込まれて壊れる**
+  //    （独立監査 2026-09-12・5巡目・P0）。
+  //    以前は後始末（step 7）の側で「前後がスペースなら残す」と書いていたが、
+  //    **対の検出そのものが先に誤るので、後始末では間に合わなかった。**
+  //    予防（対の候補から外す）と後始末（対にならなかったものを落とす）は別の仕事で、
+  //    後者に前者の役目をさせていたのが誤り。
+  const operatorPlaceholders: string[] = []
+  out = out.replace(/(?<=[ \t])\*{2,}(?=[ \t])/g, (m) => {
+    operatorPlaceholders.push(m)
+    return `${MARK}OP${operatorPlaceholders.length - 1}${MARK}`
+  })
+
   // 1. 太字 **text** / __text__ を退避。
   //    **改行を1つまたぐ太字も拾う**（独立監査 2026-09-12・P1）。LLM は段落全体を太字にすることがあり、
   //    改行を除外していると `**` が生徒の画面にそのまま残っていた。
@@ -307,14 +325,12 @@ export function convertMarkdownToMrkdwn(text: string): string {
   //    という1つの規則にしてある。トークン上限で開き `**` の直後に切れる経路
   //    （executeProcessMessage の TRUNCATED_ANSWER_NOTICE）が実運用で必ず通る。
   //
-  //    ただし**前後が半角スペースで挟まれている場合だけは残す**。`x = base ** 2` の
-  //    べき乗を消さないため（同じファイルの斜体変換が掛け算の `*` を避けているのと同じ判断軸）。
-  out = out.replace(/\*{2,}/g, (m, offset: number, full: string) => {
-    const before = offset === 0 ? '' : full[offset - 1]
-    const after = full[offset + m.length] ?? ''
-    const isOperator = /[ \t]/.test(before) && /[ \t]/.test(after)
-    return isOperator ? m : ''
-  })
+  //    べき乗の演算子は 0-c で退避済みなので、ここに残っているものは全部落としてよい。
+  out = out.replace(/\*{2,}/g, '')
+
+  // 8. 退避しておいたべき乗の演算子を戻す
+  const opRestoreRe = new RegExp(`${MARK}OP(\\d+)${MARK}`, 'g')
+  out = out.replace(opRestoreRe, (m, idx) => operatorPlaceholders[Number(idx)] ?? m)
 
   return out
 }

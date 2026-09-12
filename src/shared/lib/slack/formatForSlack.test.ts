@@ -251,6 +251,22 @@ describe('formatForSlack（独立検査で見つかった破壊の回帰防止�
       expect(formatForSlack('x = base ** 2 だよ')).toBe('x = base ** 2 だよ')
     })
 
+    // 5巡目・P0。1つだけのケースしかテストしておらず、**2つ以上あると
+    // 1個目と2個目が太字の対と誤認されて、間の本文ごと壊れていた**。
+    // 「テストが通る」は「テストが十分」を意味しない、の実例。
+    it('べき乗が同じ文に2つ以上あっても壊れない', () => {
+      expect(formatForSlack('aの2乗は a ** 2 で、bの2乗は b ** 2 です')).toBe(
+        'aの2乗は a ** 2 で、bの2乗は b ** 2 です',
+      )
+      expect(formatForSlack('x ** 2 と y ** 2 と z ** 2')).toBe('x ** 2 と y ** 2 と z ** 2')
+    })
+
+    it('べき乗のあとに本物の太字が来ても、両方とも壊れない', () => {
+      expect(formatForSlack('x ** 2 を計算してから、**答え合わせ**をしよう')).toBe(
+        'x ** 2 を計算してから、*答え合わせ*をしよう',
+      )
+    })
+
     it('コードブロックの中のべき乗も当然そのまま', () => {
       const input = '```\nx = base ** 2\n```'
       expect(formatForSlack(input)).toBe(input)
