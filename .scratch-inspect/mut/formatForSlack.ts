@@ -21,15 +21,6 @@
  *   - プロンプトで LaTeX 禁止(案c)だけに頼るのは、LLM が指示に従わない場合の保険が無くなるため、
  *     本関数を安全網として残しつつ buildPrompt.ts 側にも禁止指示を追加する（両方やる）。
  *   変換できない複雑な LaTeX（\begin{...} など）はそのまま素通しする（対象外）。
- *
- * 対象外と決めていること（「確かめていない」ではなく「やらないと決めた」もの）:
- *   - **4スペース字下げのコードブロック**（フェンス無しの Markdown の書き方）。保護しない。
- *     buildPrompt が ``` のフェンスしか指示していないため。LLM がこの形で出したら中身が変換される。
- *   - **`__word__` を太字として扱うこと自体の副作用**。両側が同じ語になる識別子
- *     （Python の `__init__` `__name__` など）はバッククォートで囲まないと `*init*` に化ける。
- *     対象が中高数学であること、buildPrompt が `__` の使用を禁じていることから、
- *     条件を足して複雑にするより、この挙動を受け入れる方を選んだ（テストで固定してある）。
- *   - 番号付きリスト・引用（`>`）・表。Slack に対応する記法が無く、素通しで読めるため。
  * @implements T-0110
  */
 
@@ -295,25 +286,6 @@ export function convertMarkdownToMrkdwn(text: string): string {
   out = out.replace(restoreRe, (m, idx) => {
     const inner = boldPlaceholders[Number(idx)]
     return inner === undefined ? m : `*${inner}*`
-  })
-
-  // 7. **閉じないアスタリスクの後始末。** ここまでで正しく対になった太字は単一の `*` に
-  //    なっているので、**2つ以上続くアスタリスクが残っていたら、それは閉じ損ねた記号**。
-  //    Slack では意味を持たず、生徒の画面に記号として出るだけなので落とす。
-  //
-  //    なぜ個別のパターンではなく、この形にしたか（独立監査 2026-09-12・4巡目・P1）:
-  //    3連を畳めば2連が残り、2連を潰せば次は別の境界値が残る、という後追いを3巡続けた。
-  //    「何連か」で場合分けするのをやめ、「**対にならなかったマーカーは投稿前に落とす**」
-  //    という1つの規則にしてある。トークン上限で開き `**` の直後に切れる経路
-  //    （executeProcessMessage の TRUNCATED_ANSWER_NOTICE）が実運用で必ず通る。
-  //
-  //    ただし**前後が半角スペースで挟まれている場合だけは残す**。`x = base ** 2` の
-  //    べき乗を消さないため（同じファイルの斜体変換が掛け算の `*` を避けているのと同じ判断軸）。
-  out = out.replace(/\*{2,}/g, (m, offset: number, full: string) => {
-    const before = offset === 0 ? '' : full[offset - 1]
-    const after = full[offset + m.length] ?? ''
-    const isOperator = /[ \t]/.test(before) && /[ \t]/.test(after)
-    return isOperator ? m : ''
   })
 
   return out

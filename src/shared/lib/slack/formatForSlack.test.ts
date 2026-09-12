@@ -224,10 +224,51 @@ describe('formatForSlack（独立検査で見つかった破壊の回帰防止�
     })
 
     it('空行（段落の切れ目）はまたがない＝閉じ忘れた ** が文書全体を飲み込まない', () => {
+      // またいでいたら「閉じ忘れた太字〜別の太字」が丸ごと1つの太字になる。
+      // またがないので、後ろの対になった太字だけが太字になり、前の閉じ忘れは記号が落ちる。
       const input = '**閉じ忘れた太字\n\n次の段落です。**別の太字**'
-      const result = formatForSlack(input)
-      expect(result).toContain('*別の太字*')
-      expect(result).toContain('**閉じ忘れた太字')
+      expect(formatForSlack(input)).toBe('閉じ忘れた太字\n\n次の段落です。*別の太字*')
+    })
+  })
+
+  describe('閉じないアスタリスクの後始末（4巡目・P1）', () => {
+    // 3連を畳めば2連が残り、2連を潰せば次の境界値が残る、という後追いを3巡続けた。
+    // 「何連か」で場合分けするのをやめ、「対にならなかったマーカーは落とす」1規則にした。
+    it('トークン上限で開き ** の直後に切れても記号を残さない（実運用で通る経路）', () => {
+      const truncated =
+        'ここまでの説明が終わって、次に大事なのは**' +
+        '\n\n（文字数の上限で途中までになっちゃった。「続きを教えて」と送ってくれたら続きを説明するよ）'
+      expect(formatForSlack(truncated)).not.toContain('**')
+    })
+
+    it('アスタリスク2つだけ・閉じ忘れ・3つ以上、どの本数でも残さない', () => {
+      expect(formatForSlack('**')).toBe('')
+      expect(formatForSlack('**太字 が閉じてない')).toBe('太字 が閉じてない')
+      expect(formatForSlack('説明****とちゅう')).toBe('説明とちゅう')
+    })
+
+    it('前後を半角スペースで挟まれたべき乗は消さない（掛け算の * と同じ判断軸）', () => {
+      expect(formatForSlack('x = base ** 2 だよ')).toBe('x = base ** 2 だよ')
+    })
+
+    it('コードブロックの中のべき乗も当然そのまま', () => {
+      const input = '```\nx = base ** 2\n```'
+      expect(formatForSlack(input)).toBe(input)
+    })
+  })
+
+  describe('受け入れた制限（直さないと決めたもの・4巡目・P2/P3）', () => {
+    // 条件を足して複雑にするより、この挙動を受け入れる方を選んだ。
+    // 対象が中高数学であること、buildPrompt が __ の使用を禁じていることが根拠。
+    // 気が変わったときに「どこが変わるか」が分かるよう、現状をここで固定しておく。
+    it('両側が同じ語の識別子は太字として解釈される（__init__ など）', () => {
+      expect(formatForSlack('__name__ が "__main__" のとき')).toBe('*name* が "*main*" のとき')
+      // バッククォートで囲めば壊れない。これが回避策。
+      expect(formatForSlack('`__init__` メソッド')).toBe('`__init__` メソッド')
+    })
+
+    it('4スペース字下げのコードブロックは保護しない（フェンスのみ対応）', () => {
+      expect(formatForSlack('    x = **1**')).toBe('    x = *1*')
     })
   })
 
