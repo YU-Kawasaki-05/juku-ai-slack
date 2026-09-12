@@ -289,17 +289,34 @@ if (!supabaseUrl || !serviceRoleKey) {
     ]) {
       const res = await sb(`/rest/v1/${t}?select=id`, { headers: { Prefer: 'count=exact', Range: '0-0' } })
       const range = res.headers.get('content-range') ?? ''
-      const total = range.split('/')[1] ?? '?'
+      const total = range.split('/')[1] ?? ''
+      if (!res.ok || total === '' || total === '*') {
+        // 件数が読めなかったことを「0件ではない」と混同しない
+        skip(label, `件数を確認できませんでした（HTTP ${res.status}）`)
+        continue
+      }
       if (total === '0')
         warn(label, '0 件', t === 'persons' ? '生徒を1人登録する（STEP 7）' : '生徒と Slack チャンネルを紐付ける（STEP 7）')
       else info(label, `${total} 件`)
     }
 
-    // 管理画面に入れる人がいるか
-    const users = await sb('/auth/v1/admin/users?page=1&per_page=200')
-    if (users.ok) {
-      const body = await users.json()
-      const list = body.users ?? []
+    // 管理画面に入れる人がいるか。
+    // ⚠️ 1ページ目だけ見ると、200人を超える環境で admin を取りこぼして
+    //    「admin が0人」と誤報する。最後まで辿る（invite-staff.mjs と同じ形）。
+    const list = []
+    let usersOk = true
+    for (let page = 1; page <= 50; page += 1) {
+      const res = await sb(`/auth/v1/admin/users?page=${page}&per_page=200`)
+      if (!res.ok) {
+        usersOk = false
+        break
+      }
+      const body = await res.json()
+      const chunk = body.users ?? []
+      list.push(...chunk)
+      if (chunk.length < 200) break
+    }
+    if (usersOk) {
       const admins = list.filter((u) => u.app_metadata?.role === 'admin')
       const staff = list.filter((u) => u.app_metadata?.role === 'staff')
       const noRole = list.filter((u) => !u.app_metadata?.role)
@@ -311,7 +328,7 @@ if (!supabaseUrl || !serviceRoleKey) {
       if (noRole.length > 0)
         warn('ロール未設定のユーザー', `${noRole.length} 人`, 'app_metadata.role が無いユーザーは権限判定で弾かれる。invite-staff.mjs で付け直す')
     } else {
-      skip('管理ユーザー', `読めなかった（HTTP ${users.status}）`)
+      skip('管理ユーザー', '読めなかった')
     }
   }
 }

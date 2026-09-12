@@ -142,20 +142,40 @@ if (!supabaseUrl || !serviceRoleKey) {
   process.exit(2)
 }
 
-// grade と id だけを取る。name は取得しない（氏名をこのプロセスに載せない）
-const res = await fetch(`${supabaseUrl}/rest/v1/persons?select=id,grade,status`, {
-  headers: {
-    apikey: serviceRoleKey,
-    Authorization: `Bearer ${serviceRoleKey}`,
-  },
-})
-
-if (!res.ok) {
-  console.error(`persons の取得に失敗しました (HTTP ${res.status})`)
-  process.exit(2)
+// grade と id だけを取る。name は取得しない（氏名をこのプロセスに載せない）。
+// ⚠️ PostgREST には既定の返却上限がある。**黙って途中までしか見ないと、
+//    点検したつもりで未点検の生徒が残る**（この手の検査で最も危ない失敗）。
+//    件数を先に取り、取得できた行数と一致するまでページを進める。
+const PAGE = 1000
+const rows = []
+let expected = null
+for (let offset = 0; ; offset += PAGE) {
+  const res = await fetch(`${supabaseUrl}/rest/v1/persons?select=id,grade,status`, {
+    headers: {
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+      Prefer: 'count=exact',
+      Range: `${offset}-${offset + PAGE - 1}`,
+    },
+  })
+  if (!res.ok && res.status !== 206) {
+    console.error(`persons の取得に失敗しました (HTTP ${res.status})`)
+    process.exit(2)
+  }
+  const total = (res.headers.get('content-range') ?? '').split('/')[1]
+  if (expected === null && total && total !== '*') expected = Number(total)
+  const chunk = await res.json()
+  rows.push(...chunk)
+  if (chunk.length < PAGE) break
 }
 
-const rows = await res.json()
+if (expected !== null && rows.length !== expected) {
+  console.error(
+    `取得できた生徒が ${rows.length} 件で、DB 上の ${expected} 件と一致しません。\n` +
+      '点検漏れが出るため中止します。時間をおいて再実行してください。',
+  )
+  process.exit(2)
+}
 
 const empty = []
 const ok = []
