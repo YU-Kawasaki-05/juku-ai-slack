@@ -30,6 +30,11 @@
  *     対象が中高数学であること、buildPrompt が `__` の使用を禁じていることから、
  *     条件を足して複雑にするより、この挙動を受け入れる方を選んだ（テストで固定してある）。
  *   - 番号付きリスト・引用（`>`）・表。Slack に対応する記法が無く、素通しで読めるため。
+ *   - **太字が単一アスタリスクの斜体を内包する形**（`**a *b* c**`）。外側の太字が落ちて
+ *     `a _b_ c` になる（記号は残らないが強調は失われる）。太字の中身に `*` を許すと
+ *     `**a**b**` のような並びで対の取り方が一意に決まらなくなるため、内包は諦めている。
+ *   - **語中の `**`**（`a**b**c`）。英数字に挟まれた `**` はべき乗として扱うので、
+ *     CommonMark の語中強調にはならない。中高数学の文脈ではべき乗の方が自然なため。
  *   - **記号が混在した擬似的な水平線**（`*-*-*` など）。CommonMark の thematic break は
  *     同じ記号の繰り返しなので水平線として扱わず、`*` が1つ残ることがある。
  *     LLM がこの形を出す動機が無いため対応しない。
@@ -281,15 +286,20 @@ export function convertMath(text: string): string {
  *
  * **同じ判断を2箇所に書かないため関数にしてある**（見出しで包む前と、復元のあとの2回通す）。
  */
-const OPERAND_LEFT = /[A-Za-z0-9０-９Ａ-Ｚａ-ｚ_)\]）］]/
-const OPERAND_RIGHT = /[A-Za-z0-9０-９Ａ-Ｚａ-ｚ_(\[（［]/
+/** 演算の対象。**英数字だけに限る。** `_` や括弧まで含めると、`__**x` のような
+ *  記号の並びを「べき乗」と読んで `**` を生徒の画面に残してしまう。
+ *  空白を挟まない `2**10` は既に前段で退避済みなので、ここは空白つきの形だけを見る。 */
+const OPERAND = /[A-Za-z0-9０-９]/
+/** 残すと決めたべき乗の退避先。2枚目の後始末が誤って消さないようにするため */
+const OPERATOR_MARK = '\u0000OPR\u0000'
 function dropUnpairedBold(text: string): string {
   return text.replace(/\*{2,}/g, (m, offset: number, full: string) => {
+    // 空白を挟まない `2**10` は前段（0-b）で退避済みなので、ここは空白つきだけ見る。
     const left = /(\S)[ \t]$/.exec(full.slice(0, offset))
     const right = /^[ \t](\S)/.exec(full.slice(offset + m.length))
-    const isExponent =
-      !!left && !!right && OPERAND_LEFT.test(left[1]) && OPERAND_RIGHT.test(right[1])
-    return isExponent ? m : ''
+    const isExponent = !!left && !!right && OPERAND.test(left[1]) && OPERAND.test(right[1])
+    // 残すと決めたものは、2枚目の後始末が触れないように退避しておく
+    return isExponent ? OPERATOR_MARK : ''
   })
 }
 
@@ -312,6 +322,21 @@ export function convertMarkdownToMrkdwn(text: string): string {
   //    `***` だけの行が `**`（閉じられない太字の記号）になって画面に残る**
   //    （独立監査 2026-09-12・3巡目・P1。畳み込みを足したこと自体が新しい穴を開けた例）。
   out = out.replace(/^[ \t]{0,3}([*\-_])[ \t]*(?:\1[ \t]*){2,}$/gm, '──────────')
+
+  // 0-b. **英数字に直接挟まれた `**` はべき乗として先に退避する。**
+  //    `x**2+y**2=z**2` は CommonMark では語中の太字だが、中高数学の文脈では
+  //    べき乗と読むのが自然。太字と読むと `x` と `2=z**2` の間が強調されて意味が変わる。
+  //    プロンプトも強調には単一の `*` を使うよう指示している。
+  //    対の候補から外すだけでは足りない（残った記号を後段の斜体が拾ってしまい
+  //    `x*_2+y__2=z_*2` になった）。**後続のどの規則からも見えないように退避する。**
+  //    ⚠️ 5〜7巡目の事故はこの「退避」の条件が緩かったこと（空白の有無・ASCII だけ）
+  //    が原因だった。ここでは**英数字が直接隣接している場合だけ**に限る。
+  //    `**大事**` の開きは直前が何も無いので該当せず、強調を奪わない。
+  const operators: string[] = []
+  out = out.replace(/(?<=[A-Za-z0-9０-９])\*{2}(?=[A-Za-z0-9０-９])/g, () => {
+    operators.push('**')
+    return OPERATOR_MARK
+  })
 
   //    ※ かつてここに「3連以上のアスタリスクを ** に畳む」処理があったが削除した。
   //    `**a***b*`（太字の閉じ2つ＋斜体の開き1つ）の正当な境界を押し潰し、
@@ -342,7 +367,10 @@ export function convertMarkdownToMrkdwn(text: string): string {
   )
 
   // 3. 打ち消し線 ~~text~~ → Slack は単一チルダ
-  out = out.replace(/~~([^~\n]+?)~~/g, '~$1~')
+  //    対にならなかった `~~` は落とす（`**` と同じ扱い）。Slack は `~~` を解釈しないので、
+  //    残すと生徒の画面に記号がそのまま出る（独立検査 2026-09-12・12巡目の不変条件で発見）。
+  const strikethrough = (t: string) => t.replace(/~~([^~\n]+?)~~/g, '~$1~').replace(/~{2,}/g, '')
+  out = strikethrough(out)
 
   // 4. 箇条書きの行頭記号（-, *, + + 半角スペース）→ Slack には箇条書き記法が無いので中黒にする
   out = out.replace(/^(\s*)[-*+][ \t]+(?=\S)/gm, '$1• ')
@@ -362,14 +390,28 @@ export function convertMarkdownToMrkdwn(text: string): string {
   //    Slack は装飾の入れ子を解釈しないので、`*__語__*` をそのまま包むと
   //    `_*語*_` になり、内側の記号が生徒の画面に出る
   //    （独立検査 2026-09-12・11巡目・P0/P1）。外側の装飾を残して中身を平らにする。
-  out = out.replace(/\*([^\s*][^*\n]*?[^\s*]|[^\s*])\*/g, (m, inner: string) => {
-    if (!EMPHASIZABLE.test(inner)) return m
-    const flattened = inner.replace(
-      new RegExp(`${MARK}B(\\d+)${MARK}`, 'g'),
-      (bm, idx) => boldPlaceholders[Number(idx)] ?? bm,
-    )
-    return `_${flattened}_`
-  })
+  const italicize = (t: string) =>
+    t.replace(/\*([^\s*][^*\n]*?[^\s*]|[^\s*])\*/g, (m, inner: string) => {
+      if (!EMPHASIZABLE.test(inner)) return m
+      const flattened = inner.replace(
+        new RegExp(`${MARK}B(\\d+)${MARK}`, 'g'),
+        (bm, idx) => boldPlaceholders[Number(idx)] ?? bm,
+      )
+      return `_${flattened}_`
+    })
+  out = italicize(out)
+
+  // 5-b. **退避した太字の中身にも、同じ変換を通す。**
+  //    退避は「後の変換から中身を隠す」ので、隠したままだと
+  //    `**~~打ち消し~~**` の `~~` や `**a *b* c**` の `*b*` が生の記号で画面に出る
+  //    （独立検査 2026-09-12・12巡目・P1/P2）。
+  //    8・9・11巡目で「見出しの中」「斜体の中」と個別に手当てしてきたが、
+  //    **外側がどの装飾でも、中の記法は必ず平らにする**という1つの規則にする。
+  //    太字の中の太字（`**__x__**`）は重ねても意味が無いので中身だけにする。
+  for (let i = 0; i < boldPlaceholders.length; i += 1) {
+    const inner = boldPlaceholders[i]
+    boldPlaceholders[i] = italicize(strikethrough(inner)).replace(/__([^_\n]+?)__/g, '$1')
+  }
 
   // 6. **対にならなかったアスタリスクの後始末（1枚目）。**
   //    **見出しで包む前に通すこと。** 包んでから落とすと、見出しの中に残っていた
@@ -432,8 +474,21 @@ export function convertMarkdownToMrkdwn(text: string): string {
   }
 
   // 9. 対にならなかったアスタリスクの後始末（2枚目）。
-  //    復元で新しく隣り合った場合に備える。
-  out = dropUnpairedBold(out)
+  //    **ここでは無条件に落とす。** 残すと決めたべき乗は1枚目で退避してあるので、
+  //    ここに残っている `**` は**復元で新しく隣り合ってできたもの**しかない
+  //    （`__a____b__` → `*a**b*`）。1枚目と同じ判定をここでも使うと、
+  //    自分が作った記号を「べき乗」と読んで残してしまう。
+  //    `~~` も同じ。退避の中に隠れていたものがここで初めて表に出ることがある。
+  //    ⚠️ **1回では足りない。** 片方を消すと残りが新しく隣り合うことがある
+  //    （`*~~*` の `~~` を消すと `**` になる）。変化が止まるまで繰り返す。
+  for (let pass = 0; pass < 5; pass += 1) {
+    const before = out
+    out = out.replace(/\*{2,}/g, '').replace(/~{2,}/g, '')
+    if (out === before) break
+  }
+
+  // 10. 退避しておいたべき乗を戻す
+  out = out.split(OPERATOR_MARK).join('**')
 
   return out
 }
