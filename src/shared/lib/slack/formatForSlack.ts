@@ -406,9 +406,18 @@ export function convertMarkdownToMrkdwn(text: string): string {
   for (let pass = 0; pass < 10 && out.includes(`${MARK}B`); pass += 1) {
     const before = out
     // 自分が退避していない番号なら、"undefined" を出さず元の文字列のまま返す
-    out = out.replace(restoreRe, (m, idx) => {
+    out = out.replace(restoreRe, (m, idx, offset: number, full: string) => {
       const inner = boldPlaceholders[Number(idx)]
-      return inner === undefined ? m : `*${inner}*`
+      if (inner === undefined) return m
+      // ⚠️ **復元で作る `*` が、地の文の `*` と隣り合うことがある。**
+      //    `x*__y__`（掛け算の `*` のすぐ後ろが太字）だと `x**y*` になり、後始末が
+      //    その `**` を「閉じ損ね」と読んで消し、**掛け算も強調も壊れていた**
+      //    （独立検査 2026-09-12・10巡目・P1）。後始末は「地の文の記号」と
+      //    「自分が作った記号」を見分けられないので、**そもそも隣り合わせない**。
+      //    どちらか一方しか残せない場面では**地の文の記号を優先する**。
+      //    中高数学では掛け算の記号の方が、強調より意味を持つため。
+      const touchesRawAsterisk = full[offset - 1] === '*' || full[offset + m.length] === '*'
+      return touchesRawAsterisk ? inner : `*${inner}*`
     })
     if (out === before) break
   }
