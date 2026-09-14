@@ -537,6 +537,16 @@ describe('formatForSlack（独立検査で見つかった破壊の回帰防止�
       expect(formatForSlack('**(x*y)**')).toBe('(x*y)')
     })
 
+    it('斜体で包まれた顔文字も、太字側と同じ扱いにする（非対称を消す）', () => {
+      expect(formatForSlack('*(*^^*)*')).toBe('(*^^*)')
+    })
+
+    // 対象外と決めたもの。顔文字を守るために、その顔文字を含むスパン全体が無強調になる。
+    it('顔文字を含む強調は、スパン全体が無強調になる（既知の代償）', () => {
+      expect(formatForSlack('**すごい (*^^*) がんばって**')).toBe('すごい (*^^*) がんばって')
+      expect(formatForSlack('## まとめ (*^^*) だよ')).toBe('まとめ (*^^*) だよ')
+    })
+
     // 代償。Slack はこれを太字として描くので記号は画面に出ない。
     // 括弧つきの強調より顔文字の方が実際に多いので、こちらを取った。
     it('括弧つきの強調は変換しない（受け入れた代償）', () => {
@@ -735,6 +745,19 @@ describe('不変条件（部品の組み合わせを総当たりする）', () =
       findCounterexample((i, o) => {
         if (/[`\\^_]/.test(i)) return true
         return pairs(i).every((seq) => o.includes(seq))
+      }),
+    ).toBeNull()
+  })
+
+  // 17巡目の検査官の指摘。6回連続で壊れてきた「顔文字」という軸を保証する不変条件が
+  // 1つも無く、40,000通りの生成器はこの破壊を1件も検出できなかった。
+  // **壊れた歴史のある軸には、その軸を名指しした不変条件を置く。**
+  it('顔文字を原形のまま残す（6回壊れた軸）', () => {
+    const faces = (t: string) => t.match(/[(（]\*[^*\n]+\*[)）]/g) ?? []
+    expect(
+      findCounterexample((i, o) => {
+        if (i.includes('`')) return true
+        return faces(i).every((face) => o.includes(face))
       }),
     ).toBeNull()
   })
