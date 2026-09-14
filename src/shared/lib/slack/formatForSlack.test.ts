@@ -333,9 +333,18 @@ describe('formatForSlack（独立検査で見つかった破壊の回帰防止�
       expect(result).not.toContain('**本当の太字**')
     })
 
+    // ⚠️ toContain('*本当の太字*') だけだと、未変換の `**本当の太字**` にも
+    //    部分一致してしまい**何も保証しない**（19巡目・P2）。完全一致で固定する。
     it('4本以上のフェンスも対で認める', () => {
       const input = ['````', 'x = **1**', '````', '**本当の太字**'].join('\n')
-      expect(formatForSlack(input)).toContain('*本当の太字*')
+      expect(formatForSlack(input)).toBe(['````', 'x = **1**', '````', '*本当の太字*'].join('\n'))
+    })
+
+    // 18巡目の修正の裏返し。開きの本数は必ず最長で取る。取らないと
+    // 開き4本を「3本」と捕まえ、3本の行を閉じと誤認して**保護が漏れる**。
+    it('開きより短い閉じは閉じと認めない（末尾までコードのまま）', () => {
+      const input = ['````', 'x = **1**', '```', '**太字**'].join('\n')
+      expect(formatForSlack(input)).toBe(input)
     })
 
     // 開始行は言語指定を許すが、閉じ行はバッククォートと空白だけ（CommonMark と同じ）。
