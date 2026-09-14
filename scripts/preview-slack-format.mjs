@@ -71,9 +71,18 @@ function renderLikeSlack(text) {
     return `${MARK}${stash.length - 1}${MARK}`
   })
 
+  // べき乗として残した `**`（英数字に挟まれた形）を装飾と読まないよう先に退避する。
+  // これをしないと `2**10` が `210` と表示され、③ が実機より悪く見える。
+  const ops = []
+  out = out.replace(/(?<=[A-Za-z0-9０-９][ \t]?)\*{2}(?=[ \t]?[A-Za-z0-9０-９])/g, (m) => {
+    ops.push(m)
+    return `${MARK}OP${ops.length - 1}${MARK}`
+  })
   out = out.replace(/\*([^*\n]+)\*/g, (_m, s) => bold(s))
   out = out.replace(/(^|[^\w])_([^_\n]+)_(?=[^\w]|$)/g, (_m, pre, s) => `${pre}${italic(s)}`)
   out = out.replace(/~([^~\n]+)~/g, (_m, s) => strike(s))
+
+  out = out.replace(new RegExp(`${MARK}OP(\\d+)${MARK}`, 'g'), (m, i) => ops[Number(i)] ?? m)
 
   return out.replace(new RegExp(`${MARK}(\\d+)${MARK}`, 'g'), (_m, i) => {
     const raw = stash[Number(i)]
