@@ -385,17 +385,22 @@ export function convertMarkdownToMrkdwn(text: string): string {
   //    **原因は「文字の種類で決めようとしたこと」。** `≧` は数式の内容にも顔文字の
   //    部品にもなる。同じ文字集合を共有しているので、**どんな文字集合を選んでも両立しない**
   //    （14巡目の検査官の指摘）。
-  //    → **文字ではなく構造で見る。** 日本語の顔文字は `(*…*)` と括弧で包む形が定型なので、
-  //    「括弧で直に包まれていて、かつ中身に文字も数字も無い」ものだけを顔文字とみなす。
-  //    `(*大事*)` のように中身に語があるものは強調として扱う。
-  const HAS_WORD = new RegExp('\\p{L}|\\p{N}', 'u')
+  //    → **文字ではなく構造だけで見る。** 日本語の顔文字は `(*…*)` と括弧で包む形が定型。
+  //    **括弧で直に包まれた `*…*` は、中身が何であれ強調として扱わない。**
+  //    ⚠️ 一度は「かつ中身に文字も数字も無いこと」という条件を足したが、
+  //    `ω` `д` `ﾟ` `①` のような**顔文字によく使われる文字が「語」と判定され**、
+  //    `(*´ω\`*)` → `(_´ω\`_)` と壊れた（15巡目・P0。同型の5回目）。
+  //    **条件を足すたびに、その条件がまた文字クラスの漏れを持ち込んでいた。**
+  //    なので条件を足すのではなく**削った**。括弧に包まれているかどうかだけで決める。
+  //    代償は `(*大事*)` が強調にならないこと。Slack はこれを太字として描くので
+  //    記号は画面に出ない。括弧つきの強調より顔文字の方が実際に多いので、こちらを取る。
   const OPEN_PAREN = /[(（]/
   const CLOSE_PAREN = /[)）]/
   const italicize = (t: string) =>
     t.replace(/\*([^\s*][^*\n]*?[^\s*]|[^\s*])\*/g, (m, inner: string, offset: number, full: string) => {
       const wrappedInParens =
         OPEN_PAREN.test(full[offset - 1] ?? '') && CLOSE_PAREN.test(full[offset + m.length] ?? '')
-      if (wrappedInParens && !HAS_WORD.test(inner)) return m
+      if (wrappedInParens) return m
       const flattened = inner.replace(
         new RegExp(`${MARK}B(\\d+)${MARK}`, 'g'),
         (bm, idx) => boldPlaceholders[Number(idx)] ?? bm,
