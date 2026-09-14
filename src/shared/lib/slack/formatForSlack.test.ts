@@ -323,6 +323,21 @@ describe('formatForSlack（独立検査で見つかった破壊の回帰防止�
       expect(formatForSlack(input)).toBe(input)
     })
 
+    // 本数を決め打ちしていたため、開き3本・閉じ4本（CommonMark では合法）で
+    // 閉じを見つけられず、**それ以降の本文が丸ごとコード扱いになって未変換のまま**
+    // 生徒の画面に出ていた（18巡目・P1）。開きの本数以上を閉じと認める。
+    it('閉じフェンスが開きより多くても閉じと認める', () => {
+      const input = ['```', 'x = **1**', '````', '**本当の太字**'].join('\n')
+      const result = formatForSlack(input)
+      expect(result).toContain('*本当の太字*')
+      expect(result).not.toContain('**本当の太字**')
+    })
+
+    it('4本以上のフェンスも対で認める', () => {
+      const input = ['````', 'x = **1**', '````', '**本当の太字**'].join('\n')
+      expect(formatForSlack(input)).toContain('*本当の太字*')
+    })
+
     // 開始行は言語指定を許すが、閉じ行はバッククォートと空白だけ（CommonMark と同じ）。
     // 対称に書くと「```js 補足」を終端と誤認し、そこから後ろのコードが変換される。
     it('言語指定つきの行を閉じフェンスと誤認しない', () => {
