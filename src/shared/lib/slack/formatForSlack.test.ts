@@ -410,6 +410,20 @@ describe('formatForSlack（独立検査で見つかった破壊の回帰防止�
     })
   })
 
+  describe('装飾の入れ子（11巡目・P0/P1）', () => {
+    // Slack は装飾の入れ子を素直には解釈しない。見出しと同じ判断で、
+    // **外側の装飾を残して中身を平らにする**。内側の記号を画面に出さない。
+    it('斜体が太字を包む形で、内側の記号を残さない', () => {
+      expect(formatForSlack('*__word__*')).toBe('_word_')
+      expect(formatForSlack('文中に*__太字語__*を入れる')).toBe('文中に_太字語_を入れる')
+    })
+
+    it('太字の両側に地の文の記号がある形でも壊れない', () => {
+      expect(formatForSlack('x*__y__*z')).toBe('x_y_z')
+      expect(formatForSlack('x*__y__*z')).not.toContain('*')
+    })
+  })
+
   describe('地の文の記号と、復元で作る記号が隣り合う場合（10巡目・P1/P2）', () => {
     // 後始末は「地の文の `*`」と「自分が復元で作った `*`」を見分けられない。
     // 隣り合うと、掛け算の記号も強調も両方壊れていた。そもそも隣り合わせない。
@@ -498,9 +512,19 @@ describe('formatForSlack（独立検査で見つかった破壊の回帰防止�
   })
 
   describe('連続アスタリスク', () => {
-    it('*** や **** を太字に寄せる（Slack に太字＋斜体の複合記法は無い）', () => {
-      expect(formatForSlack('***重要***')).toBe('*重要*')
-      expect(formatForSlack('****太字****')).toBe('*太字*')
+    // かつては「3連以上を ** に畳む」処理で太字に寄せていたが、その畳み込みが
+    // `**a***b*`（太字の閉じ＋斜体の開き）の正当な境界を潰していたので削除した。
+    // flanking 規則と後始末だけで、**記号は残らない**。どの装飾になるかは変わる。
+    it('*** や **** でも記号を残さない', () => {
+      expect(formatForSlack('***重要***')).toBe('_重要_')
+      expect(formatForSlack('****太字****')).toBe('*_太字_*')
+      for (const s of ['***重要***', '****太字****']) {
+        expect(formatForSlack(s)).not.toContain('**')
+      }
+    })
+
+    it('太字の直後に斜体が隙間なく続いても、両方とも活きる', () => {
+      expect(formatForSlack('**a***b*')).toBe('*a*_b_')
     })
 
     it('掛け算の単独アスタリスクは畳まない', () => {
@@ -541,17 +565,31 @@ describe('不変条件（部品の組み合わせを総当たりする）', () =
   const NUL = String.fromCharCode(0)
   const count = (s: string, c: string) => s.split(c).length - 1
 
-  /** 生成した入力をすべて流し、条件を満たさない最初の1件を返す */
+  /**
+   * 生成した入力をすべて流し、条件を満たさない最初の1件を返す。
+   *
+   * ⚠️ **部品の数が足りないと、原理的に作れない形が生まれる。**
+   * 当初は4部品の結合だったが、`*` + `__` + 語 + `__` + `*` のように
+   * **5〜7個の境界を要する壊れ方**（11巡目の P0/P1）は4部品では生成できず、
+   * 19,200通り回しても構造的に検出できなかった（独立検査 11巡目・所見）。
+   * 部品数を増やすと組み合わせは急に増えるので、決め打ちの少数ループではなく
+   * 疑似乱数で満遍なく引く（seed 固定なので毎回同じ入力・落ちたら再現できる）。
+   */
   function findCounterexample(holds: (input: string, output: string) => boolean) {
-    const at = (n: number) => PARTS[n % PARTS.length]
-    for (let a = 0; a < PARTS.length; a += 1) {
-      for (let b = 0; b < PARTS.length; b += 1) {
-        for (let c = 0; c < 12; c += 1) {
-          const input = at(a) + at(b) + at(a + c) + at(b * 2 + c)
-          const output = formatForSlack(input)
-          if (!holds(input, output)) return { input, output }
-        }
-      }
+    // xorshift。seed 固定で毎回同じ列を出す（テストが実行ごとに変わらないため）
+    let seed = 0x2545f491
+    const next = () => {
+      seed ^= seed << 13
+      seed ^= seed >>> 17
+      seed ^= seed << 5
+      return (seed >>> 0) % PARTS.length
+    }
+    for (let i = 0; i < 40000; i += 1) {
+      const len = 2 + (i % 6) // 2〜7部品
+      let input = ''
+      for (let k = 0; k < len; k += 1) input += PARTS[next()]
+      const output = formatForSlack(input)
+      if (!holds(input, output)) return { input, output }
     }
     return null
   }
