@@ -553,7 +553,17 @@ export function convertMarkdownToMrkdwn(text: string): string {
 export function formatForSlack(text: string): string {
   // 目印に使う NUL を入力から除去する。表示できない制御文字なので落として実害は無く、
   // これで「入力がプレースホルダと衝突する」経路が構造的に消える（上の MARK のコメント参照）
-  const { text: protectedText, restore } = protectCode(text.replace(/\u0000/g, ''))
+  // 改行の表現を1つに揃える。**ここで揃えないと、以降のすべての正規表現が
+  //    「改行とは何か」を各自で決めることになり、必ずどれかが漏れる。**
+  //    実際、`[^*\n]` は U+2028 / U+2029 / 単体CR を「普通の文字」として通す一方、
+  //    `\s` はそれらを空白として拾うため、「空行はまたがない」という守りが
+  //    これらの文字では効かず、閉じ忘れの太字が後続の文まで巻き込んでいた
+  //    （独立検査 2026-09-12・20巡目・P1。inspections/コード.md の「行境界文字」の項）。
+  //    CRLF も LF に寄せる。Slack は LF で改行するので出力の意味は変わらない。
+  const normalized = text
+    .replace(/\u0000/g, '')
+    .replace(/\r\n|[\r\u0085\u2028\u2029\v\f]/g, '\n')
+  const { text: protectedText, restore } = protectCode(normalized)
   const withMath = convertMath(protectedText)
   const withMarkdown = convertMarkdownToMrkdwn(withMath)
   return restore(withMarkdown)
