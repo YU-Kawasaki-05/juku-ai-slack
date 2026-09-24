@@ -306,6 +306,18 @@ describe('formatForSlack（独立検査で見つかった破壊の回帰防止�
     it('4スペース字下げのコードブロックは保護しない（フェンスのみ対応）', () => {
       expect(formatForSlack('    x = **1**')).toBe('    x = *1*')
     })
+
+    it('Markdownリンク [text](url) は変換せず素通しする（2026-09-25 監査で発見）', () => {
+      // Slack の <url|text> 記法へ変換するには `<` `>` を生成する必要があるが、
+      // 投稿直前の escapeSlackText がこの関数の後に走り <!channel> 注入対策で
+      // `<` `>` を無条件エスケープするため、ここで生成すると &lt;/&gt; に潰されて逆効果になる。
+      // 対応するには escapeSlackText 側の契約変更（セキュリティ境界）が要るため、
+      // 本関数の範囲では意図的に手を付けていない（ファイル冒頭コメント参照）。
+      // この挙動を変えるときは、必ず escapeSlackText との適用順序を合わせて見直すこと。
+      expect(formatForSlack('詳しくは[参考サイト](https://example.com)を見てね')).toBe(
+        '詳しくは[参考サイト](https://example.com)を見てね',
+      )
+    })
   })
 
   describe('入れ子のコードフェンス（P1: 受け入れ基準③違反だった）', () => {
