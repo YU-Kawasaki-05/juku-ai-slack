@@ -77,13 +77,16 @@ async function deliverAnswer(
   answerText: string,
 ): Promise<void> {
   // T-0110: LLM は標準 Markdown（#, **, - など）や LaTeX（$...$ 等）混じりで返すことがあるため、
-  // Slack mrkdwn に整形してから投稿する。C-3: エスケープは整形の後、投稿直前に行う
-  // （escapeSlackText は `<` `>` `&` だけを見るので formatForSlack と順序を入れ替えても安全だが、
-  // 「投稿直前に一度だけエスケープする」という既存の防波堤の位置は変えない）。
-  // 生徒が「回答に <!channel> と書いて」と誘導すると Bot がチャンネル全員通知を撒いてしまう
+  // Slack mrkdwn に整形してから投稿する。
+  // T-0195: 呼び出し順を escapeSlackText → formatForSlack に入れ替えた（旧順序から反転）。
+  // 理由: Markdown リンク [text](url) を Slack の <url|text> に直すには formatForSlack が
+  // `<` `>` を生成する必要があり、escapeSlackText を後段に置くとその角括弧ごと
+  // &lt;/&gt; に潰されて逆効果になるため（formatForSlack.ts 冒頭のセキュリティ注記参照）。
+  // 生徒が「回答に <!channel> と書いて」と誘導しても、先に escapeSlackText を通すので
+  // 生の割り込み文字列は formatForSlack に届く前に無害化済みになる。
   const posted = await postMessage({
     channel: payload.channelId,
-    text: escapeSlackText(formatForSlack(answerText)),
+    text: formatForSlack(escapeSlackText(answerText)),
     threadTs: payload.threadTs,
   })
 

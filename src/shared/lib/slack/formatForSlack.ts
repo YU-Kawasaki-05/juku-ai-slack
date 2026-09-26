@@ -1,6 +1,7 @@
 /** @file
  * 機能: LLM が出力した標準 Markdown / LaTeX 混じりのテキストを Slack mrkdwn 向けに整形する
- * 入力: LLM 生成テキスト（escapeSlackText を通す前の生テキスト）
+ * 入力: LLM 生成テキスト（**escapeSlackText を通したあとの**テキスト。呼び出し順が
+ *   T-0195 で入れ替わったので注意。下のセキュリティ注記を参照）
  * 出力: Slack 上で見出し記号・二重アスタリスク・生の LaTeX が文字として露出しない、
  *   mrkdwn として自然に表示されるテキスト
  * 例外: なし（純粋関数。変換できないパターンは元の形のまま素通しする）
@@ -9,8 +10,18 @@
  *   （見出し・強調・箇条書き・基本的な数式）に限られ、テーブルやネスト構造まで扱う必要が無い。
  *   remark/unified ベースの汎用パッケージを入れるほどの複雑さではなく、対応漏れが出ても
  *   このファイル1つを直せば済む方が運用しやすい（T-0110）。
- * セキュリティ: この関数は `<` `>` `&` を一切生成しない。呼び出し順は必ず
- *   `escapeSlackText(formatForSlack(text))`（インジェクション対策のエスケープは投稿直前が最終防波堤）。
+ * セキュリティ（T-0195 で契約変更）: 呼び出し順は必ず
+ *   `formatForSlack(escapeSlackText(text))`（**T-0110 時点の順序から入れ替えた**）。
+ *   理由: Markdown リンク `[text](url)` を Slack の `<url|text>` に直すには、この関数が
+ *   `<` `>` を生成する必要がある。エスケープが後段だと、せっかく作った `<url|text>` が
+ *   `&lt;url|text&gt;` に潰されて記号のまま画面に出てしまう（d595d78 で発見・当時は見送った）。
+ *   エスケープを**先**にすることで、`<!channel>` 等の生の割り込み文字列は formatForSlack に
+ *   届く前にすべて `&lt;...&gt;` へ無害化済みになる。formatForSlack がその後に生成する
+ *   `<` `>` は「安全と確認できた http/https リンクだけ」に限定し（下記 convertMarkdownLinks
+ *   参照）、生成する角括弧は常に `<http` または `<https` から始まる——
+ *   Slack の割り込み記法（`<!channel>` `<!here>` `<@U…>` `<#C…>`）はどれも `<` の直後が
+ *   `!` `@` `#` であることが必須なので、この関数がどんな入力を受けても割り込み記法を
+ *   作れないことが構造で保証される（文字を数えて防ぐのではなく、生成物の形そのものを縛る）。
  * 数式方針（要件 T-0110 #2）: LaTeX (`$...$` `\(...\)` `\[...\]` `$$...$$`) を Unicode の
  *   上付き・下付き・記号（× ÷ √ ≤ など）に変換する（案a）。理由:
  *   - このボットの対象は中学・高校の数学で、範囲は分数・平方根・指数・不等号・ギリシャ文字程度に収まり、
@@ -44,7 +55,15 @@
  *   - **記号が混在した擬似的な水平線**（`*-*-*` など）。CommonMark の thematic break は
  *     同じ記号の繰り返しなので水平線として扱わず、`*` が1つ残ることがある。
  *     LLM がこの形を出す動機が無いため対応しない。
- * @implements T-0110
+ *   - **Markdown リンク `[text](url)` は T-0195 で対応した**（対象外リストからは外れた）。
+ *     `convertMarkdownLinks`（下記）が変換を担当する。安全と確認できない場合
+ *     （URL が http/https でない、URL に空白・`<` `>` `|` を含む、表示テキストに
+ *     生の `<` `>` を含む）は変換せず `[text](url)` を元の形のまま素通しする。
+ *     コードブロック・インラインコードの中の `[text](url)` は、この関数の入口で
+ *     protectCode が先に退避しているため、そもそも変換の対象にならない。
+ *     URL・表示テキストのどちらも `[a](b)(c)` のような入れ子・連続構造は対象外
+ *     （このボットの生徒向け回答でその形が出る動機が無いため）。
+ * @implements T-0110, T-0195
  */
 
 // プレースホルダの目印。**入力に現れうる文字列を目印にしてはいけない**（独立監査 2026-09-12・P1）。
@@ -101,6 +120,74 @@ function protectCode(text: string): { text: string; restore: (s: string) => stri
     // ミューテーション検査（この `?? m` を `?? ''` に戻す）でも落ちるテストは0件だった。
     // 「テストで守られている」とは書かない——1枚目を外す変更をしたら、ここも同時に見ること。
     restore: (s) => s.replace(restoreRe, (m, idx) => blocks[Number(idx)] ?? m),
+  }
+}
+
+// ---- Markdown リンク（[text](url) → Slack <url|text>、T-0195） ----
+
+/**
+ * Slack の `<url|text>` として安全に組み立てられる URL か。
+ * - スキームは http/https のみ（`javascript:` 等の危険なスキームを拒否）。
+ * - 空白・`<` `>` `|` を含まない。`|` は Slack のリンク区切り文字そのものと衝突し
+ *   （`<url|text>` の区切りがどこか一意に決まらなくなる）、`<` `>` を含むと
+ *   角括弧が入れ子になって Slack 側のトークン境界があいまいになるため拒否する。
+ *
+ * この2条件により、この関数が生成する角括弧は常に `<http` または `<https` から
+ * 始まる。Slack の割り込み記法（`<!channel>` `<!here>` `<@U…>` `<#C…>`）はどれも
+ * `<` の直後が `!` `@` `#` であることが必須なので、**どんな入力を通しても
+ * この関数が割り込み記法を作ることは構造上できない**（個々の文字を数えて弾くのではなく、
+ * 生成物の形そのものを http/https 始まりに縛ることで保証する）。
+ */
+const SAFE_LINK_URL_RE = /^https?:\/\/[^\s<>|]+$/i
+
+/**
+ * リンクの表示テキストに生の `<` `>` が残っていないか。
+ * 残っていると `<url|<!channel>>` のように角括弧が入れ子になり、
+ * SAFE_LINK_URL_RE で URL 側を絞っても Slack 側のトークン境界があいまいになるため、
+ * 表示テキスト側でも同じ理由で弾く。
+ */
+function isSafeLinkText(text: string): boolean {
+  return !/[<>]/.test(text)
+}
+
+/**
+ * `[text](url)` を退避し、変換対象（数式・太字などの正規表現）から隠す。
+ * URL は表示テキストと違って Slack へそのまま出るため、数式変換（下付き `_1` など）や
+ * Markdown 変換（`~~` `**` など）に一切触れさせてはいけない——退避せずに他の変換を
+ * 先に通すと、`https://example.com/page_2` の `_2` が下付き文字に化けるような
+ * 無音の URL 破壊が起きる（protectCode と同じ発想。コードと同様「本文に混ぜない」）。
+ *
+ * 表示テキスト側は Markdown（太字・数式など）を含みうるので、復元時に
+ * convertMath → convertMarkdownToMrkdwn を**表示テキストだけに**通してから組み立てる
+ * （本体パイプラインと同じ順序）。
+ *
+ * protectCode の**後**に通すこと。コードブロック・インラインコードの中の
+ * `[text](url)` は、その時点で既に CODE プレースホルダに退避済みなので、
+ * ここに生の `[...]( ...)` として現れず、変換対象から自然に外れる。
+ */
+function protectLinks(text: string): { text: string; restore: (s: string) => string } {
+  const links: Array<{ raw: string; url: string; displayRaw: string }> = []
+  const out = text.replace(
+    /\[([^[\]\n]*)\]\(([^()\s\n]+)\)/g,
+    (whole, displayRaw: string, url: string) => {
+      const idx = links.length
+      links.push({ raw: whole, url, displayRaw })
+      return `${MARK}LINK${idx}${MARK}`
+    },
+  )
+
+  const restoreRe = new RegExp(`${MARK}LINK(\\d+)${MARK}`, 'g')
+  return {
+    text: out,
+    restore: (s) =>
+      s.replace(restoreRe, (m, idx) => {
+        const rec = links[Number(idx)]
+        // 自分が退避していない番号なら、元の文字列のまま返す（本文を消さない。protectCode と同じ安全側）
+        if (!rec) return m
+        if (!SAFE_LINK_URL_RE.test(rec.url) || !isSafeLinkText(rec.displayRaw)) return rec.raw
+        const formattedText = convertMarkdownToMrkdwn(convertMath(rec.displayRaw))
+        return `<${rec.url}|${formattedText}>`
+      }),
   }
 }
 
@@ -541,8 +628,10 @@ export function convertMarkdownToMrkdwn(text: string): string {
 
 /**
  * LLM 生成テキストを Slack 投稿用に整形する。呼び出し側は
- * `postMessage({ text: escapeSlackText(formatForSlack(answerText)) })` の順で使うこと
- * （escapeSlackText によるインジェクション対策は必ず最後、投稿直前に行う）。
+ * `postMessage({ text: formatForSlack(escapeSlackText(answerText)) })` の順で使うこと
+ * （**T-0195 でエスケープの位置を先頭に入れ替えた**。理由はファイル冒頭のセキュリティ注記を参照。
+ * Markdown リンクを `<url|text>` に直すには本関数が `<` `>` を生成する必要があり、
+ * escapeSlackText を後段に置くとその角括弧自体が `&lt;/&gt;` に潰されてしまうため）。
  *
  * **べき等ではない**（既知の性質・独立監査 2026-09-12・P2）。出力の太字は Slack 記法の `*x*` だが、
  * これを再度この関数に通すと Markdown の斜体と区別できず `_x_` に化ける。単一アスタリスクが
@@ -565,8 +654,11 @@ export function formatForSlack(text: string): string {
   const normalized = text
     .replace(/\u0000/g, '')
     .replace(/\r\n|[\r\u0085\u2028\u2029\v\f]/g, '\n')
-  const { text: protectedText, restore } = protectCode(normalized)
-  const withMath = convertMath(protectedText)
+  const { text: protectedText, restore: restoreCode } = protectCode(normalized)
+  // protectCode の後・convertMath / convertMarkdownToMrkdwn の前に通す。
+  // URL を数式・Markdown の変換対象から隠すため（上の protectLinks のコメント参照）。
+  const { text: protectedText2, restore: restoreLinks } = protectLinks(protectedText)
+  const withMath = convertMath(protectedText2)
   const withMarkdown = convertMarkdownToMrkdwn(withMath)
-  return restore(withMarkdown)
+  return restoreCode(restoreLinks(withMarkdown))
 }
