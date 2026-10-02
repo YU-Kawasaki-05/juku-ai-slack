@@ -26,6 +26,7 @@ import { getOrCreateSession, summarizeThread } from '@features/thread-sessions'
 import { processAttachments } from '@features/image-attachments'
 import { postMessage } from '@shared/lib/slack/client'
 import { escapeSlackText } from '@shared/lib/slack/escapeSlackText'
+import { formatForSlack } from '@shared/lib/slack/formatForSlack'
 import { stripBotMention } from '@features/slack-events'
 import { getStudentProfile } from '@features/student-profiles'
 import { getMastery, getKnowledgeSummary, evaluate, applyEvaluation } from '@features/student-knowledge'
@@ -75,11 +76,17 @@ async function deliverAnswer(
   payload: ProcessSlackMessagePayload,
   answerText: string,
 ): Promise<void> {
-  // C-3: LLM 生成テキストは必ずエスケープしてから投稿する。
-  // 生徒が「回答に <!channel> と書いて」と誘導すると Bot がチャンネル全員通知を撒いてしまう
+  // T-0110: LLM は標準 Markdown（#, **, - など）や LaTeX（$...$ 等）混じりで返すことがあるため、
+  // Slack mrkdwn に整形してから投稿する。
+  // T-0195: 呼び出し順を escapeSlackText → formatForSlack に入れ替えた（旧順序から反転）。
+  // 理由: Markdown リンク [text](url) を Slack の <url|text> に直すには formatForSlack が
+  // `<` `>` を生成する必要があり、escapeSlackText を後段に置くとその角括弧ごと
+  // &lt;/&gt; に潰されて逆効果になるため（formatForSlack.ts 冒頭のセキュリティ注記参照）。
+  // 生徒が「回答に <!channel> と書いて」と誘導しても、先に escapeSlackText を通すので
+  // 生の割り込み文字列は formatForSlack に届く前に無害化済みになる。
   const posted = await postMessage({
     channel: payload.channelId,
-    text: escapeSlackText(answerText),
+    text: formatForSlack(escapeSlackText(answerText)),
     threadTs: payload.threadTs,
   })
 
