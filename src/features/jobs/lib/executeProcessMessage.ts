@@ -26,6 +26,7 @@ import { getOrCreateSession, summarizeThread } from '@features/thread-sessions'
 import { processAttachments } from '@features/image-attachments'
 import { postMessage } from '@shared/lib/slack/client'
 import { escapeSlackText } from '@shared/lib/slack/escapeSlackText'
+import { formatForSlack } from '@shared/lib/slack/formatForSlack'
 import { stripBotMention } from '@features/slack-events'
 import { getStudentProfile } from '@features/student-profiles'
 import { getMastery, getKnowledgeSummary, evaluate, applyEvaluation } from '@features/student-knowledge'
@@ -75,11 +76,14 @@ async function deliverAnswer(
   payload: ProcessSlackMessagePayload,
   answerText: string,
 ): Promise<void> {
-  // C-3: LLM 生成テキストは必ずエスケープしてから投稿する。
+  // T-0110: LLM は標準 Markdown（#, **, - など）や LaTeX（$...$ 等）混じりで返すことがあるため、
+  // Slack mrkdwn に整形してから投稿する。C-3: エスケープは整形の後、投稿直前に行う
+  // （escapeSlackText は `<` `>` `&` だけを見るので formatForSlack と順序を入れ替えても安全だが、
+  // 「投稿直前に一度だけエスケープする」という既存の防波堤の位置は変えない）。
   // 生徒が「回答に <!channel> と書いて」と誘導すると Bot がチャンネル全員通知を撒いてしまう
   const posted = await postMessage({
     channel: payload.channelId,
-    text: escapeSlackText(answerText),
+    text: escapeSlackText(formatForSlack(answerText)),
     threadTs: payload.threadTs,
   })
 

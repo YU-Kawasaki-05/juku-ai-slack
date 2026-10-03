@@ -401,6 +401,17 @@ describe('executeProcessSlackMessage', () => {
     expect(mocks.postMessage.mock.calls[0][0].text).toBe('生成済みの回答')
   })
 
+  // T-0110 / 独立検査 2026-09-12: formatForSlack は「投稿直前に1回だけ」通す設計で、
+  // べき等ではない。保存する resultText が**整形前**であることがその前提なので、ここで固定する。
+  // 整形後を保存する変更を入れると、配信リトライのたびに太字が斜体へ化ける。
+  it('配信は整形後・保存は整形前（formatForSlack を二重適用しない, T-0110）', async () => {
+    await executeProcessSlackMessage(db, payload, {
+      jobId: 'job1',
+      resultText: '## 見出し\n**太字**',
+    })
+    expect(mocks.postMessage.mock.calls[0][0].text).toBe('*見出し*\n*太字*')
+  })
+
   it('返信後の保存失敗はベストエフォート（throw せず＝再返信を招かない）', async () => {
     mocks.saveMessage.mockRejectedValue(new Error('db blip'))
     await expect(executeProcessSlackMessage(db, payload)).resolves.toBeUndefined()

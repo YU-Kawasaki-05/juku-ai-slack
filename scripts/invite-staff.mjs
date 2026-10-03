@@ -50,6 +50,9 @@ const HELP = `スタッフ用の管理画面アカウントを作り、本人専
                         省略時は環境変数 APP_URL を使う
     --env-file <path>   環境変数を読み込むファイル（既定 .env.local）
     --reissue-only      既存ユーザー専用。ユーザーが無ければ作らずエラーにする
+    --change-role       既存ユーザーの役割を**変更する**ことを明示的に許可する。
+                        付けないと、今の役割と違う --role を指定した時点で中止する
+                        （admin の再発行を --role staff でやって降格させる事故を防ぐ）
     --help              このヘルプ
 
   環境変数（.env.local から自動で読む。既にシェルにある値が優先）:
@@ -123,6 +126,10 @@ function parseArgs(argv) {
     }
     if (arg === '--reissue-only') {
       out.reissueOnly = true
+      continue
+    }
+    if (arg === '--change-role') {
+      out.changeRole = true
       continue
     }
     const match = /^--([a-z-]+)(?:=(.*))?$/.exec(arg)
@@ -237,6 +244,19 @@ async function main() {
 
   if (!existing && args.reissueOnly) {
     fail(`${email} のユーザーが存在しません（--reissue-only は既存ユーザー専用です）`)
+  }
+
+  // ⚠️ 降格事故の防止。既存ユーザーへの再発行は「ロールを更新してリンクを出す」動きなので、
+  //    admin のパスワード再設定を --role staff でやると、**その人の管理権限が黙って消える**。
+  //    「パスワードを忘れた」への対応で最も起きやすい操作なのに、失うものが最も大きい。
+  //    既定を拒否にして、役割を変えると分かって指定したときだけ通す。
+  const existingRole = existing?.app_metadata?.role
+  if (existing && existingRole && existingRole !== role && !args.changeRole) {
+    fail(
+      `${email} は既に role=${existingRole} で登録されています。--role ${role} を指定すると役割が変わります。\n` +
+        `       リンクの再発行だけが目的なら --role ${existingRole} を指定してください。\n` +
+        `       役割を ${existingRole} → ${role} に変えるのが目的なら --change-role を付けてください。`,
+    )
   }
 
   let mode
