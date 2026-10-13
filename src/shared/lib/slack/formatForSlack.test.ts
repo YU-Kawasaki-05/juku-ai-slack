@@ -1,6 +1,6 @@
 /** @file
  * 検証: LLM 出力（標準 Markdown / LaTeX 混じり）を Slack mrkdwn へ整形する formatForSlack
- * @verifies T-0110
+ * @verifies T-0110, T-0195
  */
 import { describe, it, expect } from 'vitest'
 import { formatForSlack, convertMarkdownToMrkdwn, convertMath } from './formatForSlack'
@@ -154,16 +154,102 @@ describe('formatForSlack（結合）', () => {
     expect(formatForSlack(llmOutput)).toBe(llmOutput)
   })
 
-  it('escapeSlackText と組み合わせても <, >, & を新たに生成しない（C-3 との整合）', () => {
+  it('escapeSlackText を先に通しても Markdown 記号・数式が壊れない（T-0195 で呼び出し順を反転）', () => {
     const llmOutput = '# 注意\n**x < 5** かつ x > 2 のとき & 考える'
-    const formatted = formatForSlack(llmOutput)
-    // escapeSlackText を後段に通しても injection 対策の文字列表現は変わらない
-    expect(escapeSlackText(formatted)).toBe('*注意*\n*x &lt; 5* かつ x &gt; 2 のとき &amp; 考える')
+    // T-0195 以降の正しい呼び出し順: escapeSlackText → formatForSlack
+    const result = formatForSlack(escapeSlackText(llmOutput))
+    expect(result).toBe('*注意*\n*x &lt; 5* かつ x &gt; 2 のとき &amp; 考える')
+  })
+
+  it('リンクを含まない入力では、この関数は生の < > を生成しない（escapeSlackText 先出しの前提・C-3）', () => {
+    const llmOutput = '# 注意\n**x < 5** かつ x > 2 のとき <!channel> と書かれても'
+    const escaped = escapeSlackText(llmOutput)
+    const result = formatForSlack(escaped)
+    // escapeSlackText が生の <!channel> を無害化済みなので、formatForSlack を通しても
+    // 生の `<` `>` が復活しない（リンク変換以外で角括弧を生成しないことの確認）
+    expect(result).not.toMatch(/<(?!https?:\/\/)/)
+    expect(result).toContain('&lt;!channel&gt;')
   })
 
   it('マークダウン・数式記法を含まない通常の回答は変化しない（回帰防止）', () => {
     const text = '一緒に整理しよう！次のステップに進むよ。'
     expect(formatForSlack(text)).toBe(text)
+  })
+})
+
+// T-0195: Markdown リンク [text](url) → Slack <url|text>。
+// escapeSlackText → formatForSlack の呼び出し順が前提（各テストで明示的に通す）。
+describe('formatForSlack（Markdown リンク変換・T-0195）', () => {
+  it('通常のリンクを <url|text> に変換する', () => {
+    const input = '詳しくは[参考サイト](https://example.com/path)を見てね'
+    expect(formatForSlack(escapeSlackText(input))).toBe(
+      '詳しくは<https://example.com/path|参考サイト>を見てね',
+    )
+  })
+
+  it('リンクの表示テキストの中の Markdown も変換する（太字）', () => {
+    const input = '[**重要**なお知らせ](https://example.com/notice)'
+    expect(formatForSlack(escapeSlackText(input))).toBe(
+      '<https://example.com/notice|*重要*なお知らせ>',
+    )
+  })
+
+  it('URL に | を含む場合は変換せず元のまま素通しする（Slack の区切り文字と衝突するため）', () => {
+    const input = '[リンク](https://example.com/search?q=a|b)'
+    expect(formatForSlack(escapeSlackText(input))).toBe(input)
+  })
+
+  it('URL に生の > を含む場合は変換せず元のまま素通しする（トークン境界があいまいになるため）', () => {
+    const raw = '[リンク](https://example.com/>evil)'
+    // escapeSlackText を通すと URL 内の `>` も &gt; になり安全に無害化されるため、
+    // ここでは「escapeSlackText を経由しない生の入力」を直接 formatForSlack に通し、
+    // 関数自身が生の `>` を含む URL を拒否することを確認する（多層防御）。
+    expect(formatForSlack(raw)).toBe(raw)
+  })
+
+  it('URL に生の < を含む場合は変換せず元のまま素通しする', () => {
+    const raw = '[リンク](https://example.com/<evil)'
+    expect(formatForSlack(raw)).toBe(raw)
+  })
+
+  it('javascript: など危険な scheme は変換しない', () => {
+    const input = '[クリック](javascript:alert(1))'
+    expect(formatForSlack(escapeSlackText(input))).toBe(input)
+  })
+
+  it('http/https 以外の scheme（相対パス・mailto 等）は変換しない', () => {
+    expect(formatForSlack(escapeSlackText('[相対](../path)'))).toBe('[相対](../path)')
+    expect(formatForSlack(escapeSlackText('[メール](mailto:a@example.com)'))).toBe(
+      '[メール](mailto:a@example.com)',
+    )
+  })
+
+  it('表示テキストに <!channel> を仕込んでも、割り込み記法にならない（メンション注入対策）', () => {
+    // escapeSlackText を経由しない生の入力を直接通し、formatForSlack 自身の防御を確認する。
+    const raw = '[<!channel>](https://example.com)'
+    const result = formatForSlack(raw)
+    // 変換しない（表示テキストに生の <, > を含むため）。素通しした結果、生の <!channel> が
+    // 残るが、これは escapeSlackText を先に通す契約（T-0195）の下では起こり得ない入力であり、
+    // ここでは「formatForSlack がそれを新しい安全な <url|...> トークンに組み込んでしまわない」
+    // ことだけを確認する（trueにする防波堤は escapeSlackText 側）。
+    expect(result).toBe(raw)
+    expect(result).not.toMatch(/<https?:\/\/[^|]*\|[^>]*<!channel>/)
+  })
+
+  it('コードブロックの中の [text](url) は変換しない', () => {
+    const input = ['```', '[参考](https://example.com)', '```'].join('\n')
+    expect(formatForSlack(escapeSlackText(input))).toBe(input)
+  })
+
+  it('インラインコードの中の [text](url) は変換しない', () => {
+    const input = '`[参考](https://example.com)` はコードのまま'
+    expect(formatForSlack(escapeSlackText(input))).toBe(input)
+  })
+
+  it('本文全体（escapeSlackText → formatForSlack）でリンクと <!channel> 注入対策が両立する', () => {
+    const llmOutput = '[参考サイト](https://example.com)を見てね。<!channel> とは書かない。'
+    const result = formatForSlack(escapeSlackText(llmOutput))
+    expect(result).toBe('<https://example.com|参考サイト>を見てね。&lt;!channel&gt; とは書かない。')
   })
 })
 
@@ -759,7 +845,12 @@ describe('不変条件（部品の組み合わせを総当たりする）', () =
     ).toBeNull()
   })
 
-  it('< > & を新たに生成しない（escapeSlackText との整合・C-3）', () => {
+  // T-0195 以降、この関数は安全な http/https リンクに限り `<url|text>` を生成するようになった
+  // （メンション注入対策は「生成しない」ではなく「http/https 始まりに限定する」構造保証に変わった。
+  // 詳細は formatForSlack.ts 冒頭のセキュリティ注記と convertMarkdownLinks を参照）。
+  // PARTS には `[` `]` が無く `[text](url)` の形を作れないため、この不変条件テストの
+  // 生成器はリンク変換の経路を通らない。したがって従来どおり「< > & を新たに生成しない」で成立する。
+  it('< > & を新たに生成しない（escapeSlackText との整合・C-3・リンク以外の経路）', () => {
     expect(
       findCounterexample((i, o) => ['<', '>', '&'].every((ch) => count(o, ch) <= count(i, ch))),
     ).toBeNull()
