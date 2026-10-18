@@ -124,7 +124,7 @@ figure.shot figcaption{margin-top:8px;font-size:13px;line-height:1.65;color:var(
 <div class="warnbox">
 <p><b>なぜ毎日見る必要があるのか。</b>
 このアプリは、エラーが起きても Slack に自動で通知を飛ばしません
-（自動通知があるのは<a href="07_安全のしくみ.html#stop">緊急停止</a>の操作だけです）。
+（自動通知があるのは<a href="07_安全のしくみ.html#stop">緊急停止</a>の操作だけです。それも <code>#alerts</code> チャンネルが設定されている場合に限ります）。
 つまり<b>人が画面を見に行かないと、失敗に気づけません</b>。朝いちばんの習慣にしてください。</p>
 </div>
 
@@ -160,12 +160,12 @@ figure.shot figcaption{margin-top:8px;font-size:13px;line-height:1.65;color:var(
 <tr>
 <td><b>今月のコスト</b></td>
 <td>いつもの伸び方</td>
-<td>急に増えた（普段の 3 倍以上）→ <a href="05_困ったとき.html#call">第 5 章</a>の連絡基準へ。<b>$0.00</b> のまま増えない場合も開発者へ</td>
+<td>目安の金額を超えた（<a href="05_困ったとき.html#call">第 5 章 5-4</a>）、または急に増えた → 第 5 章の連絡基準へ。<b>$0.00</b> のまま増えない場合も開発者へ</td>
 </tr>
 <tr>
 <td><b>最近のエラー</b>（一番下）</td>
-<td>「エラーはありません」</td>
-<td>並んでいる行をクリックすると詳細が開きます</td>
+<td>見るのは上の<b>未対応エラー</b>の数字です。この一覧は<b>対応済みのもの（薄い表示）も含めた直近 5 件</b>なので、一度でもエラーが出ると、「エラーはありません」には戻りません</td>
+<td>薄くない行（未対応）をクリックすると詳細が開きます</td>
 </tr>
 </tbody>
 </table>
@@ -230,20 +230,28 @@ figure.shot figcaption{margin-top:8px;font-size:13px;line-height:1.65;color:var(
 <thead><tr><th>コード</th><th>何が起きたか（平たく言うと）</th><th>やること</th><th>急ぎ度</th></tr></thead>
 <tbody>
 <tr><td><code>AI_RESPONSE_FAILED</code></td><td>AI が回答を作れなかった</td><td>1 件なら様子見。<b>連続して出るなら開発者へ連絡</b>（<a href="05_困ったとき.html#call">第 5 章</a>）</td><td><span class="req y">高</span></td></tr>
-<tr><td><code>AI_RATE_LIMITED</code></td><td>AI のサービス側が混み合っていた</td><td>自動でやり直します（5 秒 → 15 秒 → 45 秒待って再挑戦）。頻発するなら開発者へ</td><td><span class="req r">中</span></td></tr>
+<tr><td><code>AI_RATE_LIMITED</code></td><td>AI のサービス側が混み合っていた</td><td>自動でやり直します（5 秒 → 15 秒の 2 回待って再挑戦。最大 3 回まで試します）。頻発するなら開発者へ</td><td><span class="req r">中</span></td></tr>
 <tr><td><code>AI_TIMEOUT</code><br><code>JOB_TIMEOUT</code></td><td>回答づくりに時間がかかりすぎた</td><td>生徒には「もう一度送ってみてね」と返っています。頻発するなら開発者へ</td><td><span class="req r">中</span></td></tr>
 <tr><td><code>SLACK_POST_FAILED</code></td><td>Slack に書き込めなかった</td><td><b>Bot がチャンネルから外れていないか</b>確認。外れていたら <code>/invite @じゅくAI</code> をやり直す</td><td><span class="req y">高</span></td></tr>
 <tr><td><code>CHANNEL_NOT_BOUND</code></td><td>紐付けのないチャンネルで呼ばれた</td><td>正しいチャンネルなら紐付けを登録（<a href="03_生徒の登録と管理.html#binding">第 3 章 3-7</a>）。関係ないチャンネルなら Bot を退出させる</td><td><span class="req n">低</span></td></tr>
-<tr><td><code>UNSUPPORTED_FILE_TYPE</code><br><code>IMAGE_TOO_LARGE</code></td><td>生徒が送ったファイルの形式・サイズが対象外</td><td>生徒に伝える：<b>画像は jpg / png、20MB 以下</b>。PDF や Word は読めません</td><td><span class="req n">低</span></td></tr>
+<tr><td><code>UNSUPPORTED_FILE_TYPE</code><br><code>IMAGE_TOO_LARGE</code></td><td>生徒が送ったファイルの形式・サイズが対象外（1 枚 20MB 超、または 1 回の合計 8MB 超も含む）</td><td>生徒に伝える：<b>画像は jpg / png / webp、1 枚 20MB 以下、1 回の合計 8MB 以下、3 枚まで</b>。PDF や Word は読めません。<span class="small">（生徒に返る案内文には「jpg / png」とだけ書かれていますが、webp も読めます。生徒には jpg / png が確実です）</span></td><td><span class="req n">低</span></td></tr>
 <tr><td><code>SLACK_FILE_DOWNLOAD_FAILED</code></td><td>画像を取り込めなかった</td><td>1 件なら Slack 側の一時的な不調。頻発するなら開発者へ</td><td><span class="req n">低</span></td></tr>
 <tr><td><code>IMAGE_MODEL_NOT_CONFIGURED</code></td><td>画像を読むための設定が入っていない</td><td><b>開発者へ連絡</b>（スタッフ側では直せません）</td><td><span class="req r">中</span></td></tr>
 <tr><td><code>PERSON_INACTIVE</code>（情報）</td><td>「無効」にした生徒のチャンネルで質問された</td><td>正常な動作。復塾したなら生徒のステータスを <b>有効</b> に戻す</td><td><span class="req n">—</span></td></tr>
 <tr><td><code>RATE_LIMITED</code>（情報）</td><td>その生徒が 1 時間に 10 回の上限に達した</td><td>正常な動作（<a href="07_安全のしくみ.html#limit">第 7 章 7-2</a>）</td><td><span class="req n">—</span></td></tr>
 <tr><td><code>CHANNEL_BINDING_CREATED</code><br><code>CHANNEL_BINDING_UPDATED</code>（情報）</td><td>誰かが紐付けを作成・変更した記録</td><td>正常な動作。「いつ誰が紐付けを変えたか」を後から追うために残しています</td><td><span class="req n">—</span></td></tr>
 <tr><td><code>THREAD_SUMMARY_FAILED</code><br><code>EVALUATOR_FAILED</code></td><td>回答を送ったあとの内部処理が失敗した</td><td><b>回答自体は生徒に届いています。</b>ときどきなら気にしなくてよい</td><td><span class="req n">低</span></td></tr>
+<tr><td><code>SLACK_SIGNATURE_INVALID</code></td><td>Slack 以外からの不正なアクセス、または署名の設定ミス。Bot が動いていても、単発で出ることがあります</td><td>Bot が普通に動いていて<b>単発</b>なら様子見。内容を確認して <b>対応済みにして</b>、メモを残す（同じ種類は未対応のまま 1 行にまとまるので、そのままだと<b>未対応エラーが 0 に戻りません</b>）。<b>Bot が全く動かない</b>のと一緒に出たら<b>開発者へ</b></td><td><span class="req r">中</span></td></tr>
+<tr><td><code>TOKEN_BUDGET_EXCEEDED</code>（警告）</td><td>質問が長すぎた（目安 6000 文字を超えた）</td><td>生徒には「質問が少し長すぎて処理できなかったよ」と返っています。短く分けて送ってもらう</td><td><span class="req n">低</span></td></tr>
+<tr><td><code>IMAGE_PROCESSING_FAILED</code></td><td>画像の処理に失敗した</td><td>画像を撮り直して送ってもらう。頻発するなら開発者へ</td><td><span class="req n">低</span></td></tr>
+<tr><td><code>PERSON_NOT_FOUND</code></td><td>紐付け先の生徒情報が見つからない</td><td><b>開発者へ連絡</b>（<a href="05_困ったとき.html#call">第 5 章</a>）</td><td><span class="req r">中</span></td></tr>
+<tr><td><code>REPORT_CHUNK_SEARCH_FAILED</code></td><td>レポートの検索に失敗した。<b>回答はレポートなしで生徒に届いています</b></td><td>単発なら様子見。続くなら開発者へ（レポートが回答に使われていない状態です）</td><td><span class="req r">中</span></td></tr>
+<tr><td><code>UNKNOWN_ERROR</code></td><td>想定していなかったエラー</td><td>詳細画面の<b>内部エラー詳細</b>をコピーして開発者へ</td><td><span class="req r">中</span></td></tr>
 </tbody>
 </table>
 </div>
+
+<p>表にないコードが出たら、詳細画面の<b>内部エラー詳細</b>をそのままコピーして開発者へ連絡してください（<a href="05_困ったとき.html#template">第 5 章 5-5</a>）。</p>
 
 <h3>対応が終わったら</h3>
 <ol>
@@ -360,10 +368,14 @@ figure.shot figcaption{margin-top:8px;font-size:13px;line-height:1.65;color:var(
 <td><b>1 時間に 10 回の上限</b></td><td>仕様です。1 時間待てば再び使えます（<a href="07_安全のしくみ.html#limit">第 7 章 7-2</a>）</td></tr>
 <tr><td>いま少し混み合ってるみたいで、すぐ答えられないや</td><td>AI のサービス側が混雑</td><td>1〜2 分待って送り直してもらう</td></tr>
 <tr><td>回答の生成に時間がかかりすぎてしまった</td><td>質問が重すぎた</td><td>質問を短く分けて送ってもらう</td></tr>
+<tr><td>処理がタイムアウトしちゃった</td><td>処理に時間がかかりすぎた</td><td>もう一度送ってもらう。頻発するなら開発者へ</td></tr>
 <tr><td>質問が少し長すぎて処理できなかったよ</td><td>文章が長すぎる（目安 6000 文字）</td><td>短く分けて送ってもらう</td></tr>
-<tr><td>ごめん、そのファイル形式にはまだ対応してないんだ</td><td>PDF・Word などを送った</td><td><b>画像（jpg / png）</b>で送ってもらう。撮り直しでも可</td></tr>
-<tr><td>画像が少し大きすぎたみたい</td><td>1 枚 20MB 超</td><td>小さめに撮り直してもらう</td></tr>
-<tr><td>ごめん、いまは画像を読み取れないみたい</td><td>画像を読む設定が入っていない</td><td><b>開発者へ連絡</b></td></tr>
+<tr><td>ごめん、そのファイル形式にはまだ対応してないんだ</td><td>PDF・Word などを送った</td><td><b>画像（jpg / png / webp）</b>で送ってもらう。撮り直しでも可。<span class="small">（この文面には「jpg / png」とだけ書かれていますが、webp も読めます）</span></td></tr>
+<tr><td>画像が少し大きすぎたみたい</td><td>1 枚 20MB 超、または 1 回の合計 8MB 超</td><td>小さめに撮り直してもらう</td></tr>
+<tr><td>画像の取得に失敗しちゃった</td><td>Slack から画像を取り込めなかった</td><td>少し時間を置いて送り直してもらう。続くなら開発者へ</td></tr>
+<tr><td>画像の処理がうまくいかなかったけど、テキストの内容で回答するね</td><td>画像の処理に失敗した（文章だけで答えた）</td><td>画像を撮り直して送ってもらう。続くなら開発者へ</td></tr>
+<tr><td>（回答の末尾に）送ってくれた画像のうち ○ 枚は読み込めなかったんだ…</td><td>4 枚目以降、対象外の形式・サイズ、取り込み失敗などで読めなかった画像がある</td><td>枚数を減らす・jpg / png / webp にする・小さめに撮り直す、のどれかで送り直してもらう</td></tr>
+<tr><td>ごめん、いまは画像を読み取れないんだ…（画像だけの質問のとき）<br>（回答の末尾に）ごめん、いまは画像を読み取れないみたい。文章の内容から答えたよ…（文章つきの質問のとき）</td><td>画像を読む設定が入っていない</td><td><b>開発者へ連絡</b></td></tr>
 <tr><td>うまく処理できなかったみたい<wbr>もう一度試してみて。続くようなら先生に教えてね。</td><td>内部エラー</td>
 <td>エラーログを見る（<a href="#errors">2-2</a>）。続くなら開発者へ</td></tr>
 <tr><td>対応する生徒情報が見つからなかったよ</td><td>紐付け先の生徒情報がおかしい</td><td><b>開発者へ連絡</b></td></tr>
