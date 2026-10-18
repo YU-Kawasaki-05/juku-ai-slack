@@ -70,6 +70,13 @@ describe('StudentProfileForm（初期値）', () => {
     expect(date).toHaveAttribute('min', '2026-08-02')
   })
 
+  it('試験期間の説明は、回答の出し方が変わるとは書かず、試験科目が AI に伝わると説明する', () => {
+    setup()
+    const help = document.getElementById('examMode-help')!
+    expect(help).toHaveTextContent('試験科目が AI に伝わります')
+    expect(help).not.toHaveTextContent('回答に切り替わ')
+  })
+
   it('試験期間 OFF のあいだは最終日を編集させない', () => {
     setup()
     expect(screen.getByLabelText('試験期間中にする')).not.toBeChecked()
@@ -87,11 +94,6 @@ describe('StudentProfileForm（初期値）', () => {
     setup()
     expect(screen.getByText(/そのまま AI に送信されます/)).toBeInTheDocument()
     expect(screen.getByText(/生徒の氏名は書かないでください/)).toBeInTheDocument()
-  })
-
-  it('確認質問なしの direct 応答に変わることを説明する（BR-05-08 の平易な説明）', () => {
-    setup()
-    expect(screen.getByText(/確認の質問をはさまず/)).toBeInTheDocument()
   })
 })
 

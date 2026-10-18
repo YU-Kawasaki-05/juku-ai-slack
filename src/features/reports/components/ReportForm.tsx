@@ -44,12 +44,15 @@ export function ReportForm({
   action,
   persons,
   report,
+  isAdmin,
 }: {
   action: ReportAction
   /** 新規作成時のみ（生徒選択肢） */
   persons?: { id: string; name: string }[]
   /** 編集時のみ */
   report?: ReportWithPerson
+  /** 再生成ボタン（管理者のみ）の案内を出し分ける */
+  isAdmin: boolean
 }) {
   const router = useRouter()
   const [state, formAction, pending] = useActionState(action, undefined)
@@ -62,15 +65,16 @@ export function ReportForm({
         toast({
           variant: 'destructive',
           title: '保存しました（AI 参照データは未更新）',
-          description:
-            'Embedding の自動再生成に失敗しました。詳細ページから手動で再生成してください',
+          description: isAdmin
+            ? 'Embedding の自動再生成に失敗しました。詳細ページから手動で再生成してください'
+            : 'Embedding の自動再生成に失敗しました。管理者に再生成を依頼してください',
         })
       } else {
         toast({ description: 'レポートを保存しました' })
       }
       router.push('/admin/reports')
     }
-  }, [state, router])
+  }, [state, router, isAdmin])
 
   const err = state && !state.ok ? state : undefined
 

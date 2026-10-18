@@ -7,6 +7,7 @@ import { notFound } from 'next/navigation'
 import { createServerClient } from '@shared/lib/supabase/serverClient'
 import { getReport, updateReportAction } from '@features/reports'
 import { ReportForm } from '@features/reports/components/ReportForm'
+import { requireStaffPage } from '@/shared/lib/auth/requireStaffPage'
 import { isUuid } from '../../../searchParams'
 
 export const metadata: Metadata = { title: 'レポート編集' }
@@ -17,6 +18,7 @@ export default async function EditReportPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  const { role } = await requireStaffPage()
   // UUID でない ID をそのままクエリすると Postgres 22P02 で 500 になるため事前に 404 に倒す（H-5）
   if (!isUuid(id)) notFound()
   const report = await getReport(createServerClient(), id)
@@ -30,7 +32,7 @@ export default async function EditReportPage({
           保存時に AI 参照データ（Embedding）が自動的に再生成されます
         </p>
       </div>
-      <ReportForm action={updateReportAction} report={report} />
+      <ReportForm action={updateReportAction} report={report} isAdmin={role === 'admin'} />
     </div>
   )
 }
