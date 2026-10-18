@@ -177,8 +177,8 @@ export function StudentProfileForm({
               <div className="space-y-1">
                 <Label htmlFor="examMode">試験期間中にする</Label>
                 <p id="examMode-help" className="text-xs text-muted-foreground">
-                  試験期間中は、確認の質問をはさまず、要点をすばやく伝える回答に切り替わります。
-                  最終日を過ぎると自動で通常の回答に戻ります
+                  試験期間中は、下の試験科目が AI に伝わります。
+                  最終日を過ぎると自動で通常に戻ります
                 </p>
               </div>
             </div>

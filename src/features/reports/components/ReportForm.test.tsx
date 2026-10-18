@@ -12,6 +12,7 @@ const push = vi.fn()
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push, replace: vi.fn() }) }))
 vi.mock('@/components/ui/use-toast', () => ({ toast: vi.fn() }))
 
+import { toast } from '@/components/ui/use-toast'
 import { ReportForm } from './ReportForm'
 import type { ReportWithPerson } from '../lib/getReports'
 import type { ReportSaveResult } from '../actions/reportActions'
@@ -51,7 +52,7 @@ beforeEach(() => vi.clearAllMocks())
 
 describe('ReportForm（H-2: Enter キーで承認保存が発火しない）', () => {
   it('フォーム内で最初に現れる submit は draft（＝暗黙 submit は下書き保存）', () => {
-    render(<ReportForm action={vi.fn()} report={report} />)
+    render(<ReportForm action={vi.fn()} report={report} isAdmin={false} />)
     const buttons = submitButtons()
     expect(buttons.length).toBeGreaterThanOrEqual(3)
     expect(buttons[0].value).toBe('draft')
@@ -61,7 +62,7 @@ describe('ReportForm（H-2: Enter キーで承認保存が発火しない）', (
   })
 
   it('先頭の draft ボタンは支援技術・タブ順から隠されている（見た目は変わらない）', () => {
-    render(<ReportForm action={vi.fn()} report={report} />)
+    render(<ReportForm action={vi.fn()} report={report} isAdmin={false} />)
     const first = submitButtons()[0]
     expect(first).toHaveAttribute('aria-hidden', 'true')
     expect(first.tabIndex).toBe(-1)
@@ -69,7 +70,7 @@ describe('ReportForm（H-2: Enter キーで承認保存が発火しない）', (
 
   it('タイトル欄で Enter を押すと status=draft が送信される', async () => {
     const action = mockAction({ ok: true })
-    render(<ReportForm action={action} report={report} />)
+    render(<ReportForm action={action} report={report} isAdmin={false} />)
 
     await userEvent.click(screen.getByLabelText(/タイトル/))
     await userEvent.keyboard('{Enter}')
@@ -83,7 +84,7 @@ describe('ReportForm（H-2: Enter キーで承認保存が発火しない）', (
 describe('ReportForm（H-9: 二重送信防止）', () => {
   it('保存成功後は submit ボタンが無効のままになる', async () => {
     const action = mockAction({ ok: true })
-    render(<ReportForm action={action} report={report} />)
+    render(<ReportForm action={action} report={report} isAdmin={false} />)
 
     await userEvent.click(screen.getByRole('button', { name: '下書き保存' }))
     await waitFor(() => expect(push).toHaveBeenCalledWith('/admin/reports'))
@@ -94,7 +95,7 @@ describe('ReportForm（H-9: 二重送信防止）', () => {
 
   it('保存失敗時は再送信できる（無効化しない）', async () => {
     const action = mockAction({ ok: false, error: '保存に失敗しました' })
-    render(<ReportForm action={action} report={report} />)
+    render(<ReportForm action={action} report={report} isAdmin={false} />)
 
     await userEvent.click(screen.getByRole('button', { name: '下書き保存' }))
     await screen.findByText('保存に失敗しました')
@@ -110,7 +111,7 @@ describe('ReportForm（H-8: fieldErrors の描画）', () => {
       error: '入力内容を確認してください',
       fieldErrors: { title: 'タイトルは必須です', bodyMarkdown: '本文が長すぎます' },
     })
-    render(<ReportForm action={action} report={report} />)
+    render(<ReportForm action={action} report={report} isAdmin={false} />)
 
     await userEvent.click(screen.getByRole('button', { name: '下書き保存' }))
 
@@ -122,21 +123,21 @@ describe('ReportForm（H-8: fieldErrors の描画）', () => {
 
 describe('ReportForm（AC-08-02 未実装: Slack 送信と誤認させない）', () => {
   it('承認の説明では Slack 送信が起きないことを明示する', () => {
-    render(<ReportForm action={vi.fn()} report={report} />)
+    render(<ReportForm action={vi.fn()} report={report} isAdmin={false} />)
 
     expect(screen.getByText(/生徒への Slack 送信は行いません/)).toBeInTheDocument()
     expect(screen.queryByText(/Slack 送信の対象/)).not.toBeInTheDocument()
   })
 
   it('AI 参照の説明に「送信済み」を含めない', () => {
-    render(<ReportForm action={vi.fn()} report={report} />)
+    render(<ReportForm action={vi.fn()} report={report} isAdmin={false} />)
 
     expect(screen.getByText('オンにすると、承認済みのレポートを Bot が回答時に参照します')).toBeInTheDocument()
   })
 
   // status='sent' を書き込む処理が無いので実際には出ないが、バナーを消したことを固定する
   it('status=sent でも「Slack 送信済み」バナーを出さない', () => {
-    render(<ReportForm action={vi.fn()} report={{ ...report, status: 'sent' }} />)
+    render(<ReportForm action={vi.fn()} report={{ ...report, status: 'sent' }} isAdmin={false} />)
 
     expect(screen.queryByText(/Slack 送信済み/)).not.toBeInTheDocument()
   })
@@ -146,7 +147,7 @@ describe('ReportForm（AC-08-02 未実装: Slack 送信と誤認させない）'
 // プロフィール欄と同じ注意書きが無いと、氏名の抜け穴になる
 describe('ReportForm（本文が AI に渡ることの注意書き）', () => {
   it('編集時に本文が AI の回答に使われることと氏名を書かない注意を出す', () => {
-    render(<ReportForm action={vi.fn()} report={report} />)
+    render(<ReportForm action={vi.fn()} report={report} isAdmin={false} />)
 
     const notice = screen.getByText(/本文は AI の回答に使われます/)
     expect(notice).toBeInTheDocument()
@@ -154,8 +155,30 @@ describe('ReportForm（本文が AI に渡ることの注意書き）', () => {
   })
 
   it('新規作成時にも同じ注意書きを出す', () => {
-    render(<ReportForm action={vi.fn()} persons={[{ id: 'p1', name: '山田太郎' }]} />)
+    render(<ReportForm action={vi.fn()} persons={[{ id: 'p1', name: '山田太郎' }]} isAdmin={false} />)
 
     expect(screen.getByText(/本文は AI の回答に使われます/)).toBeInTheDocument()
+  })
+})
+
+describe('ReportForm（embedding 再生成失敗トーストはロールで案内を分ける）', () => {
+  const warned = { ok: true as const, data: { reportId: report.id, embeddingWarning: true } }
+
+  async function submitApproved(isAdmin: boolean) {
+    render(<ReportForm action={mockAction(warned)} report={report} isAdmin={isAdmin} />)
+    await userEvent.click(screen.getByRole('button', { name: '承認して保存' }))
+    await waitFor(() => expect(toast).toHaveBeenCalled())
+    return vi.mocked(toast).mock.calls[0][0]
+  }
+
+  it('管理者には詳細ページから手動で再生成する案内を出す', async () => {
+    const arg = await submitApproved(true)
+    expect(arg.description).toContain('詳細ページから手動で再生成')
+  })
+
+  it('スタッフには管理者への再生成依頼を案内する（再生成ボタンは管理者のみ）', async () => {
+    const arg = await submitApproved(false)
+    expect(arg.description).toContain('管理者に再生成を依頼')
+    expect(arg.description).not.toContain('手動で再生成')
   })
 })

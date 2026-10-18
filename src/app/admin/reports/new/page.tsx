@@ -6,11 +6,13 @@ import type { Metadata } from 'next'
 import { createServerClient } from '@shared/lib/supabase/serverClient'
 import { getPersons } from '@features/persons'
 import { createReportAction } from '@features/reports'
+import { requireStaffPage } from '@/shared/lib/auth/requireStaffPage'
 import { ReportForm } from '@features/reports/components/ReportForm'
 
 export const metadata: Metadata = { title: '新規レポート' }
 
 export default async function NewReportPage() {
+  const { role } = await requireStaffPage()
   const persons = await getPersons(createServerClient())
 
   return (
@@ -23,6 +25,7 @@ export default async function NewReportPage() {
       </div>
       <ReportForm
         action={createReportAction}
+        isAdmin={role === 'admin'}
         persons={persons.map((p) => ({ id: p.id, name: p.name }))}
       />
     </div>
