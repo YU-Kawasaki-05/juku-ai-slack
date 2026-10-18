@@ -124,6 +124,9 @@ figure.shot figcaption{margin-top:8px;font-size:13px;line-height:1.65;color:var(
 
 <h2 id="flow">3-0. 全体の流れ（5 ステップ）</h2>
 
+<p>生徒の登録やチャンネルの紐付けなどの最初の設定は、<b>当面は開発担当（川崎）が代わりに行います</b>。
+この章の手順は、塾で自分で行うとき（生徒が増えたときなど）の手順です。</p>
+
 <pre class="diagram nocopy"><code>  ① 生徒を登録する           管理画面 → 生徒管理 → 新規生徒
            ↓
   ② AI 用プロフィールを書く   管理画面 → 生徒管理 → 生徒名をクリック
@@ -150,8 +153,8 @@ figure.shot figcaption{margin-top:8px;font-size:13px;line-height:1.65;color:var(
 <p><b>生徒管理</b> → 右上の <b>新規生徒</b>。</p>
 
 <figure class="shot">
-<img src="images/03-person-new-form.png" alt="新規生徒の登録フォーム。上から「名前（必須）」「表示名（任意）」「学年（任意）」「ステータス（有効）」「保護者メール（任意）」の 5 つの入力欄が縦に並び、最下部に「保存」と「キャンセル」のボタンがある。学年の欄の下には「この欄の内容はそのまま AI に送られます」という注意書きが表示されている">
-<figcaption>新規生徒の登録フォーム。入力例はサンプルです。<b>学年</b>の欄だけが AI に送られる点に注意してください</figcaption>
+<img src="images/03-person-new-form.png" alt="新規生徒の登録フォーム。上から「名前（必須）」「表示名（任意）」「学年（任意）」「ステータス（有効）」「保護者メール（任意）」の 5 つの入力欄が縦に並び、最下部に「保存」と「キャンセル」のボタンがある。表示名の下には「Bot が呼びかけに使う名前です（例: 太郎くん）」という古い説明文が出ている">
+<figcaption>新規生徒の登録フォーム。入力例はサンプルです。<b>学年</b>の欄だけが AI に送られる点に注意してください。<span class="small">（この画像は少し古く、表示名の下の説明文が今の画面と違います。今の画面では表示名の下に「管理画面の生徒一覧に併記される名前です。AI には送られません」、学年の下に「この欄の内容はそのまま AI に送られます」と出ます）</span></figcaption>
 </figure>
 
 <div class="scroll wide">
@@ -159,7 +162,7 @@ figure.shot figcaption{margin-top:8px;font-size:13px;line-height:1.65;color:var(
 <thead><tr><th>入力欄</th><th>必須</th><th>何を入れるか</th></tr></thead>
 <tbody>
 <tr><td><b>名前</b></td><td><span class="req y">必須</span></td><td>生徒の氏名（例：<code>山田太郎</code>）。<b>管理画面の中だけで使う名前です。AI には送られません</b></td></tr>
-<tr><td><b>表示名（任意）</b></td><td><span class="req n">任意</span></td><td>Bot が呼びかけに使う名前（例：<code>太郎くん</code>）</td></tr>
+<tr><td><b>表示名（任意）</b></td><td><span class="req n">任意</span></td><td>管理画面の生徒一覧で、名前の横に出る呼び名（例：<code>太郎くん</code>）。<b>Bot の呼びかけには使われません。AI にも送られません</b></td></tr>
 <tr><td><b>学年（任意）</b></td><td><span class="req n">任意</span></td><td><b>学年だけ</b>を書きます（例：<code>中学3年</code>）。<b>この欄は AI に送られます</b> → 下の注意</td></tr>
 <tr><td><b>ステータス</b></td><td>—</td><td><b>有効</b> のまま。無効にすると Bot が応答しなくなります（<a href="#leave">3-8</a>）</td></tr>
 <tr><td><b>保護者メール（任意）</b></td><td><span class="req n">任意</span></td><td>記録として保存されるだけです。<b>いまはこのアドレスにメールは送られません</b>（<a href="06_このアプリでできること.html#cannot">第 6 章</a>）</td></tr>
@@ -255,7 +258,7 @@ figure.shot figcaption{margin-top:8px;font-size:13px;line-height:1.65;color:var(
 <ul>
 <li>この文章は<b>塾の外にある AI のサービスに送られます</b>。氏名を送らなければ、万が一の情報漏れでも「誰のことか」が分かりません</li>
 <li>氏名は<b>答えの質を上げません</b>。AI が知りたいのは「どこでつまずくか」だけです</li>
-<li>保護者に「お子さまの氏名は AI に渡していません」と説明できる状態を保てます（<a href="07_安全のしくみ.html#privacy">第 7 章 7-3</a>）</li>
+<li>保護者に「システムとしては、お子さまの氏名を AI に渡さない作りです」と説明できる状態を保てます（<a href="07_安全のしくみ.html#privacy">第 7 章 7-3</a>）</li>
 </ul>
 <p>生徒を指すときは <b>「本人」「この生徒」</b> と書いてください。
 <span class="small">だめな例：<code>山田くんは文章題が苦手</code> → よい例：<code>文章題で条件を式に落とすところでつまずきやすい</code></span></p>
@@ -333,12 +336,10 @@ figure.shot figcaption{margin-top:8px;font-size:13px;line-height:1.65;color:var(
 </table>
 </div>
 
-<p><b>何が変わるか</b>：画面の説明どおり、</p>
+<p><b>何が変わるか</b>：試験期間中は、設定した<b>試験科目が AI に伝わります</b>（AI 用プロフィールの一部として送られます）。
+<b>回答の出し方は、今のところ変わりません。</b>いまのじゅくAI は、試験期間にしていてもいなくても、どの生徒にも要点から直接説明する形で答えるためです（<a href="06_このアプリでできること.html#cannot">第 6 章 6-3</a>）。
+最終日を過ぎると、試験科目は AI に伝わらなくなります。</p>
 
-<div class="okbox">
-<p>試験期間中は、確認の質問をはさまず、要点をすばやく伝える回答に切り替わります。
-最終日を過ぎると自動で通常の回答に戻ります</p>
-</div>
 
 <ul>
 <li><b>解除の操作は要りません。</b>最終日を過ぎれば自動で通常に戻ります</li>
@@ -364,6 +365,13 @@ figure.shot figcaption{margin-top:8px;font-size:13px;line-height:1.65;color:var(
 <li>公開／非公開は、塾で決めた方針にそろえる</li>
 <li><b>生徒本人を招待する</b>（必要なら保護者や担当講師も）</li>
 </ol>
+
+<div class="warnbox">
+<p><b>保護者や担当講師をチャンネルに入れるときの注意。</b>
+じゅくAI が答えたスレッドの中では、<b>誰が書き込んでも、じゅくAI が生徒の質問として答えます</b>
+（<a href="01_はじめに.html#student">第 1 章 1-2</a>）。
+保護者や講師が生徒に話しかけたいときは、スレッドの外に書いてもらってください。</p>
+</div>
 
 <p class="small">原則 <b>生徒 1 人 = チャンネル 1 つ</b> です。1 つのチャンネルに 2 人の生徒を入れることはできません
 （「このチャンネルの質問は誰のものか」を 1 人に決める必要があるためです）。</p>
@@ -439,7 +447,7 @@ Bot をチャンネルから外すと、その時点で反応しなくなりま�
 <p>塾のワークスペース全体で 1 つの値なので、<b>生徒ごとに調べ直す必要はありません</b>。一度メモしておけば使い回せます。</p>
 <p>ブラウザで Slack を開いたときのアドレス
 <code>https://app.slack.com/client/<span class="ph">T01ABCDEFGH</span>/C01...</code> の<b>最初の ID</b> がそれです。
-分からない場合は管理者に聞いてください。</p>
+分からない場合は開発担当（川崎）に聞いてください。</p>
 
 <h2 id="binding">3-7. チャンネルと生徒を紐付ける ★事故に注意</h2>
 
@@ -529,7 +537,7 @@ AI が「レポートを見る限り、〜が課題だったね」と、他人�
 <td>一覧から既存の紐付けを開いて内容を確認する（1 チャンネル = 1 生徒）</td></tr>
 <tr><td><code>チャンネルIDの形式が正しくありません</code></td><td>小文字混じり／<code>#</code> 付き／チャンネル名を入れている</td>
 <td><a href="#channelid">3-6</a> の手順で ID を取り直す</td></tr>
-<tr><td><code>ワークスペースIDの形式が正しくありません</code></td><td><code>T</code> で始まっていない</td><td>管理者にワークスペース ID を確認する</td></tr>
+<tr><td><code>ワークスペースIDの形式が正しくありません</code></td><td><code>T</code> で始まっていない</td><td>開発担当（川崎）にワークスペース ID を確認する</td></tr>
 <tr><td><code>ログインが必要です</code></td><td>ログインが切れた</td><td>ログインし直してからやり直す</td></tr>
 </tbody>
 </table>
