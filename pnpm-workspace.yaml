@@ -22,6 +22,10 @@ onlyBuiltDependencies:
 # sharp <0.35.0 は libvips の CVE-2026-33327 / 33328 ほかの影響下にある。
 # 生徒が送る画像（信頼できない入力）を処理する経路なので必ず patched 版を使う。
 # next も sharp を依存に持つため、ツリー全体を override で引き上げる。
+# sharp <0.35.5 は GHSA-2464-fhr4-w9xw（Next の画像最適化経由の RCE・2026-10-22）の影響下にある。
+# browserslist・source-map-js は next 経由で入る古い版に high の勧告がある（pnpm audit --prod、2026-10-23）
 overrides:
   postcss: ^8.5.26
-  sharp: ^0.35.4
+  sharp: ^0.35.5
+  browserslist: ^4.28.7
+  source-map-js: ^1.2.2
