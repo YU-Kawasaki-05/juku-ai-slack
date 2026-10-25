@@ -1,11 +1,11 @@
 /** @file
- * 機能: レポート詳細（SCR-09）。Markdown 表示・Embedding 状態の警告・手動再生成
- * @implements FR-16, AC-16-03, BR-16-03
+ * 機能: レポート詳細（SCR-09）。Markdown 表示・Embedding 状態の警告・手動再生成・Markdown ダウンロード
+ * @implements FR-16, AC-16-03, BR-16-03, FR-08
  */
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { AlertTriangle, Bot, Check, Pencil, TriangleAlert } from 'lucide-react'
+import { AlertTriangle, Bot, Check, Download, Pencil, TriangleAlert } from 'lucide-react'
 import { createServerClient } from '@shared/lib/supabase/serverClient'
 import { getReport } from '@features/reports'
 import { needsEmbeddingRebuild } from '@features/rag'
@@ -46,6 +46,13 @@ export default async function ReportDetailPage({
         </div>
         <div className="flex shrink-0 gap-2">
           <RebuildEmbeddingsButton reportId={report.id} />
+          <Button asChild variant="outline" size="sm">
+            {/* ファイルのダウンロードなので next/link ではなく通常のリンク */}
+            <a href={`/admin/reports/${report.id}/markdown`} download>
+              <Download className="h-4 w-4" aria-hidden="true" />
+              Markdown で保存
+            </a>
+          </Button>
           <Button asChild size="sm">
             <Link href={`/admin/reports/${report.id}/edit`}>
               <Pencil className="h-4 w-4" aria-hidden="true" />

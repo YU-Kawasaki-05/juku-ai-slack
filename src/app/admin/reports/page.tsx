@@ -1,13 +1,16 @@
 /** @file
- * 機能: レポート一覧（SCR-07）。生徒/対象月/状態でフィルタ
- * @implements FR-16
+ * 機能: レポート一覧（SCR-07）。生徒/対象月/状態でフィルタ。管理者には「先月分を今すぐ作成して送る」ボタンを出す
+ * @implements FR-16, FR-08
  */
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Check, FileText, Plus } from 'lucide-react'
 import { createServerClient } from '@shared/lib/supabase/serverClient'
 import { getPersons } from '@features/persons'
+import { requireStaffPage } from '@shared/lib/auth/requireStaffPage'
 import { getReports, REPORT_STATUSES } from '@features/reports'
+import { GenerateMonthlyReportsButton } from '@features/monthly-reports/components/GenerateMonthlyReportsButton'
+import { formatMonthJa, getPreviousReportMonth } from '@features/monthly-reports'
 import { ReportsFilter } from '@features/reports/components/ReportsFilter'
 import { Button } from '@/components/ui/button'
 import {
@@ -24,12 +27,16 @@ import { parseMonthParam, parseUuidParam } from '../searchParams'
 
 export const metadata: Metadata = { title: 'レポート管理' }
 
+/** 「先月分を今すぐ作成して送る」の Server Action がこのページの実行時間上限を引き継ぐ（LLM を数人ずつ呼ぶため） */
+export const maxDuration = 300
+
 export default async function ReportsPage({
   searchParams,
 }: {
   searchParams: Promise<{ person?: string; month?: string; status?: string }>
 }) {
   const sp = await searchParams
+  const { role } = await requireStaffPage()
   // 無効なクエリ値はフィルタなしとして扱う（H-4: URL 手編集で 500 にしない）
   const filters = {
     personId: parseUuidParam(sp.person),
@@ -53,12 +60,19 @@ export default async function ReportsPage({
             {reports.length} 件）
           </p>
         </div>
-        <Button asChild>
-          <Link href="/admin/reports/new">
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            新規レポート
-          </Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {role === 'admin' && (
+            <GenerateMonthlyReportsButton
+              monthLabel={formatMonthJa(getPreviousReportMonth(new Date()))}
+            />
+          )}
+          <Button asChild>
+            <Link href="/admin/reports/new">
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              新規レポート
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <ReportsFilter

@@ -365,6 +365,30 @@ export type Database = {
           },
         ]
       }
+      monthly_report_runs: {
+        Row: {
+          email_claimed_at: string | null
+          email_error: string | null
+          emailed_at: string | null
+          generated_at: string | null
+          report_month: string
+        }
+        Insert: {
+          email_claimed_at?: string | null
+          email_error?: string | null
+          emailed_at?: string | null
+          generated_at?: string | null
+          report_month: string
+        }
+        Update: {
+          email_claimed_at?: string | null
+          email_error?: string | null
+          emailed_at?: string | null
+          generated_at?: string | null
+          report_month?: string
+        }
+        Relationships: []
+      }
       persons: {
         Row: {
           created_at: string
