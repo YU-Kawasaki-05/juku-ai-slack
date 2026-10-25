@@ -3,11 +3,12 @@ import AdminSidebar from '@/components/admin/AdminSidebar'
 import AdminHeader from '@/components/admin/AdminHeader'
 import { Toaster } from '@/components/ui/toaster'
 import { requireStaffPage } from '@/shared/lib/auth/requireStaffPage'
+import { APP_NAME } from '@/shared/lib/constants'
 
 export const metadata: Metadata = {
   title: {
-    template: '%s | じゅくAI 管理画面',
-    default: '管理画面 | じゅくAI',
+    template: `%s | ${APP_NAME} 管理画面`,
+    default: `管理画面 | ${APP_NAME}`,
   },
 }
 

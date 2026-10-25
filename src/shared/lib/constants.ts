@@ -4,6 +4,9 @@
  * @implements -
  */
 
+/** サービスの表示名（画面・会話ログに出る名前。Slack のボット名は運用側の Slack 設定で別に決まる） */
+export const APP_NAME = 'マルボ'
+
 /** Slack 署名のバージョンプレフィックス */
 export const SLACK_SIGNATURE_VERSION = 'v0'
 

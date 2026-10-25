@@ -27,10 +27,30 @@ describe('buildPrompt', () => {
     }
   })
 
-  it('direct はワークド例題（条件・行動・目的）を指示（AC-05-02）', () => {
+  it('direct は詳しく答えるときのワークド例題（条件・行動・目的）を指示（AC-05-02）', () => {
     const { system } = buildPrompt({ ...base, mode: 'direct' })
     expect(system).toContain('条件・行動・目的')
+    expect(system).toContain('ワークド例題')
     expect(system).toContain('direct')
+  })
+
+  it('direct はまず要点を短く答え、最後に1つだけ詳しい解説が要るか尋ね、頼まれたら詳しく答える', () => {
+    const { system } = buildPrompt({ ...base, mode: 'direct' })
+    const direct = system.slice(system.indexOf('【今回のモード: direct'))
+    expect(direct).toContain('2〜4文程度で端的に')
+    expect(direct).toContain('例題は出さない')
+    expect(direct).toContain('もっと詳しい解説（例題つき）がほしい？')
+    expect(direct).toContain('問いを1つだけ')
+    expect(direct).toContain('「詳しく」「例題」「もっと」')
+    expect(direct).toContain('最後の問いは不要')
+    expect(direct).not.toContain('確認質問は不要')
+  })
+
+  it('全モード共通でコードブロックに言語名を付けないよう指示する', () => {
+    for (const mode of ['direct', 'socratic', 'confirmation'] as const) {
+      const { system } = buildPrompt({ ...base, mode })
+      expect(system).toContain('言語名を付けない')
+    }
   })
 
   it('socratic は確認質問1問・末尾終了を指示（AC-05-03）', () => {

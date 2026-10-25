@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>じゅくAI スタッフ操作マニュアル</title>
+<title>マルボ スタッフ操作マニュアル</title>
 <style>
 :root{--fg:#191c21;--muted:#5c6470;--line:#d9dee6;--bg:#fff;--soft:#f6f8fa;--soft2:#eef2f7;--accent:#1f5fa9;--code:#0f2b46;
 --warn:#7a4d00;--warnbg:#fff8e8;--warnline:#e6c579;--danger:#96262c;--dangerbg:#fdf1f2;--dangerline:#e3adb1;
@@ -95,15 +95,15 @@ a{color:var(--accent)}
 </head>
 <body>
 <div class="topbar"><div class="inner">
-<span class="crumb">じゅくAI スタッフ操作マニュアル</span>
+<span class="crumb">マルボ スタッフ操作マニュアル</span>
 <span class="crumb">全 7 章</span>
 </div></div>
 
 <div class="wrap">
 
-<h1>じゅくAI スタッフ操作マニュアル</h1>
+<h1>マルボ スタッフ操作マニュアル</h1>
 
-<p>じゅくAI は、<b>生徒が Slack で質問すると AI が答えてくれる</b>しくみです。
+<p>マルボは、<b>生徒が Slack で質問すると AI が答えてくれる</b>しくみです。
 ふつうの AI チャットと違うのは、<b>その生徒のことを踏まえて</b>答えるところです。
 そのために必要な情報を用意するのが、スタッフのしごとです。</p>
 
@@ -115,11 +115,11 @@ a{color:var(--accent)}
 <pre class="diagram nocopy"><code>   生徒（Slack）                          スタッフ（Web の管理画面）
        │                                        │
        │ 自分専用のチャンネルで質問する          │ 生徒を登録する
-       │  「@じゅくAI この問題わからない」       │ AI 用プロフィールを書く
+       │  「@marubo この問題わからない」         │ AI 用プロフィールを書く
        │                                        │ 月次レポートを登録する
        ▼                                        │ 会話ログ・エラーを見る
    ┌──────────────────────┐                     │
-   │  じゅくAI              │◀────────────────┘
+   │  マルボ                │◀────────────────┘
    │                       │
    │  この生徒のことを      │   ・学年
    │  ふまえて答える        │   ・AI 用プロフィール（スタッフが書いた学習メモ）
@@ -133,8 +133,8 @@ a{color:var(--accent)}
 <div class="note">
 <p><b>スタッフが操作するのは Web の管理画面だけです。</b>
 生徒の Slack チャンネルにスタッフが書き込む必要はありません
-（スレッドの外で、<code>@じゅくAI</code> を付けずに書いても、じゅくAI は反応しません。
-ただし、じゅくAI が答えたスレッドの中では、誰が書き込んでも AI が答えます。<a href="01_はじめに.html#student">第 1 章 1-2</a>）。</p>
+（スレッドの外で、<code>@marubo</code> を付けずに書いても、マルボは反応しません。
+ただし、マルボが答えたスレッドの中では、誰が書き込んでも AI が答えます。<a href="01_はじめに.html#student">第 1 章 1-2</a>）。</p>
 </div>
 
 <h2>2. まず何を読むか</h2>
@@ -159,7 +159,7 @@ a{color:var(--accent)}
 
 <ol class="steps">
 <li><a href="01_はじめに.html"><span class="n">第 1 章</span><span class="t">はじめに</span>
-<span class="d">はじめの一歩（ログイン・困ったときの連絡先） / じゅくAI とは何か / 生徒からはどう見えるか / スタッフが触るのは管理画面だけ / 役割と早見表</span></a></li>
+<span class="d">はじめの一歩（ログイン・困ったときの連絡先） / マルボとは何か / 生徒からはどう見えるか / スタッフが触るのは管理画面だけ / 役割と早見表</span></a></li>
 
 <li><a href="02_毎日の確認.html"><span class="n">第 2 章</span><span class="t">毎日の確認</span>
 <span class="d">朝の 3 分チェック / エラーの見方 / 会話ログの見方 /「Bot が反応しない」と言われたときの手順</span></a></li>
@@ -184,7 +184,7 @@ a{color:var(--accent)}
 
 <div class="dangerbox">
 <p><b>① チャンネルを作ったら、Bot を招待する。</b>
-Slack のチャンネルで <code>/invite @じゅくAI</code> と打ちます。これを忘れると、じゅくAI は<b>完全に無反応</b>になります。
+Slack のチャンネルで <code>/invite @marubo</code> と打ちます。これを忘れると、マルボは<b>完全に無反応</b>になります。
 エラーの記録さえ残らないので、いちばん気づきにくいミスです。→ <a href="03_生徒の登録と管理.html#invite">第 3 章</a></p>
 </div>
 
@@ -207,7 +207,7 @@ Slack のチャンネルで <code>/invite @じゅくAI</code> と打ちます。
 <thead><tr><th>言葉</th><th>意味</th></tr></thead>
 <tbody>
 <tr><td><b>管理画面</b></td><td>スタッフが使う Web の画面。ログインが必要。生徒はログインできません</td></tr>
-<tr><td><b>Bot（ボット）</b></td><td>Slack の中にいる「じゅくAI」のこと。人ではなくアプリです</td></tr>
+<tr><td><b>Bot（ボット）</b></td><td>Slack の中にいる「マルボ」のこと。人ではなくアプリです</td></tr>
 <tr><td><b>チャンネル</b></td><td>Slack の会話の部屋。<b>生徒 1 人につき 1 つ</b>作ります</td></tr>
 <tr><td><b>スレッド</b></td><td>Slack で 1 つの発言にぶら下がる返信の列。話の続きはここで続けます</td></tr>
 <tr><td><b>紐付け（ひもづけ）</b></td><td>「このチャンネルの質問は誰のものか」を決める設定</td></tr>

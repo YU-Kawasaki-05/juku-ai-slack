@@ -23,6 +23,7 @@ import { KillSwitchCard } from '@features/kill-switch/components/KillSwitchCard'
 import { StatusBadge } from '@/components/admin/StatusBadge'
 import { formatDateTime } from '@/components/admin/formatDate'
 import { cn } from '@/lib/utils'
+import { APP_NAME } from '@/shared/lib/constants'
 
 export const metadata: Metadata = { title: 'ダッシュボード' }
 
@@ -45,7 +46,7 @@ export default async function AdminDashboardPage() {
     <div className="space-y-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight">ダッシュボード</h1>
-        <p className="text-sm text-muted-foreground">じゅくAI の利用状況サマリー</p>
+        <p className="text-sm text-muted-foreground">{APP_NAME} の利用状況サマリー</p>
       </div>
 
       <KillSwitchCard state={killSwitch} />

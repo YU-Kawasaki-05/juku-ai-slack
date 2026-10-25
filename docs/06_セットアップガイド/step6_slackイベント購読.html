@@ -306,7 +306,7 @@ STEP 5 で設定した <code>SLACK_BOT_TOKEN</code> と一致しているかを�
 </div>
 
 <h3>簡易的な疎通テスト（任意）</h3>
-<p>適当な公開チャンネル（例 <code>#general</code>）に Bot を招待して <code>@じゅくAI テスト</code> と書くと、
+<p>適当な公開チャンネル（例 <code>#general</code>）に Bot を招待して <code>@marubo テスト</code> と書くと、
 <b>紐付けが無いチャンネル</b>なので次の案内が返ってくるはずです。</p>
 
 <pre class="nocopy"><code>このチャンネルにはまだBotの設定が完了していないみたい。管理者に確認してもらえると助かります！</code></pre>
@@ -314,7 +314,7 @@ STEP 5 で設定した <code>SLACK_BOT_TOKEN</code> と一致しているかを�
 <p>これが返れば <b>Slack → Vercel → DB → Slack</b> の往復が全部つながっています。
 返らない場合は <a href="troubleshooting.html#noreply">トラブルシューティング「Bot が反応しない」</a> を確認してください。</p>
 
-<p class="small">テストが済んだら、そのチャンネルから Bot を退出させておきます（<code>/remove @じゅくAI</code> または
+<p class="small">テストが済んだら、そのチャンネルから Bot を退出させておきます（<code>/remove @marubo</code> または
 チャンネル詳細 → インテグレーション → アプリを削除）。紐付けの無いチャンネルにメンションが飛ぶたびに
 <code>CHANNEL_NOT_BOUND</code> の警告ログが積まれるためです。</p>
 
