@@ -10,6 +10,7 @@ import { createServerClient } from '@shared/lib/supabase/serverClient'
 import { getThreadDetail, formatMessageTime } from '@features/conversation-logs'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { APP_NAME } from '@/shared/lib/constants'
 import { isUuid } from '../../searchParams'
 
 export const metadata: Metadata = { title: '会話ログ詳細' }
@@ -85,7 +86,7 @@ export default async function ConversationDetailPage({
                       isBot ? 'justify-start' : 'justify-end',
                     )}
                   >
-                    <span className="font-medium">{isBot ? 'じゅくAI' : session.persons?.name ?? '生徒'}</span>
+                    <span className="font-medium">{isBot ? APP_NAME : session.persons?.name ?? '生徒'}</span>
                     <span className="tabular-nums">{formatMessageTime(m.createdAt)}</span>
                   </div>
                   <div

@@ -19,6 +19,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { APP_NAME } from '@/shared/lib/constants'
 
 interface NavItem {
   href: string
@@ -54,7 +55,7 @@ export default function AdminSidebar({ isAdmin }: { isAdmin: boolean }) {
     <aside className="flex w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
       <div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
         <GraduationCap className="h-5 w-5 text-sidebar-primary" aria-hidden="true" />
-        <span className="font-bold text-sidebar-primary">じゅくAI</span>
+        <span className="font-bold text-sidebar-primary">{APP_NAME}</span>
       </div>
       <nav aria-label="メインナビゲーション" className="flex-1 space-y-1 overflow-y-auto p-3">
         {items.map(({ href, label, icon: Icon }) => {

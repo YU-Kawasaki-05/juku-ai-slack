@@ -142,7 +142,49 @@ describe('formatForSlack（結合）', () => {
     const llmOutput = ['```python', '# これはコメント', 'x = base ** 2  # べき乗', '```'].join('\n')
 
     const result = formatForSlack(llmOutput)
-    expect(result).toBe(llmOutput)
+    expect(result).toBe(['```', '# これはコメント', 'x = base ** 2  # べき乗', '```'].join('\n'))
+  })
+
+  describe('コードブロック開始行の言語名を外す（Slack で1行目に text と出る）', () => {
+    it('```text で始まるブロックの1行目に text が残らない', () => {
+      const input = ['```text', '3x + 2 = 11', 'x = 3', '```'].join('\n')
+      const result = formatForSlack(input)
+      expect(result).toBe(['```', '3x + 2 = 11', 'x = 3', '```'].join('\n'))
+      expect(result.split('\n')[0]).toBe('```')
+    })
+
+    it('python・math など他の言語名も外し、中身は変えない', () => {
+      for (const lang of ['python', 'math', 'c++', 'c#', 'js', 'Text']) {
+        const input = ['```' + lang, 'a = **1**  # そのまま', '```'].join('\n')
+        expect(formatForSlack(input)).toBe(['```', 'a = **1**  # そのまま', '```'].join('\n'))
+      }
+    })
+
+    it('言語名のない ``` はそのまま', () => {
+      const input = ['```', 'F = m * a', '```'].join('\n')
+      expect(formatForSlack(input)).toBe(input)
+    })
+
+    it('閉じていないフェンスの言語名も外す', () => {
+      expect(formatForSlack('```text\nx = 1')).toBe('```\nx = 1')
+    })
+
+    it('語以外が混じる開始行（```js 補足）は触らない', () => {
+      const input = ['```js 補足', 'b = 2', '```'].join('\n')
+      expect(formatForSlack(input)).toBe(input)
+    })
+
+    it('インラインコードと、コード内の text という語は影響を受けない', () => {
+      expect(formatForSlack('`text` を使うよ')).toBe('`text` を使うよ')
+      expect(formatForSlack('```text```')).toBe('```text```')
+      const input = ['```', 'text', '```'].join('\n')
+      expect(formatForSlack(input)).toBe(input)
+    })
+
+    it('ブロックの前後の本文は通常どおり変換される', () => {
+      const input = ['**ポイント**', '```text', 'x = 3', '```', '**おわり**'].join('\n')
+      expect(formatForSlack(input)).toBe(['*ポイント*', '```', 'x = 3', '```', '*おわり*'].join('\n'))
+    })
   })
 
   it('インラインコードの中身は変換しない', () => {
@@ -406,7 +448,7 @@ describe('formatForSlack（独立検査で見つかった破壊の回帰防止�
 
     it('閉じていないフェンスは本文末尾までコードとして扱う', () => {
       const input = '```python\n# 見出しではないコメント\n**べき乗**'
-      expect(formatForSlack(input)).toBe(input)
+      expect(formatForSlack(input)).toBe('```\n# 見出しではないコメント\n**べき乗**')
     })
 
     // 本数を決め打ちしていたため、開き3本・閉じ4本（CommonMark では合法）で

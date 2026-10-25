@@ -232,7 +232,7 @@ figure.shot figcaption{margin-top:8px;font-size:13px;line-height:1.65;color:var(
 <tr><td><code>AI_RESPONSE_FAILED</code></td><td>AI が回答を作れなかった</td><td>1 件なら様子見。<b>連続して出るなら開発者へ連絡</b>（<a href="05_困ったとき.html#call">第 5 章</a>）</td><td><span class="req y">高</span></td></tr>
 <tr><td><code>AI_RATE_LIMITED</code></td><td>AI のサービス側が混み合っていた</td><td>自動でやり直します（5 秒 → 15 秒の 2 回待って再挑戦。最大 3 回まで試します）。頻発するなら開発者へ</td><td><span class="req r">中</span></td></tr>
 <tr><td><code>AI_TIMEOUT</code><br><code>JOB_TIMEOUT</code></td><td>回答づくりに時間がかかりすぎた</td><td>生徒には「もう一度送ってみてね」と返っています。頻発するなら開発者へ</td><td><span class="req r">中</span></td></tr>
-<tr><td><code>SLACK_POST_FAILED</code></td><td>Slack に書き込めなかった</td><td><b>Bot がチャンネルから外れていないか</b>確認。外れていたら <code>/invite @じゅくAI</code> をやり直す</td><td><span class="req y">高</span></td></tr>
+<tr><td><code>SLACK_POST_FAILED</code></td><td>Slack に書き込めなかった</td><td><b>Bot がチャンネルから外れていないか</b>確認。外れていたら <code>/invite @marubo</code> をやり直す</td><td><span class="req y">高</span></td></tr>
 <tr><td><code>CHANNEL_NOT_BOUND</code></td><td>紐付けのないチャンネルで呼ばれた</td><td>正しいチャンネルなら紐付けを登録（<a href="03_生徒の登録と管理.html#binding">第 3 章 3-7</a>）。関係ないチャンネルなら Bot を退出させる</td><td><span class="req n">低</span></td></tr>
 <tr><td><code>UNSUPPORTED_FILE_TYPE</code><br><code>IMAGE_TOO_LARGE</code></td><td>生徒が送ったファイルの形式・サイズが対象外（1 枚 20MB 超、または 1 回の合計 8MB 超も含む）</td><td>生徒に伝える：<b>画像は jpg / png / webp、1 枚 20MB 以下、1 回の合計 8MB 以下、3 枚まで</b>。PDF や Word は読めません。<span class="small">（生徒に返る案内文には「jpg / png」とだけ書かれていますが、webp も読めます。生徒には jpg / png が確実です）</span></td><td><span class="req n">低</span></td></tr>
 <tr><td><code>SLACK_FILE_DOWNLOAD_FAILED</code></td><td>画像を取り込めなかった</td><td>1 件なら Slack 側の一時的な不調。頻発するなら開発者へ</td><td><span class="req n">低</span></td></tr>
@@ -263,7 +263,7 @@ figure.shot figcaption{margin-top:8px;font-size:13px;line-height:1.65;color:var(
 
 <h2 id="conv">2-3. 会話ログの見方</h2>
 
-<p><b>会話ログ</b>は、生徒とじゅくAI のやり取りが<b>スレッド 1 本 = 1 行</b>で並ぶ画面です。
+<p><b>会話ログ</b>は、生徒とマルボのやり取りが<b>スレッド 1 本 = 1 行</b>で並ぶ画面です。
 「AI がちゃんと答えられているか」を確かめる場所です。</p>
 
 <div class="scroll wide">
@@ -287,12 +287,12 @@ figure.shot figcaption{margin-top:8px;font-size:13px;line-height:1.65;color:var(
 <figcaption>会話ログの一覧。上のフィルタで生徒・期間・モデル・画像あり・エラーありに絞り込めます。<b>状態</b>の欄のアイコンは画像添付（□）とエラー発生（△）です</figcaption>
 </figure>
 
-<p>行をクリックすると、生徒とじゅくAI の吹き出しが時系列で並びます（右が生徒、左が <b>じゅくAI</b>）。
+<p>行をクリックすると、生徒とマルボの吹き出しが時系列で並びます（右が生徒、左が <b>マルボ</b>）。
 画像を送った発言には「画像添付あり」と表示されます。</p>
 
 <figure class="shot">
-<img src="images/02-conversation-detail.png" alt="会話ログの詳細画面。上部に「スレッド要約」カードがあり、その下に生徒の発言（濃い色の吹き出し・右寄せ）とじゅくAI の回答（薄い色の吹き出し・左寄せ）が時系列で交互に並んでいる">
-<figcaption>会話ログの詳細。右が生徒、左が <b>じゅくAI</b> の発言です。長いスレッドでは上に<b>スレッド要約</b>が付きます（内容はサンプルです）</figcaption>
+<img src="images/02-conversation-detail.png" alt="会話ログの詳細画面。上部に「スレッド要約」カードがあり、その下に生徒の発言（濃い色の吹き出し・右寄せ）とマルボの回答（薄い色の吹き出し・左寄せ）が時系列で交互に並んでいる">
+<figcaption>会話ログの詳細。右が生徒、左が <b>マルボ</b> の発言です。長いスレッドでは上に<b>スレッド要約</b>が付きます（内容はサンプルです）</figcaption>
 </figure>
 
 <div class="okbox">
@@ -319,14 +319,14 @@ figure.shot figcaption{margin-top:8px;font-size:13px;line-height:1.65;color:var(
 <tr>
 <td>1</td>
 <td><b>Bot がチャンネルに招待されていない</b><br><span class="small">いちばん多い</span></td>
-<td>チャンネル名をクリック → <b>インテグレーション</b> タブに「じゅくAI」が無い。<b>エラーログにも何も残らない</b></td>
-<td>そのチャンネルで <code>/invite @じゅくAI</code> と打つ（<a href="03_生徒の登録と管理.html#invite">第 3 章 3-5</a>）</td>
+<td>チャンネル名をクリック → <b>インテグレーション</b> タブに「マルボ」が無い。<b>エラーログにも何も残らない</b></td>
+<td>そのチャンネルで <code>/invite @marubo</code> と打つ（<a href="03_生徒の登録と管理.html#invite">第 3 章 3-5</a>）</td>
 </tr>
 <tr>
 <td>2</td>
-<td>生徒が <code>@じゅくAI</code> を付けていない</td>
+<td>生徒が <code>@marubo</code> を付けていない</td>
 <td>チャンネルの一番下（スレッドの外）に、メンションなしの発言が並んでいる</td>
-<td>生徒に伝える：<b>新しい質問は <code>@じゅくAI</code> から始める</b>。返信を続けるときはスレッドの中でメンション不要</td>
+<td>生徒に伝える：<b>新しい質問は <code>@marubo</code> から始める</b>。返信を続けるときはスレッドの中でメンション不要</td>
 </tr>
 <tr>
 <td>3</td>
@@ -436,7 +436,7 @@ figure.shot figcaption{margin-top:8px;font-size:13px;line-height:1.65;color:var(
 
 <div class="okbox">
 <p><b>安心して押して構いません。</b>
-再実行する直前に「同じスレッドにじゅくAI の返信がもう入っていないか」を必ず確認する仕組みが入っています。
+再実行する直前に「同じスレッドにマルボの返信がもう入っていないか」を必ず確認する仕組みが入っています。
 すでに届いていれば実行されず、
 <code>既に回答が配信済みのため再実行せず、完了として記録しました（二重返信の防止）</code>
 と表示されます。同じ回答が 2 回投稿されることはありません。</p>

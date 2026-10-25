@@ -18,9 +18,10 @@ import { ShieldAlert } from 'lucide-react'
 import { createAuthServerClient } from '@/shared/lib/supabase/authServerClient'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import NoAccessSignOutButton from './NoAccessSignOutButton'
+import { APP_NAME } from '@/shared/lib/constants'
 
 export const metadata: Metadata = {
-  title: '管理画面の利用権限がありません | じゅくAI',
+  title: `管理画面の利用権限がありません | ${APP_NAME}`,
 }
 
 const GRANT_ROLE_SQL = `update auth.users

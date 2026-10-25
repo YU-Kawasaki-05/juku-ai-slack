@@ -415,7 +415,7 @@ order by created_at;</code></pre>
 <div class="okbox">
 <p><b>試験期間中は AI の答え方が変わります。</b>
 通常は理解度に応じて確認の質問を挟むことがありますが、試験期間中は
-<b>確認質問をはさまず、要点と解き方の例をすばやく提示する</b>モード（direct）に固定されます。
+<b>理解度を確かめる質問をはさまず、まず要点を短く答え、希望があれば詳しく解説する</b>モード（direct）に固定されます。
 試験直前に「まず自分で考えてみよう」と返されると困る、という現場の要求への対応です。
 設定した科目名も AI に伝わります。</p>
 </div>
@@ -442,9 +442,9 @@ order by created_at;</code></pre>
 
 <p>チャンネルで次を実行します。</p>
 
-<pre><code>/invite @じゅくAI</code></pre>
+<pre><code>/invite @marubo</code></pre>
 
-<p>「じゅくAI がチャンネルに参加しました」と表示されれば OK です。
+<p>「marubo がチャンネルに参加しました」と表示されれば OK です。
 チャンネル詳細 → <b>インテグレーション</b> タブにアプリが並んでいることでも確認できます。</p>
 
 <p class="small">生徒を追加するたびに<b>チャンネル作成 → 招待</b>がセットで必要です。運用手順書に必ず書いておいてください。</p>
@@ -599,7 +599,7 @@ order by created_at;</code></pre>
 
 <ol>
 <li>Slack で運用者向けチャンネルを作る（例 <code>#jukuai-alerts</code>）。<b>生徒は入れない</b></li>
-<li><code>/invite @じゅくAI</code> で Bot を招待する（招待しないと投稿できません）</li>
+<li><code>/invite @marubo</code> で Bot を招待する（招待しないと投稿できません）</li>
 <li>7-7 の手順でチャンネル ID を取得</li>
 <li>Vercel → Settings → Environment Variables に <code>SLACK_ALERTS_CHANNEL_ID</code> を追加 → <b>再デプロイ</b></li>
 </ol>
@@ -615,7 +615,7 @@ order by created_at;</code></pre>
 <li><input type="checkbox" id="s7-4"><label for="s7-4">生徒を登録した（重複していない）</label></li>
 <li><input type="checkbox" id="s7-5"><label for="s7-5">AI 用プロフィールの「全体要約」を書いた</label></li>
 <li><input type="checkbox" id="s7-6"><label for="s7-6">Slack に生徒チャンネルを作った</label></li>
-<li><input type="checkbox" id="s7-7"><label for="s7-7"><b><code>/invite @じゅくAI</code> で Bot を招待した</b></label></li>
+<li><input type="checkbox" id="s7-7"><label for="s7-7"><b><code>/invite @marubo</code> で Bot を招待した</b></label></li>
 <li><input type="checkbox" id="s7-8"><label for="s7-8">チャンネル ID / ワークスペース ID を控えた</label></li>
 <li><input type="checkbox" id="s7-9"><label for="s7-9">チャンネル紐付けを登録した</label></li>
 <li><input type="checkbox" id="s7-10"><label for="s7-10">レポートを<b>承認して保存</b>し、Embedding 警告が出ないことを確認した</label></li>

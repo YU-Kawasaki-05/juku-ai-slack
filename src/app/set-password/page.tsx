@@ -11,9 +11,10 @@
 import { Metadata } from 'next'
 import { KeyRound } from 'lucide-react'
 import SetPasswordForm from './SetPasswordForm'
+import { APP_NAME } from '@/shared/lib/constants'
 
 export const metadata: Metadata = {
-  title: 'パスワードの設定 | じゅくAI',
+  title: `パスワードの設定 | ${APP_NAME}`,
   // 招待リンクは本人限定。検索エンジンに拾わせない
   robots: { index: false, follow: false },
 }

@@ -85,6 +85,12 @@ function protectCode(text: string): { text: string; restore: (s: string) => stri
     blocks.push(m)
     return `${MARK}CODE${i++}${MARK}`
   }
+  // フェンス開始行の言語名（```text など）を外す。Slack は言語指定を解釈せず、
+  // 1行目に「text」という語がそのまま表示されてしまうため（実機で確認）。
+  // 外すのは開始行が「バッククォート+英数字・一部記号だけの語」のときに限り、
+  // 中身（2行目以降）には触れない。「```js 補足」のような語以外が混じる行は触らない。
+  const stashFence = (m: string): string =>
+    stash(m.replace(/^([ \t]{0,3}`{3,})[ \t]*[A-Za-z0-9_+#.-]+[ \t]*(?=\n|$)/, '$1'))
 
   // 3連バッククォートのフェンス。**開始も終了も行頭にあるものだけ**をフェンスとみなす
   // （CommonMark と同じ扱い）。単純な非貪欲 /```[\s\S]*?```/ だと、コード見本として本文中に
@@ -104,10 +110,10 @@ function protectCode(text: string): { text: string; restore: (s: string) => stri
   // 独立検査 2026-09-12・19巡目・P1）。コードの中に ``` の見本を書く場面、
   // つまり4本以上を使う動機そのものの状況で、保護が漏れていた。
   // 開きの本数は**必ず最長**で取る。
-  let out = text.replace(/^[ \t]{0,3}(`{3,})(?!`)[^\n]*\n[\s\S]*?^[ \t]{0,3}\1`*[ \t]*$/gm, stash)
+  let out = text.replace(/^[ \t]{0,3}(`{3,})(?!`)[^\n]*\n[\s\S]*?^[ \t]{0,3}\1`*[ \t]*$/gm, stashFence)
   // 閉じていないフェンスは本文末尾までコードとして扱う（CommonMark と同じ）。
   // g を付けないのは、最初の1つが末尾まで飲み込むため2つ目以降が存在しないから。
-  out = out.replace(/^[ \t]{0,3}`{3,}[\s\S]*/m, stash)
+  out = out.replace(/^[ \t]{0,3}`{3,}[\s\S]*/m, stashFence)
   // 残りのインラインコード（同じ行の中の `...`）を退避
   out = out.replace(/`[^`\n]+`/g, stash)
 

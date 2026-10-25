@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { APP_NAME } from '@/shared/lib/constants'
 
 export const metadata: Metadata = {
-  title: 'じゅくAI 管理画面',
-  description: 'じゅくAI Slack Bot 管理ダッシュボード',
+  title: `${APP_NAME} 管理画面`,
+  description: `${APP_NAME} Slack Bot 管理ダッシュボード`,
 }
 
 // 描画前に localStorage / OS 設定からテーマを反映して FOUC を防ぐ

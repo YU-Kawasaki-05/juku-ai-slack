@@ -195,7 +195,7 @@ a{color:var(--accent)}
 <h3>manifest（そのままコピーして使えます）</h3>
 
 <pre><code>display_information:
-  name: じゅくAI
+  name: マルボ
   description: 生徒ごとのチャンネルで学習の質問に答える AI アシスタント
   background_color: "#2b3a55"
   # `:thinking_face:` のようにコロンの後にスペースが続く文字列は、
@@ -204,7 +204,7 @@ a{color:var(--accent)}
 
 features:
   bot_user:
-    display_name: juku-ai
+    display_name: marubo
     always_online: true
 
 oauth_config:
@@ -247,7 +247,7 @@ settings:
 
 <ol>
 <li><b>Create New App</b> → <b>From scratch</b></li>
-<li>App Name = <code>じゅくAI</code>、ワークスペースを選択 → <b>Create App</b></li>
+<li>App Name = <code>マルボ</code>、ワークスペースを選択 → <b>Create App</b></li>
 <li>左メニュー <b>OAuth &amp; Permissions</b> → <b>Scopes</b> → <b>Bot Token Scopes</b> → <b>Add an OAuth Scope</b> で
 5 つ（<code>chat:write</code> / <code>reactions:write</code> / <code>channels:history</code> / <code>groups:history</code> / <code>files:read</code>）を追加</li>
 <li>左メニュー <b>App Home</b> → <b>App Display Name</b> の <b>Edit</b> で表示名を設定<br>
@@ -303,7 +303,7 @@ Bot Token が漏れると塾のワークスペースに任意の投稿ができ�
   "ok": true,
   "url": "https://&lt;ワークスペース&gt;.slack.com/",
   "team": "&lt;ワークスペース名&gt;",
-  "user": "じゅくai",
+  "user": "marubo",
   "team_id": "T01ABCDEFGH",     ← STEP 7 のチャンネル紐付けで使う
   "user_id": "U01ABCDEFGH",     ← これが SLACK_BOT_USER_ID
   "bot_id": "B01ABCDEFGH"       ← これではない
@@ -325,7 +325,7 @@ Bot Token が漏れると塾のワークスペースに任意の投稿ができ�
 
 <h3>方法2: Slack クライアントから調べる</h3>
 <ol>
-<li>Slack で任意のチャンネルの<b>メンバー一覧</b>、または検索窓から <b>じゅくAI</b> を開く</li>
+<li>Slack で任意のチャンネルの<b>メンバー一覧</b>、または検索窓から <b>marubo</b> を開く</li>
 <li>プロフィールの <b>「…」（その他）</b> → <b>メンバー ID をコピー</b></li>
 </ol>
 <p class="small">この方法でも <code>U</code> 始まりの ID が得られます。ただし表示名が似た別ユーザーを開いてしまう事故があるため、方法1 を推奨します。</p>

@@ -5,9 +5,10 @@
 import { Metadata } from 'next'
 import { GraduationCap } from 'lucide-react'
 import LoginForm from './LoginForm'
+import { APP_NAME } from '@/shared/lib/constants'
 
 export const metadata: Metadata = {
-  title: 'ログイン | じゅくAI',
+  title: `ログイン | ${APP_NAME}`,
 }
 
 export default function LoginPage() {
@@ -19,7 +20,7 @@ export default function LoginPage() {
             <GraduationCap className="h-6 w-6" aria-hidden="true" />
           </div>
           <div className="space-y-1">
-            <h1 className="text-xl font-bold tracking-tight">じゅくAI 管理画面</h1>
+            <h1 className="text-xl font-bold tracking-tight">{APP_NAME} 管理画面</h1>
             <p className="text-sm text-muted-foreground">スタッフアカウントでログイン</p>
           </div>
         </div>
