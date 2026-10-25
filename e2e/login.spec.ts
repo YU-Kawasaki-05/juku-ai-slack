@@ -7,7 +7,7 @@ test.describe('ログイン画面（SCR-01）', () => {
   })
 
   test('ブランド見出しとフォームが表示される', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'マルボ 管理画面' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'marubo 管理画面' })).toBeVisible()
     await expect(page.getByLabel('メールアドレス')).toBeVisible()
     await expect(page.getByLabel('パスワード')).toBeVisible()
     await expect(page.getByRole('button', { name: 'ログイン' })).toBeVisible()
