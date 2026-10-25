@@ -64,6 +64,10 @@ jobs:
     # 対象ブランチの絞り込みは on.pull_request.branches 側で済んでいるので event_name だけ見る。
     if: github.event_name == 'pull_request'
     env:
+      # Supabase CLI はローカル用のイメージを既定で ECR Public（public.ecr.aws）から取る。ECR Public は
+      # ログインしない利用者に月 500GB までしか配らず、IP を共有する GitHub Actions では上限に当たって
+      # 「Data limit exceeded」で落ちた（2026-10-25）。同じイメージがある ghcr.io から取る。
+      SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
       # smoke 対象。増減させるときはここだけ直せば存在チェックと実行の両方に効く
       SMOKE_SPECS: >-
         e2e/permissions.spec.ts
@@ -117,6 +121,11 @@ jobs:
     name: E2E Fullsuite
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    env:
+      # Supabase CLI はローカル用のイメージを既定で ECR Public（public.ecr.aws）から取る。ECR Public は
+      # ログインしない利用者に月 500GB までしか配らず、IP を共有する GitHub Actions では上限に当たって
+      # 「Data limit exceeded」で落ちた（2026-10-25）。同じイメージがある ghcr.io から取る。
+      SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
