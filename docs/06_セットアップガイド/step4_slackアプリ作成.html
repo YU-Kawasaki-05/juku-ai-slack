@@ -195,7 +195,7 @@ a{color:var(--accent)}
 <h3>manifest（そのままコピーして使えます）</h3>
 
 <pre><code>display_information:
-  name: marubo
+  name: マル先生
   description: 生徒ごとのチャンネルで学習の質問に答える AI アシスタント
   background_color: "#2b3a55"
   # `:thinking_face:` のようにコロンの後にスペースが続く文字列は、
@@ -204,6 +204,9 @@ a{color:var(--accent)}
 
 features:
   bot_user:
+    # display_name は呼び出しに使うユーザー名（@marubo）の元になる。ユーザー名はインストールの時点で決まり、
+    # 後から App Home で変えても残る（2026-10-27 に作り直して確認）。インストール前に App Home の
+    # Display Name / Default username を確かめること。名前に記号（かっこ等）は使えない
     display_name: marubo
     always_online: true
 
@@ -247,7 +250,7 @@ settings:
 
 <ol>
 <li><b>Create New App</b> → <b>From scratch</b></li>
-<li>App Name = <code>marubo</code>、ワークスペースを選択 → <b>Create App</b></li>
+<li>App Name = <code>マル先生</code>、ワークスペースを選択 → <b>Create App</b></li>
 <li>左メニュー <b>OAuth &amp; Permissions</b> → <b>Scopes</b> → <b>Bot Token Scopes</b> → <b>Add an OAuth Scope</b> で
 5 つ（<code>chat:write</code> / <code>reactions:write</code> / <code>channels:history</code> / <code>groups:history</code> / <code>files:read</code>）を追加</li>
 <li>左メニュー <b>App Home</b> → <b>App Display Name</b> の <b>Edit</b> で表示名を設定<br>
