@@ -179,7 +179,7 @@ a{color:var(--accent)}
 <td><b>他の環境変数の形式エラーでアプリ全体が 500 になっていないか</b></td>
 <td><code>/login</code> を開いても 500。Runtime Logs に
 <code>Missing or invalid env vars: ...</code></td>
-<td>env は起動時に一括検証されるため、<b>Slack と無関係な変数（例: <code>RESEND_FROM_EMAIL</code> の空文字）1 つで全滅します</b>。
+<td>env は起動時に一括検証されるため、<b>Slack と無関係な変数（例: <code>LLM_BASE_URL</code> の URL 形式ミス）1 つで全滅します</b>。
 該当変数を修正するか<b>行ごと削除</b>（<a href="step5_vercelデプロイ.html#envtable">STEP 5-2</a>）</td>
 </tr>
 <tr>

@@ -1,7 +1,7 @@
 /** @file
  * 機能: レポート本文（Markdown）の表示（SCR-08 プレビュー / SCR-09 詳細で共用）
  * セキュリティ: react-markdown は raw HTML をデフォルトで無効化する（XSS 対策）。
- *   rehype-raw は導入しないこと
+ *   rehype-raw は導入しないこと。画像（img）は表示しない（外部への自動アクセス防止）
  * @implements FR-16
  */
 import ReactMarkdown, { type Components } from 'react-markdown'
@@ -46,6 +46,10 @@ const components: Components = {
   ),
   td: (props) => <td className="border px-3 py-1.5 align-top" {...props} />,
   hr: (props) => <hr className="my-6" {...props} />,
+  // 画像は表示しない。月次レポートは生徒の入力を元に LLM が作るため、`![](https://外部)` を出されると
+  // スタッフが画面を開いた時点で外部へアクセスしてしまう（閲覧の追跡・情報の持ち出し）。
+  // リンク（a）はクリックされるまで外部へ出ず、react-markdown 既定の urlTransform が javascript: 等を落とすので現状のまま
+  img: () => null,
 }
 
 export function MarkdownContent({ markdown }: { markdown: string }) {

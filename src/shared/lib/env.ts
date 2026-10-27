@@ -32,10 +32,22 @@ const envSchema = z.object({
   // Anthropic 直アダプタを使う場合のみ
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
 
-  // 保護者メール送信（FR-08 想定）。現時点でコード上の利用箇所はゼロのため optional。
-  // 必須にすると未設定環境で env のパースが落ち、Slack 連携ごと 500 になる
-  RESEND_API_KEY: z.string().min(1).optional(),
-  RESEND_FROM_EMAIL: z.string().email().optional(),
+  // メール送信（Resend。月次レポートの送付に使う。FR-08）。未設定でも他の機能は動くため optional。
+  // 形式検証（min(1) / email）を付けない: 空文字や `Name <addr>` 形式で env のパースが落ちると
+  // Slack 連携ごと 500 になり、生徒の質問に答えられなくなる。検証は使う側（resolveMailConfig）で行い、
+  // 不正なら「メール設定なし」として扱う（月次レポートの送信だけが止まる）
+  RESEND_API_KEY: z.string().optional(),
+  RESEND_FROM_EMAIL: z.string().optional(),
+
+  // 月次レポート（FR-08）。ここは「空文字でも env のパースを落とさない」ことを優先し、
+  // min(1) や形式検証を付けない（他の変数と違い、Vercel で空のまま保存されても Slack 連携ごと
+  // 500 にしない）。空・不正は使う側で「未設定」として扱い、画面とログに理由を出す。
+  //   CRON_SECRET: /api/cron/monthly-reports の Bearer 認証。Vercel Cron が自動で付ける
+  //   REPORT_EMAIL_TO: 月次レポートの送り先メールアドレス（カンマ区切りで複数可）
+  //   VERCEL_PROJECT_PRODUCTION_URL: Vercel が自動で入れる本番ドメイン（メール本文の管理画面リンク用）
+  CRON_SECRET: z.string().optional(),
+  REPORT_EMAIL_TO: z.string().optional(),
+  VERCEL_PROJECT_PRODUCTION_URL: z.string().optional(),
 })
 
 const parsed = envSchema.safeParse(process.env)

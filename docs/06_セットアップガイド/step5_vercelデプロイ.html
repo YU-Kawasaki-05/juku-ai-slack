@@ -146,7 +146,7 @@ Environment は最低限 <b>Production</b> にチェック。Preview デプロ�
 <div class="dangerbox">
 <p><b>最重要の落とし穴: 使わない変数は「空文字で登録」せず、行ごと作らないでください。</b></p>
 <p>環境変数は起動時に Zod で一括検証しています。<code>*_BASE_URL</code> や <code>NEXT_PUBLIC_SUPABASE_URL</code> は
-<b>URL 形式</b>、<code>RESEND_FROM_EMAIL</code> は<b>メール形式</b>でないと検証に失敗し、
+<b>URL 形式</b>でないと検証に失敗し、
 <code>Missing or invalid env vars: ...</code> を投げて<b>アプリ全体（Slack Webhook 含む）が 500 になります</b>。
 「任意」の変数でも、<b>空文字で存在している状態は「未設定」ではなく「不正な値」</b>として扱われます。</p>
 </div>
@@ -262,7 +262,7 @@ Environment は最低限 <b>Production</b> にチェック。Preview デプロ�
 <p class="small">3 つとも未設定なら RAG は静かに無効化されます（<code>EmbeddingNotConfiguredError</code>、severity=info、エラーログに残らない）。
 <b>1 つでも欠けると同じく無効</b>になるので、設定するなら 3 つセットで入れてください。</p>
 
-<h3>任意（3 個）</h3>
+<h3>任意（7 個）</h3>
 
 <div class="scroll wide">
 <table>
@@ -286,11 +286,35 @@ Environment は最低限 <b>Production</b> にチェック。Preview デプロ�
 <td>—</td>
 <td><b>設定不要。</b>Anthropic 直アダプタ用の予約変数だが、<code>@anthropic-ai/sdk</code> は依存から外してあるため現状は使えない。Claude を使うなら OpenRouter 経由（<code>LLM_*</code>）で</td>
 </tr>
+<tr>
+<td><code>CRON_SECRET</code></td>
+<td>自分で決める 16 文字以上のランダムな文字列（例: <code>openssl rand -hex 24</code>）</td>
+<td>—</td>
+<td>月次レポートの自動作成（毎月 1〜3 日の日本時間 9:00）が動かない。Vercel Cron はこの値を <code>Authorization: Bearer</code> で自動送信し、アプリは一致しない呼び出しを 401 で断る（<b>未設定でも誰でも呼べる状態にはならない</b>）。<b>Sensitive にする</b></td>
+</tr>
+<tr>
+<td><code>REPORT_EMAIL_TO</code></td>
+<td>月次レポートを受け取るスタッフのメールアドレス</td>
+<td><code>staff@example.com,admin@example.com</code></td>
+<td>メールは送られず、レポートの作成だけ行われる（ログに「メール設定なし」）。カンマ区切りで複数可。形式が不正なアドレスは無視される</td>
+</tr>
+<tr>
+<td><code>RESEND_API_KEY</code></td>
+<td>Resend のダッシュボード → API Keys（<b>Sending access</b> で十分）</td>
+<td><code>re_xxxxxxxx</code></td>
+<td>同上（メールが送られない）。<b>Sensitive にする。</b>使わないなら行ごと作らない（空文字でもアプリは落ちず、メールが送られないだけ）</td>
+</tr>
+<tr>
+<td><code>RESEND_FROM_EMAIL</code></td>
+<td>Resend で認証済みのドメインのアドレス</td>
+<td><code>noreply@your-juku.example</code></td>
+<td>同上。<code>addr</code> でも <code>marubo &lt;addr&gt;</code> 形式でも可。形式が不正でもアプリは落ちず、「メール設定なし」として扱われる</td>
+</tr>
 </tbody>
 </table>
 </div>
 
-<h3>設定してはいけない / 不要（3 個）</h3>
+<h3>設定してはいけない / 不要（1 個）</h3>
 
 <div class="scroll wide">
 <table>
@@ -301,24 +325,17 @@ Environment は最低限 <b>Production</b> にチェック。Preview デプロ�
 <td><span class="req y">本番では設定しない</span></td>
 <td>受け入れテストでモックサーバーへ向けるための差し替え口。ループバック（<code>localhost</code> / <code>127.0.0.1</code> / <code>::1</code>）以外を指定しても無視されるが、本番に置く理由がない</td>
 </tr>
-<tr>
-<td><code>RESEND_API_KEY</code></td>
-<td><span class="req n">不要</span></td>
-<td><b>コード上の利用箇所はゼロ。</b>将来の保護者メール通知（FR-08）用の予約。設定しなくても全機能が動く</td>
-</tr>
-<tr>
-<td><code>RESEND_FROM_EMAIL</code></td>
-<td><span class="req n">不要</span></td>
-<td>同上。<b>設定するならメール形式必須</b>（不正な値だとアプリ全体が 500 になる）</td>
-</tr>
 </tbody>
 </table>
 </div>
 
 <div class="note">
-<p><b>変数は全部で 19 個</b>（必須 6 / AI 4 / RAG 3 / 任意 3 / 不要 3）。
+<p><b>変数は全部で 21 個</b>（必須 6 / AI 4 / RAG 3 / 任意 7 / 不要 1）。
 一般的な構成では <b>13 個</b>（必須 6 + AI 4 + RAG 3）を設定し、必要に応じて
-<code>SLACK_WORKSPACE_URL</code> と <code>SLACK_ALERTS_CHANNEL_ID</code> を足して 15 個になります。</p>
+<code>SLACK_WORKSPACE_URL</code> と <code>SLACK_ALERTS_CHANNEL_ID</code> を足して 15 個になります。
+<b>月次レポートを毎月メールで受け取る</b>なら、さらに <code>CRON_SECRET</code>・<code>REPORT_EMAIL_TO</code>・<code>RESEND_API_KEY</code>・<code>RESEND_FROM_EMAIL</code> の 4 個を足します（19 個）。
+<code>VERCEL_PROJECT_PRODUCTION_URL</code> は Vercel が自動で入れる値で、メール本文の管理画面リンクに使います（自分で設定する必要はありません）。
+月次レポートの自動実行の予定は、リポジトリの <code>vercel.json</code> に入っています（毎月 1〜3 日 0:00 UTC = 日本時間 9:00）。</p>
 </div>
 
 <h3><code>NEXT_PUBLIC_</code> の扱い（重要）</h3>
@@ -401,6 +418,7 @@ Vercel のダッシュボードで値を書き換えても、<b>再デプロイ�
 <li><input type="checkbox" id="s5-1"><label for="s5-1">Vercel にリポジトリをインポートした（Node 22.x / Pro プラン）</label></li>
 <li><input type="checkbox" id="s5-2"><label for="s5-2">必須 6 個の環境変数を設定した</label></li>
 <li><input type="checkbox" id="s5-3"><label for="s5-3">LLM 4 個・Embedding 3 個を設定した</label></li>
+<li><input type="checkbox" id="s5-3b"><label for="s5-3b">（月次レポートをメールで受け取るなら）<code>CRON_SECRET</code>・<code>REPORT_EMAIL_TO</code>・<code>RESEND_API_KEY</code>・<code>RESEND_FROM_EMAIL</code> を設定した</label></li>
 <li><input type="checkbox" id="s5-4"><label for="s5-4">使わない変数を<b>空文字で登録していない</b></label></li>
 <li><input type="checkbox" id="s5-5"><label for="s5-5">シークレット系を Sensitive にした</label></li>
 <li><input type="checkbox" id="s5-6"><label for="s5-6">デプロイが成功した</label></li>

@@ -155,6 +155,41 @@ export const RAG_SIMILARITY_THRESHOLD = 0.7
 /** 1チャンクの最大文字数（BR-10-02: 200〜800 tokens 目安。日本語 ~1tok/字 を考慮） */
 export const RAG_CHUNK_MAX_CHARS = 1000
 
+// --- 月次レポートの自動作成・メール送付（FR-08）---
+
+/**
+ * 1回の実行で新しく作成する生徒数の上限。LLM は 1 人あたり十数秒かかるため、
+ * 全員を 1 回で処理しようとすると関数の実行時間上限を超える。残りは翌日（毎月 1〜3 日に実行）か
+ * 管理画面のボタンで続きから処理する（作成済みの生徒は飛ばす）。
+ */
+export const MONTHLY_REPORT_MAX_STUDENTS_PER_RUN = 30
+/**
+ * 1回の実行で「新しい生徒の処理を始めてよい」時間（ミリ秒）。
+ * 関数の上限（maxDuration=300 秒）から、最後に着手した 1 人の LLM（60 秒）・Embedding（60 秒）と
+ * メール送信（Resend 30 秒）のタイムアウトの合計 150 秒を引いて取る（150 + 150 = 300）。
+ */
+export const MONTHLY_REPORT_TIME_BUDGET_MS = 150_000
+/** LLM を同時に呼ぶ生徒数。レート制限（429）を踏まない程度に抑える */
+export const MONTHLY_REPORT_CONCURRENCY = 3
+/**
+ * レポート 1 件の最大出力トークン。推論系モデルは推論トークンも上限に含めるため、
+ * 日本語で千数百字のレポートに対して余裕を持たせる
+ */
+export const MONTHLY_REPORT_MAX_TOKENS = 3000
+/** LLM に渡す会話の合計文字数の上限。超えたら質問と回答の組を等間隔に間引く */
+export const MONTHLY_REPORT_PROMPT_CHAR_BUDGET = 24_000
+/** 会話 1 件あたりの切り詰め文字数（質問 / AI の回答） */
+export const MONTHLY_REPORT_QUESTION_MAX_CHARS = 400
+export const MONTHLY_REPORT_ANSWER_MAX_CHARS = 250
+/** 1 生徒の 1 か月分の会話を読むときの最大ページ数（1 ページ 1000 行） */
+export const MONTHLY_REPORT_MAX_MESSAGE_PAGES = 10
+/** メール送信の「実行中」の目印がこの時間を過ぎたら、異常終了したものとみなして引き継ぐ */
+export const MONTHLY_REPORT_EMAIL_CLAIM_STALE_MS = 10 * 60 * 1000
+/** Resend API 1 回あたりのタイムアウト */
+export const RESEND_TIMEOUT_MS = 30_000
+/** cron で最後の試行とみなす日（日本時間の日）。この日は未作成の生徒が残っていてもメールを送る */
+export const MONTHLY_REPORT_FINAL_CRON_DAY = 3
+
 export interface ModelPrice {
   inputPerM: number
   outputPerM: number

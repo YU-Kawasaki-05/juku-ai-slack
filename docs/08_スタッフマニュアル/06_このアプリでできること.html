@@ -142,6 +142,7 @@ figure.shot figcaption{margin-top:8px;font-size:13px;line-height:1.65;color:var(
 <h3>② 過去のレポートを踏まえた回答</h3>
 <p>承認済みの月次レポートの中から、<b>その質問に関係のある部分だけ</b>を探し出して回答に使います。
 回答には「今月のレポートを見る限り〜」のように、<b>どこから持ってきた情報かが分かる形</b>で現れます。</p>
+<p>月次レポートの<b>下書きは AI が毎月自動で作り</b>、スタッフにメールで届けます（前月の会話から作ります）。確認・修正して承認すると、このように回答に使われます。</p>
 <p class="small">→ 使えるようにする手順は <a href="04_月次レポート.html">第 4 章</a></p>
 
 <h3>③ 写真での質問</h3>
@@ -214,10 +215,10 @@ figure.shot figcaption{margin-top:8px;font-size:13px;line-height:1.65;color:var(
 <tbody>
 
 <tr>
-<td><b>月次レポートの AI 自動生成</b><br>
-<span class="small">「その月の会話から AI がレポートの下書きを作る」機能はありません</span></td>
-<td><b>スタッフが手で書きます。</b>書いたレポートを承認すれば AI はきちんと参照します
-（AI が書いたものと参照データとしては同じ扱いです）。→ <a href="04_月次レポート.html">第 4 章</a></td>
+<td><b>AI が作った月次レポートの自動承認</b><br>
+<span class="small">AI が毎月作るのは「AI下書き」までです</span></td>
+<td><b>スタッフが確認・修正して、自分で承認します。</b>承認するまで、AI が作った下書きは Bot の回答に使われません。
+→ <a href="04_月次レポート.html#auto">第 4 章 4-6</a></td>
 </tr>
 
 <tr>
@@ -244,7 +245,7 @@ figure.shot figcaption{margin-top:8px;font-size:13px;line-height:1.65;color:var(
 <td><b>エラーが起きたときの自動通知</b><br>
 <span class="small">エラーが出ても Slack に通知は飛びません</span></td>
 <td><b>だから毎日ダッシュボードを見る運用が必要です。</b>
-自動通知があるのは緊急停止の操作だけで、それも <code>#alerts</code> チャンネルが設定されている場合に限ります。→ <a href="02_毎日の確認.html">第 2 章</a></td>
+自動通知があるのは緊急停止の操作と、月次レポートのメール送信に失敗したときだけで、それも <code>#alerts</code> チャンネルが設定されている場合に限ります。→ <a href="02_毎日の確認.html">第 2 章</a></td>
 </tr>
 
 <tr>
